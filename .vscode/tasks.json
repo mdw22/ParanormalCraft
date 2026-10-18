@@ -1,0 +1,66 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}"
+    },
+    "tasks": [
+        {
+            "label": "NeoForge client",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runClient",
+            "problemMatcher": []
+        },
+        {
+            "label": "NeoForge server",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runServer",
+            "problemMatcher": []
+        },
+        {
+            "label": "Fabric client",
+            "type": "shell",
+            "command": "./gradlew :fabric:runClient",
+            "problemMatcher": []
+        },
+        {
+            "label": "Fabric server",
+            "type": "shell",
+            "command": "./gradlew :fabric:runServer",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build all",
+            "type": "shell",
+            "command": "./gradlew build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "NeoForge data gen",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runData",
+            "problemMatcher": []
+        },
+        {
+            // Used by the "Debug NeoForge client" launch config: starts the client suspended on port 5005
+            // and tells VS Code it is ready once the JVM is listening for the debugger.
+            "label": "NeoForge client (debug)",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runClient -PdebugClient",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "gradle-debug",
+                "pattern": {
+                    "regexp": "^__never_matches__$"
+                },
+                "background": {
+                    "beginsPattern": "^.*(Starting a Gradle Daemon|Configure project|Task :).*$",
+                    "endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
+                }
+            }
+        }
+    ]
+}

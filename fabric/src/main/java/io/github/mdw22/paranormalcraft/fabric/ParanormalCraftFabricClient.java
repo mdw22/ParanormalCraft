@@ -1,0 +1,24 @@
+package io.github.mdw22.paranormalcraft.fabric;
+
+import io.github.mdw22.paranormalcraft.network.ClientPayloadRegistrar;
+import io.github.mdw22.paranormalcraft.network.ModNetwork;
+import io.github.mdw22.paranormalcraft.network.PayloadHandler;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+
+public class ParanormalCraftFabricClient implements ClientModInitializer {
+
+    @Override
+    public void onInitializeClient() {
+
+        ModNetwork.registerClientHandlers(new ClientPayloadRegistrar() {
+
+            @Override
+            public <T extends CustomPacketPayload> void playToClient(CustomPacketPayload.Type<T> type, PayloadHandler<T> handler) {
+
+                ClientPlayNetworking.registerGlobalReceiver(type, (payload, context) -> handler.handle(payload, context.player()));
+            }
+        });
+    }
+}

@@ -1,0 +1,43 @@
+package io.github.mdw22.paranormalcraft.neoforge;
+
+import io.github.mdw22.paranormalcraft.CommonEvents;
+import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.ParanormalCraft;
+import io.github.mdw22.paranormalcraft.neoforge.datagen.ModDataGenerators;
+import io.github.mdw22.paranormalcraft.neoforge.platform.NeoForgeNetworkHelper;
+import io.github.mdw22.paranormalcraft.neoforge.platform.NeoForgeRegistrationHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+
+@Mod(Constants.MOD_ID)
+public class ParanormalCraftNeoForge {
+
+    public ParanormalCraftNeoForge(IEventBus modBus) {
+
+        // DeferredRegisters created during common init attach to this bus.
+        NeoForgeRegistrationHelper.setModBus(modBus);
+        ParanormalCraft.init();
+
+        modBus.addListener(NeoForgeNetworkHelper::registerPayloads);
+        modBus.addListener(ModDataGenerators::gatherClientData);
+
+        // Forward game events to CommonEvents, server side only.
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> CommonEvents.onServerTick(event.getServer()));
+        NeoForge.EVENT_BUS.addListener((PlayerTickEvent.Post event) -> {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                CommonEvents.onPlayerTick(player);
+            }
+        });
+        NeoForge.EVENT_BUS.addListener((EntityJoinLevelEvent event) -> {
+            if (event.getLevel() instanceof ServerLevel level) {
+                CommonEvents.onEntityJoinLevel(event.getEntity(), level);
+            }
+        });
+    }
+}

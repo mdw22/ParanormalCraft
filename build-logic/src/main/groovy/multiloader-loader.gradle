@@ -1,0 +1,66 @@
+plugins {
+    id 'multiloader-common'
+}
+
+configurations {
+    commonJava {
+        canBeResolved = true
+    }
+    commonResources {
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    compileOnly(project(':common')) {
+        def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+        attributes {
+            attribute(loaderAttribute, 'common')
+        }
+    }
+    commonJava(project(path: ':common', configuration: 'commonJava'))
+    commonResources(project(path: ':common', configuration: 'commonResources'))
+}
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn(configurations.commonJava)
+    source(configurations.commonJava)
+}
+
+processResources {
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources) {
+        // Data generator hash cache, written next to the generated files in common.
+        exclude('.cache/**')
+    }
+}
+
+// Dev server: accept the EULA and run in offline mode so dev clients can join over localhost.
+def prepareDevServer = tasks.register('prepareDevServer') {
+    group = 'multiloader'
+    description = 'Accepts the EULA and sets online-mode=false in runs/server.'
+    def serverDir = file('runs/server')
+    doLast {
+        serverDir.mkdirs()
+        new File(serverDir, 'eula.txt').text = 'eula=true\n'
+        def props = new File(serverDir, 'server.properties')
+        def lines = props.exists() ? props.readLines().findAll { !it.startsWith('online-mode=') } : []
+        lines << 'online-mode=false'
+        props.text = lines.join('\n') + '\n'
+    }
+}
+tasks.matching { it.name == 'runServer' }.configureEach {
+    dependsOn(prepareDevServer)
+}
+
+tasks.named('javadoc', Javadoc).configure {
+    dependsOn(configurations.commonJava)
+    source(configurations.commonJava)
+}
+
+tasks.named('sourcesJar', Jar) {
+    dependsOn(configurations.commonJava)
+    from(configurations.commonJava)
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources)
+}

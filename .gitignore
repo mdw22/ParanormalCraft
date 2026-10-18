@@ -1,0 +1,42 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea/*
+!.idea/scopes
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+run
+runs
+build/
+.gradle/
+**/run/
+**/runs/
+
+# macOS
+.DS_Store
+
+# VS Code Java language server output
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# handoff files
+DESIGNER_RESPONSE.md
+DESIGNER_REPORT.md
+CLAUDE.md

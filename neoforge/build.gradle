@@ -1,0 +1,72 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
+}
+
+// Data generation writes into common's generated resource folder so every loader ships it.
+// The output folder is wiped of anything datagen did not produce, so it must never hold hand-written files.
+def commonGenerated = project(':common').file('src/generated/resources/')
+def commonResources = project(':common').file('src/main/resources/')
+
+neoForge {
+    version = neoforge_version
+    // Automatically enable neoforge AccessTransformers if the file exists
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    runs {
+        configureEach {
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+        }
+        client {
+            client()
+            gameDirectory = this.mkdir(this.file('runs/client'))
+            // ./gradlew :neoforge:runClient -PdebugClient waits for a debugger on 127.0.0.1:5005 (VS Code: "Debug NeoForge client").
+            // Gradle's --debug-jvm can bind to IPv6 [::1] only, which debuggers attaching to localhost/127.0.0.1 then miss.
+            if (project.hasProperty('debugClient')) {
+                jvmArguments.add('-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=127.0.0.1:5005')
+            }
+        }
+        data {
+            clientData()
+            gameDirectory = this.mkdir(this.file('runs/data'))
+            // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', commonGenerated.getAbsolutePath(), '--existing', commonResources.getAbsolutePath()
+        }
+        server {
+            server()
+            this.file('runs/server').createParentDirectories()
+            gameDirectory = this.mkdir(this.file('runs/server'))
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    implementation("com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}")
+}
+
+// Implement mcgradleconventions loader attribute
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.named(variant) {
+        attributes {
+            attribute(loaderAttribute, 'neoforge')
+        }
+    }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName, it.getTaskName(null, 'jarJar')].each { variant ->
+        configurations.named(variant) {
+            attributes {
+                attribute(loaderAttribute, 'neoforge')
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+Copyright (c) 2026 mdw22
+
+All Rights Reserved.
+
+This software and its associated assets, source code and documentation are the
+property of the copyright holder. No permission is granted to use, copy, modify,
+merge, publish, distribute, sublicense or sell copies of this software, in whole
+or in part, without prior written permission from the copyright holder.
+
+This license is provisional and will be revisited before public release.
+
+Portions of the build setup are derived from the MultiLoader Template
+(https://github.com/jaredlll08/MultiLoader-Template), which is released under
+CC0 1.0 Universal.

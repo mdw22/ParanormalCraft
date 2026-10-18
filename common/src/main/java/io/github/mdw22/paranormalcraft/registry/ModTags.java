@@ -12,6 +12,15 @@ public final class ModTags {
      */
     public static final TagKey<Block> GHOST_PASSABLE = TagKey.create(Registries.BLOCK, Constants.id("ghost_passable"));
 
+    /** Plain torches a ghost can knock off. Soul and redstone torches are deliberately absent. */
+    public static final TagKey<Block> SNUFFABLE_TORCHES = TagKey.create(Registries.BLOCK, Constants.id("haunting/snuffable_torches"));
+    /** Lit candles and campfires a ghost can put out (not soul campfires). */
+    public static final TagKey<Block> SNUFFABLE_FLAMES = TagKey.create(Registries.BLOCK, Constants.id("haunting/snuffable_flames"));
+    /** Wooden doors, trapdoors and fence gates a ghost can swing. Iron and copper ones are deliberately absent. */
+    public static final TagKey<Block> HAUNTED_OPENINGS = TagKey.create(Registries.BLOCK, Constants.id("haunting/openings"));
+    /** Containers whose lid a ghost can rattle. */
+    public static final TagKey<Block> PHANTOM_CONTAINERS = TagKey.create(Registries.BLOCK, Constants.id("haunting/phantom_containers"));
+
     private ModTags() {
     }
 }

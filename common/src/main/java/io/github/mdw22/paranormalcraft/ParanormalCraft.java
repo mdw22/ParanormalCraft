@@ -3,6 +3,7 @@ package io.github.mdw22.paranormalcraft;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.gametest.ModGameTests;
 import io.github.mdw22.paranormalcraft.platform.Services;
+import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModCreativeTabs;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
@@ -23,6 +24,7 @@ public class ParanormalCraft {
         ModConfigs.loadServer();
 
         ModSounds.init();
+        ModBlocks.init();
         ModEntities.init();
         ModItems.init();
         ModCreativeTabs.init();

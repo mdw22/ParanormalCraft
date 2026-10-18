@@ -1,0 +1,18 @@
+{
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 1627384951,
+    "separation": 12,
+    "spacing": 32
+  },
+  "structures": [
+    {
+      "structure": "paranormalcraft:abandoned_cabin_oak",
+      "weight": 1
+    },
+    {
+      "structure": "paranormalcraft:abandoned_cabin_spruce",
+      "weight": 1
+    }
+  ]
+}

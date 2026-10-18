@@ -9,6 +9,9 @@ import com.google.gson.JsonObject;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
+import io.github.mdw22.paranormalcraft.haunting.HauntingAction;
+import io.github.mdw22.paranormalcraft.haunting.HauntingController;
+import io.github.mdw22.paranormalcraft.haunting.HauntingSchedule;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
 import net.minecraft.core.BlockPos;
@@ -68,10 +71,26 @@ public final class DebugDump {
             json.addProperty("presence", ghost.getPresence());
             json.addProperty("manifesting", ghost.isManifesting());
             json.addProperty("activeGoal", ghost.activeGoals());
+            HauntingSchedule schedule = ghost.haunting().schedule();
+            JsonObject haunting = new JsonObject();
+            haunting.addProperty("nextAttemptGameTime", schedule.isScheduled() ? schedule.nextAttempt() : null);
+            haunting.addProperty("ticksUntilNextAttempt", schedule.isScheduled() ? Math.max(0, schedule.nextAttempt() - level.getGameTime()) : null);
+            JsonObject cooldowns = new JsonObject();
+            for (HauntingAction action : HauntingAction.values()) {
+                cooldowns.addProperty(action.id(), schedule.cooldownRemaining(action, level.getGameTime()));
+            }
+            haunting.add("cooldownTicksRemaining", cooldowns);
+            JsonArray recent = new JsonArray();
+            for (HauntingController.Record record : ghost.haunting().history()) {
+                recent.add(record.action().id() + " @" + record.gameTime() + ": " + record.detail());
+            }
+            haunting.add("recent", recent);
+            json.add("haunting", haunting);
             ghostArray.add(json);
-            line(chat, "Ghost %s %s at %s home %s cold spot %s presence %.1f manifesting %s goal %s",
+            line(chat, "Ghost %s %s at %s home %s cold spot %s presence %.1f manifesting %s goal %s next haunt in %s ticks",
                     json.get("type").getAsString(), ghost.getUUID(), fmt(ghost.position()), ghost.getHome(), ghost.getColdSpot(),
-                    ghost.getPresence(), ghost.isManifesting(), ghost.activeGoals());
+                    ghost.getPresence(), ghost.isManifesting(), ghost.activeGoals(),
+                    schedule.isScheduled() ? Math.max(0, schedule.nextAttempt() - level.getGameTime()) : "?");
         }
         root.add("ghosts", ghostArray);
 

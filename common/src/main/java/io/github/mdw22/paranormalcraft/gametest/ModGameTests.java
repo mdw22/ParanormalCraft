@@ -4,6 +4,7 @@ import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.ColdSpots;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.Presence;
+import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.registry.RegistrationHelper;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -53,6 +55,8 @@ public final class ModGameTests {
         RegistrationHelper.testFunction("thermometer_cold_spot", ModGameTests::thermometerColdSpot);
         RegistrationHelper.testFunction("spectral_arrow_glows_without_damage", ModGameTests::spectralArrowGlowsWithoutDamage);
         RegistrationHelper.testFunction("cold_spot_is_roofed", ModGameTests::coldSpotIsRoofed);
+        RegistrationHelper.testFunction("ghost_marker_spawns_homed_ghost", ModGameTests::ghostMarkerSpawnsHomedGhost);
+        HauntingGameTests.init();
     }
 
     private static LingeringSpiritEntity frozenGhost(GameTestHelper helper) {
@@ -202,6 +206,27 @@ public final class ModGameTests {
             check(helper, ghost.getPresence() == Presence.MAX, "the arrow drained Presence to %.1f", ghost.getPresence());
             ghost.discard();
             archer.level().getServer().getPlayerList().remove(archer);
+        });
+    }
+
+    /**
+     * The cabin's marker block turns into a ghost homed at the marker (multiplier 1.0: the first ghost always spawns)
+     * and removes itself.
+     */
+    private static void ghostMarkerSpawnsHomedGhost(GameTestHelper helper) {
+
+        BlockPos marker = new BlockPos(20, 1, 20);
+        helper.setBlock(marker, ModBlocks.GHOST_MARKER.get());
+        helper.runAfterDelay(3, () -> {
+            helper.assertBlockNotPresent(ModBlocks.GHOST_MARKER.get(), marker);
+            BlockPos home = helper.absolutePos(marker);
+            List<LingeringSpiritEntity> ghosts = helper.getLevel().getEntitiesOfClass(LingeringSpiritEntity.class, new AABB(home).inflate(2));
+            check(helper, !ghosts.isEmpty() && ghosts.size() <= 2, "%s ghost(s) spawned", ghosts.size());
+            for (LingeringSpiritEntity ghost : ghosts) {
+                check(helper, home.equals(ghost.getHome()), "ghost home %s, expected %s", ghost.getHome(), home);
+                ghost.discard();
+            }
+            helper.succeed();
         });
     }
 

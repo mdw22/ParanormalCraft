@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:haunt_idle_without_players",
+  "environment": "paranormalcraft:haunting_idle",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 120,
+  "sky_access": true
+}

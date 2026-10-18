@@ -13,12 +13,18 @@ import java.nio.file.Path;
  * @param manifestIntervalMinSeconds shortest wait between a ghost's manifests
  * @param manifestIntervalMaxSeconds longest wait between a ghost's manifests
  * @param enableDebugCommands        allows {@code /paranormalcraft debug …} (always on in a development environment)
+ * @param hauntingEnabled            turns ghost haunting actions on or off
+ * @param hauntingIntervalMinSeconds shortest wait between a ghost's haunting actions
+ * @param hauntingIntervalMaxSeconds longest wait between a ghost's haunting actions
+ * @param hallucinationIntervalMinSeconds shortest wait between a player's hallucinations
+ * @param hallucinationIntervalMaxSeconds longest wait between a player's hallucinations
  */
 public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier, int manifestIntervalMinSeconds, int manifestIntervalMaxSeconds,
-                           boolean enableDebugCommands) {
+                           boolean enableDebugCommands, boolean hauntingEnabled, int hauntingIntervalMinSeconds, int hauntingIntervalMaxSeconds,
+                           int hallucinationIntervalMinSeconds, int hallucinationIntervalMaxSeconds) {
 
     public static final String FILE_NAME = "paranormalcraft-server.json";
-    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300, false);
+    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300, false, true, 30, 90, 180, 480);
 
     static final int MIN_INTERVAL_SECONDS = 1;
     static final int MAX_INTERVAL_SECONDS = 86400;
@@ -28,15 +34,48 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
         ConfigFile file = ConfigFile.open(configDir.resolve(FILE_NAME), log);
         boolean griefing = file.getBoolean("hauntingGriefing", DEFAULTS.hauntingGriefing);
         double multiplier = file.getDouble("ghostSpawnMultiplier", DEFAULTS.ghostSpawnMultiplier, 0.0, 4.0);
-        ConfigFile.Section interval = file.section("manifestIntervalSeconds");
-        int min = interval.getInt("min", DEFAULTS.manifestIntervalMinSeconds, MIN_INTERVAL_SECONDS, MAX_INTERVAL_SECONDS);
-        int max = interval.getInt("max", DEFAULTS.manifestIntervalMaxSeconds, MIN_INTERVAL_SECONDS, MAX_INTERVAL_SECONDS);
+        int[] manifest = interval(file, "manifestIntervalSeconds", DEFAULTS.manifestIntervalMinSeconds, DEFAULTS.manifestIntervalMaxSeconds);
+        boolean debugCommands = file.getBoolean("enableDebugCommands", DEFAULTS.enableDebugCommands);
+        boolean haunting = file.getBoolean("hauntingEnabled", DEFAULTS.hauntingEnabled);
+        int[] hauntingInterval = interval(file, "hauntingIntervalSeconds", DEFAULTS.hauntingIntervalMinSeconds, DEFAULTS.hauntingIntervalMaxSeconds);
+        int[] hallucination = interval(file, "hallucinationIntervalSeconds", DEFAULTS.hallucinationIntervalMinSeconds, DEFAULTS.hallucinationIntervalMaxSeconds);
+        file.save();
+        return new ServerConfig(griefing, multiplier, manifest[0], manifest[1], debugCommands, haunting, hauntingInterval[0], hauntingInterval[1],
+                hallucination[0], hallucination[1]);
+    }
+
+    /**
+     * A copy with a different griefing switch (GameTests).
+     */
+    public ServerConfig withHauntingGriefing(boolean griefing) {
+
+        return new ServerConfig(griefing, this.ghostSpawnMultiplier, this.manifestIntervalMinSeconds, this.manifestIntervalMaxSeconds,
+                this.enableDebugCommands, this.hauntingEnabled, this.hauntingIntervalMinSeconds, this.hauntingIntervalMaxSeconds,
+                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds);
+    }
+
+    /**
+     * A copy with a different haunting interval in seconds (GameTests).
+     */
+    public ServerConfig withHauntingInterval(int minSeconds, int maxSeconds) {
+
+        return new ServerConfig(this.hauntingGriefing, this.ghostSpawnMultiplier, this.manifestIntervalMinSeconds, this.manifestIntervalMaxSeconds,
+                this.enableDebugCommands, this.hauntingEnabled, minSeconds, maxSeconds,
+                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds);
+    }
+
+    /**
+     * Reads a {@code {"min": …, "max": …}} section in seconds, raising max to min if it is smaller.
+     */
+    private static int[] interval(ConfigFile file, String key, int defaultMin, int defaultMax) {
+
+        ConfigFile.Section section = file.section(key);
+        int min = section.getInt("min", defaultMin, MIN_INTERVAL_SECONDS, MAX_INTERVAL_SECONDS);
+        int max = section.getInt("max", defaultMax, MIN_INTERVAL_SECONDS, MAX_INTERVAL_SECONDS);
         if (max < min) {
             max = min;
-            interval.fix("max", max, "is less than min");
+            section.fix("max", max, "is less than min");
         }
-        boolean debugCommands = file.getBoolean("enableDebugCommands", DEFAULTS.enableDebugCommands);
-        file.save();
-        return new ServerConfig(griefing, multiplier, min, max, debugCommands);
+        return new int[]{min, max};
     }
 }

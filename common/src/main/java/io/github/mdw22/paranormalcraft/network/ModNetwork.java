@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.network;
 
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
+import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
 
 /**
@@ -24,6 +25,7 @@ public final class ModNetwork {
         registrar.playToClient(RevealFlagPayload.TYPE, RevealFlagPayload.STREAM_CODEC);
         registrar.playToClient(EmfLevelPayload.TYPE, EmfLevelPayload.STREAM_CODEC);
         registrar.playToClient(ThermometerReadingPayload.TYPE, ThermometerReadingPayload.STREAM_CODEC);
+        registrar.playToClient(HallucinationPayload.TYPE, HallucinationPayload.STREAM_CODEC);
     }
 
     /**
@@ -34,5 +36,6 @@ public final class ModNetwork {
         registrar.playToClient(RevealFlagPayload.TYPE, (payload, player) -> RevealDebug.handleClientFlag(payload));
         registrar.playToClient(EmfLevelPayload.TYPE, (payload, player) -> ClientToolState.onEmfLevel(payload));
         registrar.playToClient(ThermometerReadingPayload.TYPE, (payload, player) -> ClientToolState.onThermometerReading(payload));
+        registrar.playToClient(HallucinationPayload.TYPE, (payload, player) -> ClientHallucinations.handle(payload));
     }
 }

@@ -70,6 +70,15 @@ public final class ToolTracker {
         Services.NETWORK.sendToPlayer(player, new EmfLevelPayload(EmfLevels.MAX_LEVEL));
     }
 
+    /**
+     * Whether this player's reader is pinned at level 5 by recent ghost activity.
+     */
+    public static boolean spikeActive(ServerPlayer player) {
+
+        Long spikeUntil = EMF_SPIKES.get(player.getUUID());
+        return spikeUntil != null && player.level().getGameTime() < spikeUntil;
+    }
+
     public static void clear() {
 
         EMF_SPIKES.clear();

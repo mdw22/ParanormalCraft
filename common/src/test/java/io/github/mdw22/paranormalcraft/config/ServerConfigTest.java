@@ -49,6 +49,11 @@ class ServerConfigTest {
         assertEquals(120, written.getAsJsonObject("manifestIntervalSeconds").get("min").getAsInt());
         assertEquals(300, written.getAsJsonObject("manifestIntervalSeconds").get("max").getAsInt());
         assertFalse(written.get("enableDebugCommands").getAsBoolean());
+        assertTrue(written.get("hauntingEnabled").getAsBoolean());
+        assertEquals(30, written.getAsJsonObject("hauntingIntervalSeconds").get("min").getAsInt());
+        assertEquals(90, written.getAsJsonObject("hauntingIntervalSeconds").get("max").getAsInt());
+        assertEquals(180, written.getAsJsonObject("hallucinationIntervalSeconds").get("min").getAsInt());
+        assertEquals(480, written.getAsJsonObject("hallucinationIntervalSeconds").get("max").getAsInt());
         assertEquals(0, this.log.count(Level.WARN));
     }
 
@@ -120,6 +125,20 @@ class ServerConfigTest {
     }
 
     @Test
+    void newIntervalsAreCheckedLikeTheManifestOne() throws IOException {
+
+        write("{\"hauntingIntervalSeconds\": {\"min\": 100, \"max\": 50}, \"hallucinationIntervalSeconds\": {\"min\": 0}}");
+
+        ServerConfig config = ServerConfig.load(this.dir, this.log);
+
+        assertEquals(100, config.hauntingIntervalMinSeconds());
+        assertEquals(100, config.hauntingIntervalMaxSeconds());
+        assertEquals(ServerConfig.MIN_INTERVAL_SECONDS, config.hallucinationIntervalMinSeconds());
+        assertEquals(480, config.hallucinationIntervalMaxSeconds());
+        assertEquals(2, this.log.count(Level.WARN));
+    }
+
+    @Test
     void brokenFileIsBackedUpAndRegenerated() throws IOException {
 
         String broken = "{\"hauntingGriefing\": false,, oops";
@@ -146,12 +165,13 @@ class ServerConfigTest {
     @Test
     void validFileIsNotRewritten() throws IOException {
 
-        String valid = "{\"hauntingGriefing\":false,\"ghostSpawnMultiplier\":2.5,\"manifestIntervalSeconds\":{\"min\":30,\"max\":60},\"enableDebugCommands\":true}";
+        String valid = "{\"hauntingGriefing\":false,\"ghostSpawnMultiplier\":2.5,\"manifestIntervalSeconds\":{\"min\":30,\"max\":60},\"enableDebugCommands\":true,"
+                + "\"hauntingEnabled\":false,\"hauntingIntervalSeconds\":{\"min\":5,\"max\":10},\"hallucinationIntervalSeconds\":{\"min\":20,\"max\":40}}";
         write(valid);
 
         ServerConfig config = ServerConfig.load(this.dir, this.log);
 
-        assertEquals(new ServerConfig(false, 2.5, 30, 60, true), config);
+        assertEquals(new ServerConfig(false, 2.5, 30, 60, true, false, 5, 10, 20, 40), config);
         assertEquals(valid, Files.readString(file(), StandardCharsets.UTF_8));
         assertEquals(0, this.log.count(Level.WARN));
     }

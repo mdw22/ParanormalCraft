@@ -19,6 +19,14 @@ public final class ModConfigs {
         return server;
     }
 
+    /**
+     * Replaces the server config. For GameTests only; normal play reads the file once at startup.
+     */
+    public static void setServerForTesting(ServerConfig config) {
+
+        server = config;
+    }
+
     public static ClientConfig client() {
 
         return client;

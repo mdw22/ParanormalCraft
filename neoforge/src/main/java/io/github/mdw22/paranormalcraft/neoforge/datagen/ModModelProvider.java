@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.neoforge.datagen;
 
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.client.EmfLevelProperty;
+import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.tool.EmfLevels;
 import net.minecraft.client.data.models.BlockModelGenerators;
@@ -12,6 +13,7 @@ import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.renderer.item.RangeSelectItemModel;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ public class ModModelProvider extends ModelProvider {
         itemModels.generateFlatItem(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(ModItems.SPIRIT_THERMOMETER.get(), ModelTemplates.FLAT_ITEM);
         generateEmfReader(itemModels);
+        blockModels.createAirLikeBlock(ModBlocks.GHOST_MARKER.get(), Items.SOUL_LANTERN);
     }
 
     /**

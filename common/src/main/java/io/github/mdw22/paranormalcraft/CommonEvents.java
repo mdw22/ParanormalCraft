@@ -5,6 +5,8 @@ import io.github.mdw22.paranormalcraft.command.ModCommands;
 import io.github.mdw22.paranormalcraft.debug.ColdSpotDisplay;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
+import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
+import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
@@ -25,6 +27,7 @@ public class CommonEvents {
 
         RevealDebug.tick(server);
         ColdSpotDisplay.tick(server);
+        HauntingScheduler.tick(server);
     }
 
     /**
@@ -33,6 +36,7 @@ public class CommonEvents {
     public static void onPlayerTick(ServerPlayer player) {
 
         ToolTracker.tick(player);
+        HallucinationScheduler.tick(player);
     }
 
     /**
@@ -62,5 +66,7 @@ public class CommonEvents {
         GhostCuriousGoal.clearClaims();
         ToolTracker.clear();
         ColdSpotDisplay.clear();
+        HauntingScheduler.clear();
+        HallucinationScheduler.clear();
     }
 }

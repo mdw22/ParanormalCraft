@@ -1,10 +1,16 @@
 {
   "commands.paranormalcraft.debug.coldspot": "Showing the cold spot of %s ghost(s) for 10 seconds",
+  "commands.paranormalcraft.debug.hallucinate": "Sent a shadow figure to %s player(s)",
+  "commands.paranormalcraft.debug.haunt.none": "No ghost could do '%s' here (no target, or griefing is off)",
+  "commands.paranormalcraft.debug.haunt.unknown": "Unknown haunting action '%s'",
   "commands.paranormalcraft.debug.manifest": "Forced %s ghost(s) to manifest",
   "commands.paranormalcraft.debug.presence": "Set Presence on %s ghost(s)",
+  "commands.paranormalcraft.debug.savestructure": "Saved structure %s to the world's generated folder",
+  "commands.paranormalcraft.debug.savestructure.failed": "No structure block in SAVE mode there, or saving failed",
   "commands.paranormalcraft.reveal.off": "Ghost reveal off",
   "commands.paranormalcraft.reveal.on": "Ghost reveal on: every ghost is visible to you and home radii are drawn",
   "entity.paranormalcraft.lingering_spirit": "Lingering Spirit",
+  "entity.paranormalcraft.shadow_figure": "Shadow Figure",
   "item.paranormalcraft.emf_reader": "EMF Reader",
   "item.paranormalcraft.lingering_spirit_spawn_egg": "Lingering Spirit Spawn Egg",
   "item.paranormalcraft.spectral_goggles": "Spectral Goggles",
@@ -13,5 +19,6 @@
   "subtitles.paranormalcraft.lingering_spirit.disperse": "Spirit disperses",
   "subtitles.paranormalcraft.lingering_spirit.hurt": "Spirit wavers",
   "subtitles.paranormalcraft.lingering_spirit.whisper": "Something whispers",
+  "subtitles.paranormalcraft.shadow_figure.vanish": "Something rushes past",
   "subtitles.paranormalcraft.spectral_goggles.equip": "Goggles click into place"
 }

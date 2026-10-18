@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:haunt_interval_and_cooldowns",
+  "environment": "paranormalcraft:haunting_timing",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 140,
+  "sky_access": true
+}

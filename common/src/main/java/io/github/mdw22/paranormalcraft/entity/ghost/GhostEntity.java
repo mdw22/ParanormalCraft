@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.entity.ghost;
 
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -65,6 +66,7 @@ public abstract class GhostEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_MANIFESTING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
 
     private Presence presence = new Presence();
+    private final HauntingController haunting = new HauntingController(this);
     private @Nullable BlockPos home;
     /** Where the thermometer reads coldest; chosen when home is first set. */
     private @Nullable BlockPos coldSpot;
@@ -109,6 +111,23 @@ public abstract class GhostEntity extends PathfinderMob {
     public @Nullable BlockPos getHome() {
 
         return this.home;
+    }
+
+    /**
+     * Server side: this ghost's haunting state and actions.
+     */
+    public HauntingController haunting() {
+
+        return this.haunting;
+    }
+
+    /**
+     * Sets home (and picks a cold spot for it) explicitly, e.g. when a structure spawns the ghost.
+     */
+    public void setHome(ServerLevel level, BlockPos home) {
+
+        this.home = home.immutable();
+        this.coldSpot = ColdSpots.choose(level, this.home, WANDER_RADIUS, this.random);
     }
 
     public @Nullable BlockPos getColdSpot() {
@@ -203,12 +222,14 @@ public abstract class GhostEntity extends PathfinderMob {
         super.tick();
         if (this.level() instanceof ServerLevel serverLevel) {
             if (this.home == null) {
-                this.home = this.blockPosition();
-                this.coldSpot = ColdSpots.choose(serverLevel, this.home, WANDER_RADIUS, this.random);
+                setHome(serverLevel, this.blockPosition());
             }
             this.presence.tick();
             this.entityData.set(DATA_PRESENCE, this.presence.value());
             tickManifest(serverLevel);
+            if (!this.isRemoved()) {
+                this.haunting.tick(serverLevel);
+            }
         }
     }
 

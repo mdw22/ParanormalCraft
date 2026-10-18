@@ -10,8 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Picks a ghost's cold spot: a standable, roofed (no sky above) position inside its home radius, or home itself if
- * there is none.
+ * Picks a ghost's cold spot: the standable, roofed (no sky above) position inside its home radius that is nearest
+ * home (ties broken at random), or home itself if there is none. Nearest rather than random, so a ghost homed in a
+ * cabin's back room keeps its cold spot in that room.
  */
 public final class ColdSpots {
 
@@ -22,13 +23,20 @@ public final class ColdSpots {
 
     public static BlockPos choose(ServerLevel level, BlockPos home, int radius, RandomSource random) {
 
-        List<BlockPos> candidates = new ArrayList<>();
+        List<BlockPos> nearest = new ArrayList<>();
+        double nearestDistance = Double.MAX_VALUE;
         for (BlockPos pos : BlockPos.betweenClosed(home.offset(-radius, -VERTICAL_SEARCH, -radius), home.offset(radius, VERTICAL_SEARCH, radius))) {
-            if (pos.distSqr(home) <= (double) radius * radius && isRoofedStandable(level, pos)) {
-                candidates.add(pos.immutable());
+            double distance = pos.distSqr(home);
+            if (distance > (double) radius * radius || distance > nearestDistance || !isRoofedStandable(level, pos)) {
+                continue;
             }
+            if (distance < nearestDistance) {
+                nearest.clear();
+                nearestDistance = distance;
+            }
+            nearest.add(pos.immutable());
         }
-        return candidates.isEmpty() ? home : candidates.get(random.nextInt(candidates.size()));
+        return nearest.isEmpty() ? home : nearest.get(random.nextInt(nearest.size()));
     }
 
     /**

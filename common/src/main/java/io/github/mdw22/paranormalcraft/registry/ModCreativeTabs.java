@@ -10,6 +10,8 @@ public final class ModCreativeTabs {
     public static final RegistryEntry<CreativeModeTab> PARANORMAL_CRAFT = RegistrationHelper.creativeTab(Constants.MOD_ID,
             (parameters, output) -> {
                 output.accept(new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
+                output.accept(new ItemStack(ModItems.EMF_READER.get()));
+                output.accept(new ItemStack(ModItems.SPIRIT_THERMOMETER.get()));
                 output.accept(new ItemStack(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get()));
             },
             builder -> builder

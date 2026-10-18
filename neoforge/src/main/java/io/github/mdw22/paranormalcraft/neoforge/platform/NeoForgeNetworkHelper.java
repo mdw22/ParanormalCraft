@@ -17,7 +17,9 @@ public class NeoForgeNetworkHelper implements INetworkHelper {
     @Override
     public void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {
 
-        PacketDistributor.sendToPlayer(player, payload);
+        if (player.connection != null && player.connection.hasChannel(payload)) {
+            PacketDistributor.sendToPlayer(player, payload);
+        }
     }
 
     /**

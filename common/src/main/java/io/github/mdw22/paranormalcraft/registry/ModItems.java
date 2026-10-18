@@ -32,6 +32,16 @@ public final class ModItems {
     public static final RegistryEntry<SpawnEggItem> LINGERING_SPIRIT_SPAWN_EGG = RegistrationHelper.item("lingering_spirit_spawn_egg", SpawnEggItem::new,
             () -> new Item.Properties().spawnEgg(ModEntities.LINGERING_SPIRIT.get()));
 
+    /**
+     * Shows ghost proximity as lights 1 to 5 while held in either hand. The level reaches only the holder, by payload.
+     */
+    public static final RegistryEntry<Item> EMF_READER = RegistrationHelper.item("emf_reader", Item::new, () -> new Item.Properties().stacksTo(1));
+
+    /**
+     * Shows the temperature in the action bar while held in either hand; cold spots read colder.
+     */
+    public static final RegistryEntry<Item> SPIRIT_THERMOMETER = RegistrationHelper.item("spirit_thermometer", Item::new, () -> new Item.Properties().stacksTo(1));
+
     private ModItems() {
     }
 

@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.entity.ghost;
 
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -12,6 +13,8 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,8 +24,10 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.arrow.SpectralArrow;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -31,6 +36,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Base class for ghosts: an invisible, flying, home-bound mob whose gameplay meter is {@link Presence}, not health.
@@ -52,12 +58,16 @@ public abstract class GhostEntity extends PathfinderMob {
     /** Vanilla health never matters; it is reset after every hit so the ghost only ever disperses. */
     public static final float FIXED_HEALTH = 1024.0F;
     private static final int MANIFEST_RETRY_TICKS = 20;
+    /** Vanilla's spectral arrow Glowing duration (its private default). */
+    private static final int SPECTRAL_ARROW_GLOWING_TICKS = 200;
 
     private static final EntityDataAccessor<Float> DATA_PRESENCE = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_MANIFESTING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
 
     private Presence presence = new Presence();
     private @Nullable BlockPos home;
+    /** Where the thermometer reads coldest; chosen when home is first set. */
+    private @Nullable BlockPos coldSpot;
     /** Ticks until the next manifest attempt; -1 until first scheduled. Server only. */
     private int manifestCooldown = -1;
     private int manifestTicksLeft;
@@ -99,6 +109,35 @@ public abstract class GhostEntity extends PathfinderMob {
     public @Nullable BlockPos getHome() {
 
         return this.home;
+    }
+
+    public @Nullable BlockPos getColdSpot() {
+
+        return this.coldSpot;
+    }
+
+    /**
+     * Simple names of the AI goals running right now, for debugging.
+     */
+    public String activeGoals() {
+
+        String running = this.goalSelector.getAvailableGoals().stream()
+                .filter(WrappedGoal::isRunning)
+                .map(goal -> goal.getGoal().getClass().getSimpleName())
+                .collect(Collectors.joining(", "));
+        return running.isEmpty() ? "none" : running;
+    }
+
+    /**
+     * Debug: sets Presence (clamped to 0..max). Zero disperses the ghost.
+     */
+    public void setPresence(ServerLevel level, float value) {
+
+        this.presence = new Presence(value, this.presence.ticksSinceHit());
+        this.entityData.set(DATA_PRESENCE, this.presence.value());
+        if (this.presence.isDepleted()) {
+            disperse(level);
+        }
     }
 
     /**
@@ -165,6 +204,7 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.level() instanceof ServerLevel serverLevel) {
             if (this.home == null) {
                 this.home = this.blockPosition();
+                this.coldSpot = ColdSpots.choose(serverLevel, this.home, WANDER_RADIUS, this.random);
             }
             this.presence.tick();
             this.entityData.set(DATA_PRESENCE, this.presence.value());
@@ -204,6 +244,7 @@ public abstract class GhostEntity extends PathfinderMob {
         this.manifestTicksLeft = MANIFEST_TICKS;
         this.entityData.set(DATA_MANIFESTING, true);
         level.playSound(null, this.getX(), this.getY(), this.getZ(), getWhisperSound(), this.getSoundSource(), 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
+        GhostEvents.onGhostActivity(this);
     }
 
     private int rollManifestCooldown() {
@@ -225,6 +266,10 @@ public abstract class GhostEntity extends PathfinderMob {
             return true;
         }
         if (!hitCounts(source)) {
+            // A spectral arrow still tags an unseen ghost, as a clue for players without goggles. No Presence damage.
+            if (source.getDirectEntity() instanceof SpectralArrow) {
+                this.addEffect(new MobEffectInstance(MobEffects.GLOWING, SPECTRAL_ARROW_GLOWING_TICKS, 0), source.getEntity());
+            }
             return false;
         }
         float healthBefore = this.getHealth();
@@ -382,6 +427,9 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.home != null) {
             output.store("Home", BlockPos.CODEC, this.home);
         }
+        if (this.coldSpot != null) {
+            output.store("ColdSpot", BlockPos.CODEC, this.coldSpot);
+        }
         output.putFloat("Presence", this.presence.value());
         output.putInt("PresenceTicksSinceHit", this.presence.ticksSinceHit());
         output.putInt("ManifestCooldown", this.manifestCooldown);
@@ -392,6 +440,7 @@ public abstract class GhostEntity extends PathfinderMob {
 
         super.readAdditionalSaveData(input);
         this.home = input.read("Home", BlockPos.CODEC).orElse(null);
+        this.coldSpot = input.read("ColdSpot", BlockPos.CODEC).orElse(this.home);
         this.presence = new Presence(input.getFloatOr("Presence", Presence.MAX), input.getIntOr("PresenceTicksSinceHit", Presence.REGEN_DELAY_TICKS));
         this.entityData.set(DATA_PRESENCE, this.presence.value());
         this.manifestCooldown = input.getIntOr("ManifestCooldown", -1);

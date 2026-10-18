@@ -19,6 +19,8 @@ public class ModLanguageProvider extends LanguageProvider {
         add("itemGroup." + Constants.MOD_ID, Constants.MOD_NAME);
         addItem(ModItems.SPECTRAL_GOGGLES, "Spectral Goggles");
         addItem(ModItems.LINGERING_SPIRIT_SPAWN_EGG, "Lingering Spirit Spawn Egg");
+        addItem(ModItems.EMF_READER, "EMF Reader");
+        addItem(ModItems.SPIRIT_THERMOMETER, "Spirit Thermometer");
         addEntityType(ModEntities.LINGERING_SPIRIT, "Lingering Spirit");
 
         add("subtitles.paranormalcraft.lingering_spirit.whisper", "Something whispers");
@@ -28,5 +30,8 @@ public class ModLanguageProvider extends LanguageProvider {
 
         add("commands.paranormalcraft.reveal.on", "Ghost reveal on: every ghost is visible to you and home radii are drawn");
         add("commands.paranormalcraft.reveal.off", "Ghost reveal off");
+        add("commands.paranormalcraft.debug.manifest", "Forced %s ghost(s) to manifest");
+        add("commands.paranormalcraft.debug.presence", "Set Presence on %s ghost(s)");
+        add("commands.paranormalcraft.debug.coldspot", "Showing the cold spot of %s ghost(s) for 10 seconds");
     }
 }

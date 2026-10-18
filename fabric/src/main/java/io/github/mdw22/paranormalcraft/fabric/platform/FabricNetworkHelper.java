@@ -16,7 +16,9 @@ public class FabricNetworkHelper implements INetworkHelper {
     @Override
     public void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {
 
-        ServerPlayNetworking.send(player, payload);
+        if (player.connection != null && ServerPlayNetworking.canSend(player, payload.type())) {
+            ServerPlayNetworking.send(player, payload);
+        }
     }
 
     /**

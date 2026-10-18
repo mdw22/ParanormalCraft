@@ -2,8 +2,10 @@ package io.github.mdw22.paranormalcraft;
 
 import com.mojang.brigadier.CommandDispatcher;
 import io.github.mdw22.paranormalcraft.command.ModCommands;
+import io.github.mdw22.paranormalcraft.debug.ColdSpotDisplay;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
+import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -22,12 +24,15 @@ public class CommonEvents {
     public static void onServerTick(MinecraftServer server) {
 
         RevealDebug.tick(server);
+        ColdSpotDisplay.tick(server);
     }
 
     /**
      * Called once per tick for every player on the server, after the player has ticked.
      */
     public static void onPlayerTick(ServerPlayer player) {
+
+        ToolTracker.tick(player);
     }
 
     /**
@@ -55,5 +60,7 @@ public class CommonEvents {
 
         RevealDebug.clear();
         GhostCuriousGoal.clearClaims();
+        ToolTracker.clear();
+        ColdSpotDisplay.clear();
     }
 }

@@ -25,6 +25,14 @@ public final class ModConfigs {
     }
 
     /**
+     * Whether {@code /paranormalcraft debug …} is available: the config switch, forced on in development.
+     */
+    public static boolean debugCommandsEnabled() {
+
+        return server.enableDebugCommands() || Services.PLATFORM.isDevelopmentEnvironment();
+    }
+
+    /**
      * Called from common init on both physical sides (the integrated server needs the server config too).
      */
     public static void loadServer() {

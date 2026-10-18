@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:emf_level_by_distance",
+  "environment": "paranormalcraft:emf",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 40,
+  "sky_access": true
+}

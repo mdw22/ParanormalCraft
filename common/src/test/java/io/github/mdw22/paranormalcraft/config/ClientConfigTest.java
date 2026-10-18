@@ -59,6 +59,16 @@ class ClientConfigTest {
     }
 
     @Test
+    void temperatureUnitDefaultsToCelsiusAndReadsFahrenheit() throws IOException {
+
+        assertEquals(ClientConfig.TemperatureUnit.CELSIUS, ClientConfig.DEFAULTS.temperatureUnit());
+        write("{\"temperatureUnit\": \"fahrenheit\"}");
+
+        assertEquals(ClientConfig.TemperatureUnit.FAHRENHEIT, ClientConfig.load(this.dir, this.log).temperatureUnit());
+        assertEquals(0, this.log.count(Level.WARN));
+    }
+
+    @Test
     void brokenFileRecovers() throws IOException {
 
         write("not json at all {");

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:cold_spot_is_roofed",
+  "environment": "minecraft:default",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 40,
+  "sky_access": true
+}

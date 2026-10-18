@@ -11,5 +11,6 @@ public class ModDataGenerators {
 
         event.createProvider(ModModelProvider::new);
         event.createProvider(ModLanguageProvider::new);
+        event.createProvider(ModRecipeProvider.Runner::new);
     }
 }

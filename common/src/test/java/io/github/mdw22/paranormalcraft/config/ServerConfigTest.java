@@ -48,6 +48,7 @@ class ServerConfigTest {
         assertEquals(1.0, written.get("ghostSpawnMultiplier").getAsDouble());
         assertEquals(120, written.getAsJsonObject("manifestIntervalSeconds").get("min").getAsInt());
         assertEquals(300, written.getAsJsonObject("manifestIntervalSeconds").get("max").getAsInt());
+        assertFalse(written.get("enableDebugCommands").getAsBoolean());
         assertEquals(0, this.log.count(Level.WARN));
     }
 
@@ -145,12 +146,12 @@ class ServerConfigTest {
     @Test
     void validFileIsNotRewritten() throws IOException {
 
-        String valid = "{\"hauntingGriefing\":false,\"ghostSpawnMultiplier\":2.5,\"manifestIntervalSeconds\":{\"min\":30,\"max\":60}}";
+        String valid = "{\"hauntingGriefing\":false,\"ghostSpawnMultiplier\":2.5,\"manifestIntervalSeconds\":{\"min\":30,\"max\":60},\"enableDebugCommands\":true}";
         write(valid);
 
         ServerConfig config = ServerConfig.load(this.dir, this.log);
 
-        assertEquals(new ServerConfig(false, 2.5, 30, 60), config);
+        assertEquals(new ServerConfig(false, 2.5, 30, 60, true), config);
         assertEquals(valid, Files.readString(file(), StandardCharsets.UTF_8));
         assertEquals(0, this.log.count(Level.WARN));
     }

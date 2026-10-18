@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:thermometer_cold_spot",
+  "environment": "paranormalcraft:thermometer",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 40,
+  "sky_access": true
+}

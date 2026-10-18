@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:environmental_damage_rejected",
+  "environment": "minecraft:default",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 40,
+  "sky_access": true
+}

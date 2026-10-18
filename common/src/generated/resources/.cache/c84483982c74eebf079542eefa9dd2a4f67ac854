@@ -1,5 +1,13 @@
-// 26.2	2026-10-17T18:17:15.476373	Model Definitions - paranormalcraft
+// 26.2	2026-10-17T19:00:04.694765	Model Definitions - paranormalcraft
+6d566db579bc7dbf2a460ed02bedf11cf544a920 assets/paranormalcraft/items/emf_reader.json
 35cf7f65393f59f9d97d5ed1a3fd4cb4338d644a assets/paranormalcraft/items/lingering_spirit_spawn_egg.json
 62d209d19a005ff95e4be5f77d0ecb19ded3d784 assets/paranormalcraft/items/spectral_goggles.json
+c1f314319307633b2ac99a6591414a033576d22b assets/paranormalcraft/items/spirit_thermometer.json
+a397b6cfc19ebae57433ae96aa43c26c7b7639cc assets/paranormalcraft/models/item/emf_reader_1.json
+00534052ed303e9e7ce0261777a8a50e3cef303f assets/paranormalcraft/models/item/emf_reader_2.json
+6354fcf0fb0d0186f6e86e1a5db33dd91f1913b5 assets/paranormalcraft/models/item/emf_reader_3.json
+539f4c9ce4b74c3ff38811805ff98d3cc31b5ce7 assets/paranormalcraft/models/item/emf_reader_4.json
+50349441066e1db14ad4a81c18c728bbbbe18a73 assets/paranormalcraft/models/item/emf_reader_5.json
 7e1bd747efc47780e7e7d02afe7e6c164da02973 assets/paranormalcraft/models/item/lingering_spirit_spawn_egg.json
 7309087c8a3cd7d2a3c7b1d3449b4f15a65dce41 assets/paranormalcraft/models/item/spectral_goggles.json
+29c3cd9b393a3068386ec916f4589ee18c7c4be1 assets/paranormalcraft/models/item/spirit_thermometer.json

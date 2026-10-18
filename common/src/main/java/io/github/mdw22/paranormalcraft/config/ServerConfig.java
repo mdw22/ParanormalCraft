@@ -12,11 +12,13 @@ import java.nio.file.Path;
  * @param ghostSpawnMultiplier      scales natural ghost spawning, 0 to 4
  * @param manifestIntervalMinSeconds shortest wait between a ghost's manifests
  * @param manifestIntervalMaxSeconds longest wait between a ghost's manifests
+ * @param enableDebugCommands        allows {@code /paranormalcraft debug …} (always on in a development environment)
  */
-public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier, int manifestIntervalMinSeconds, int manifestIntervalMaxSeconds) {
+public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier, int manifestIntervalMinSeconds, int manifestIntervalMaxSeconds,
+                           boolean enableDebugCommands) {
 
     public static final String FILE_NAME = "paranormalcraft-server.json";
-    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300);
+    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300, false);
 
     static final int MIN_INTERVAL_SECONDS = 1;
     static final int MAX_INTERVAL_SECONDS = 86400;
@@ -33,7 +35,8 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
             max = min;
             interval.fix("max", max, "is less than min");
         }
+        boolean debugCommands = file.getBoolean("enableDebugCommands", DEFAULTS.enableDebugCommands);
         file.save();
-        return new ServerConfig(griefing, multiplier, min, max);
+        return new ServerConfig(griefing, multiplier, min, max, debugCommands);
     }
 }

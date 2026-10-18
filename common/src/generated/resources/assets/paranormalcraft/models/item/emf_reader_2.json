@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "paranormalcraft:item/emf_reader_2"
+  }
+}

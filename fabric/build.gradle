@@ -9,6 +9,18 @@ dependencies {
     implementation("com.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}")
 }
 
+// Server GameTests (the data-driven ones in common) run with ./gradlew :fabric:runGameTest; client GameTests in
+// src/gametest run with ./gradlew :fabric:runClientGameTest and save screenshots under build/run/clientGameTest.
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = "${mod_id}-gametest"
+        enableGameTests = true
+        enableClientGameTests = true
+        eula = true
+    }
+}
+
 loom {
     def aw = project(':common').file("src/main/resources/${mod_id}.accesswidener")
     if (aw.exists()) {

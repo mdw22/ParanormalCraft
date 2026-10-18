@@ -1,0 +1,17 @@
+{
+    "schemaVersion": 1,
+    "id": "paranormalcraft-gametest",
+    "version": "1.0.0",
+    "name": "Paranormal Craft GameTests",
+    "description": "Client GameTests for Paranormal Craft. Dev only; never shipped.",
+    "environment": "*",
+    "entrypoints": {
+        "fabric-client-gametest": [
+            "io.github.mdw22.paranormalcraft.fabric.gametest.ToolsAndVisibilityClientGameTest"
+        ]
+    },
+    "depends": {
+        "paranormalcraft": "*",
+        "fabric-client-gametest-api-v1": "*"
+    }
+}

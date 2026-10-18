@@ -24,8 +24,23 @@ jobs:
       - name: Compile common on its own
         run: ./gradlew :common:compileJava
 
-      - name: Build
+      - name: Build (includes common unit tests)
         run: ./gradlew build
+
+      - name: Server GameTests (NeoForge and Fabric)
+        run: ./gradlew :neoforge:runGameTestServer :fabric:runGameTest
+
+      # Renders a real client under a virtual display with software OpenGL.
+      - name: Fabric client GameTests (xvfb)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :fabric:runClientGameTest
+
+      - name: Upload client GameTest screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-gametest-screenshots
+          path: fabric/build/run/clientGameTest/screenshots/
+          if-no-files-found: ignore
 
       - name: Upload NeoForge jar
         uses: actions/upload-artifact@v4

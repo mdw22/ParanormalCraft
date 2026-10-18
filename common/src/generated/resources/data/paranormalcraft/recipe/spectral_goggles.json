@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:copper_ingot",
+    "L": "minecraft:leather",
+    "T": "minecraft:tinted_glass"
+  },
+  "pattern": [
+    "LCL",
+    "TAT"
+  ],
+  "result": {
+    "id": "paranormalcraft:spectral_goggles"
+  }
+}

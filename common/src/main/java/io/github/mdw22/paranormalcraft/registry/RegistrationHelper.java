@@ -4,6 +4,7 @@ import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.platform.services.IRegistrationHelper;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -92,6 +94,14 @@ public final class RegistrationHelper {
     }
 
     public record EntityAttributes<T extends LivingEntity>(Supplier<EntityType<T>> type, Supplier<AttributeSupplier.Builder> attributes) {
+    }
+
+    /**
+     * Registers a GameTest function. Pair it with a {@code test_instance} JSON in {@code data/<ns>/test_instance}.
+     */
+    public static RegistryEntry<Consumer<GameTestHelper>> testFunction(String name, Consumer<GameTestHelper> test) {
+
+        return PLATFORM.register(BuiltInRegistries.TEST_FUNCTION, name, () -> test);
     }
 
     public static RegistryEntry<SoundEvent> sound(String name) {

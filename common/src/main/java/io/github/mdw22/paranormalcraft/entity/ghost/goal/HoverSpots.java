@@ -24,8 +24,15 @@ final class HoverSpots {
      */
     static @Nullable Vec3 nearHome(GhostEntity ghost, int radius) {
 
+        return near(ghost, ghost.homeOrHere(), radius);
+    }
+
+    /**
+     * A random spot within {@code radius} of {@code centre} that is also inside the ghost's wander radius, or null.
+     */
+    static @Nullable Vec3 near(GhostEntity ghost, BlockPos centre, int radius) {
+
         RandomSource random = ghost.getRandom();
-        BlockPos home = ghost.homeOrHere();
         for (int attempt = 0; attempt < 10; attempt++) {
             int dx = random.nextInt(radius * 2 + 1) - radius;
             int dz = random.nextInt(radius * 2 + 1) - radius;
@@ -33,8 +40,9 @@ final class HoverSpots {
                 continue;
             }
             int dy = random.nextInt(7) - 3;
-            Vec3 spot = aboveFloor(ghost, home.getX() + dx, home.getY() + dy, home.getZ() + dz);
-            if (spot != null && withinLeash(ghost, spot, radius)) {
+            Vec3 spot = aboveFloor(ghost, centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz);
+            if (spot != null && spot.distanceToSqr(Vec3.atCenterOf(centre)) <= (radius + 1.0) * (radius + 1.0)
+                    && withinLeash(ghost, spot, GhostEntity.WANDER_RADIUS)) {
                 return spot;
             }
         }

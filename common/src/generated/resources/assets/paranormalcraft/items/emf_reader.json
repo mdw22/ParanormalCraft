@@ -1,0 +1,40 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "entries": [
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "paranormalcraft:item/emf_reader_2"
+        },
+        "threshold": 2.0
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "paranormalcraft:item/emf_reader_3"
+        },
+        "threshold": 3.0
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "paranormalcraft:item/emf_reader_4"
+        },
+        "threshold": 4.0
+      },
+      {
+        "model": {
+          "type": "minecraft:model",
+          "model": "paranormalcraft:item/emf_reader_5"
+        },
+        "threshold": 5.0
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "paranormalcraft:item/emf_reader_1"
+    },
+    "property": "paranormalcraft:emf_level"
+  }
+}

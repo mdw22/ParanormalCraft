@@ -48,6 +48,11 @@ neoForge {
             // DataGen can be run by - "./gradlew :neoforge:runData" in Terminal.
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', commonGenerated.getAbsolutePath(), '--existing', commonResources.getAbsolutePath()
         }
+        // ./gradlew :neoforge:runGameTestServer runs every server GameTest and exits non-zero if a required one fails.
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = this.mkdir(this.file('runs/gametest'))
+        }
         server {
             server()
             this.file('runs/server').createParentDirectories()

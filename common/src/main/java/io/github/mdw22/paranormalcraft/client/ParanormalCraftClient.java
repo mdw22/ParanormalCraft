@@ -19,6 +19,19 @@ public final class ParanormalCraftClient {
 
         ModConfigs.loadClient();
         GhostVisibility.setClientViewer(() -> Minecraft.getInstance().player);
+        ClientServices.PLATFORM.registerRangeSelectProperty(EmfLevelProperty.ID, EmfLevelProperty.MAP_CODEC);
+    }
+
+    /**
+     * Called at the end of every client tick.
+     */
+    public static void tick(Minecraft minecraft) {
+
+        if (minecraft.level == null) {
+            ClientToolState.reset();
+            return;
+        }
+        ClientToolState.tick(minecraft);
     }
 
     public static void registerEntityRenderers(EntityRendererRegistrar registrar) {

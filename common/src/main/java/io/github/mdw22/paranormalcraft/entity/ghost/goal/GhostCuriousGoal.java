@@ -60,7 +60,10 @@ public class GhostCuriousGoal extends Goal {
     @Override
     public boolean canUse() {
 
-        if (this.ghost.getRandom().nextInt(reducedTickDelay(this.chance)) != 0) {
+        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.CURIOUS)) {
+            return false;
+        }
+        if (!this.ghost.goalForced(GhostEntity.ForcedGoal.CURIOUS) && this.ghost.getRandom().nextInt(reducedTickDelay(this.chance)) != 0) {
             return false;
         }
         for (Player player : this.ghost.playersInRange()) {
@@ -77,6 +80,7 @@ public class GhostCuriousGoal extends Goal {
 
         Player player = this.target;
         return player != null
+                && this.ghost.goalAllowed(GhostEntity.ForcedGoal.CURIOUS)
                 && this.ticksLeft > 0
                 && player.isAlive()
                 && !player.isSpectator()

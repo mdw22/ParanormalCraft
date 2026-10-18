@@ -26,13 +26,18 @@ public class GhostReturnHomeGoal extends Goal {
     @Override
     public boolean canUse() {
 
-        return this.ghost.getHome() != null && this.ghost.distanceToHomeSqr() > GhostEntity.LEASH_RADIUS * GhostEntity.LEASH_RADIUS;
+        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.HOME) || this.ghost.getHome() == null) {
+            return false;
+        }
+        double leash = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) ? 1.0 : GhostEntity.LEASH_RADIUS;
+        return this.ghost.distanceToHomeSqr() > leash * leash;
     }
 
     @Override
     public boolean canContinueToUse() {
 
-        return this.ghost.distanceToHomeSqr() > ARRIVED_DISTANCE * ARRIVED_DISTANCE;
+        double arrived = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) ? 1.0 : ARRIVED_DISTANCE;
+        return this.ghost.goalAllowed(GhostEntity.ForcedGoal.HOME) && this.ghost.distanceToHomeSqr() > arrived * arrived;
     }
 
     @Override

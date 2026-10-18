@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:toolkit_scene_builds_and_repeats",
+  "environment": "paranormalcraft:toolkit",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 100,
+  "sky_access": true
+}

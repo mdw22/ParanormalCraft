@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:toolkit_config_set_in_memory",
+  "environment": "paranormalcraft:toolkit",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 20,
+  "sky_access": true
+}

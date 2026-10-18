@@ -12,10 +12,16 @@ and 1030 -60 1000 in a flat world):
   5. copy <world>/generated/paranormalcraft/structure/abandoned_cabin_<wood>.nbt into the resources folder
 
 Layout, relative to the origin: the house is x 0..8, z 0..6, with z=6 the front (porch side). Front room x1..4,
-partition wall x=5 with a door, back room x6..7. The template is 13x9x13 (x -2..10, y 0..8, z -2..10) so it holds the
-roof overhang, porch, fallen roof pieces and the broken fence. Template y=0 lands on the terrain's top block, so
-everything outside the house at y=0 (and around it) is structure_void and the terrain shows through, except the
-coarse dirt and grass patches placed on purpose. All decay is baked in; no structure processors.
+partition wall x=5 with a door, back room x6..7. The template is 15x9x14 (x -3..11, y 0..8, z -3..10): the house plus
+a 2-3 block yard ring, the porch, fallen roof pieces and the broken fence. Template y=0 lands on the terrain's top
+block; outside the ring everything is structure_void, so the terrain shows through. All decay is baked in; no
+structure processors.
+
+Trees: worldgen only places a tree where its sapling would survive, i.e. on #minecraft:supports_vegetation (dirt,
+coarse and rooted dirt, mud, moss blocks, grass, podzol, mycelium, farmland); huge mushrooms need the same plus nylium.
+So the yard ring is dirt path, gravel and packed mud (none of those), with mossy cobblestone rubble and moss carpet on
+top. Grass and ferns only grow on grass blocks right under the eaves and the gable-corner overhang, where the roof is
+too low for any tree to fit.
 
 The ghost marker sits in the back room at (6, 1, 2), under the collapsed roof corner; the nearest roofed spot, and so
 the cold spot, is next to it at (6, 1, 3).
@@ -30,7 +36,7 @@ ROOF = "spruce" if spruce else "dark_oak"
 STAIRS, ROOF_SLAB = f"{ROOF}_stairs", f"{ROOF}_slab"
 cmds = []
 
-MIN_X, MAX_X, MIN_Z, MAX_Z, MAX_Y = -2, 10, -2, 10, 8
+MIN_X, MAX_X, MIN_Z, MAX_Z, MAX_Y = -3, 11, -3, 10, 8
 
 
 def at(x, y, z):
@@ -56,7 +62,7 @@ def plant(x, z, block, tall=False):
 
 
 # ---- clear the site: void everywhere, air inside the house ----
-cmds.append(f"kill @e[type=!player,x={ox + MIN_X - 1},y={oy - 1},z={oz + MIN_Z - 1},dx=15,dy=11,dz=15]")
+cmds.append(f"kill @e[type=!player,x={ox + MIN_X - 1},y={oy - 1},z={oz + MIN_Z - 1},dx=17,dy=11,dz=16]")
 fill(MIN_X - 1, 0, MIN_Z - 1, MAX_X + 1, MAX_Y + 1, MAX_Z + 1, "air")
 fill(MIN_X, 0, MIN_Z, MAX_X, MAX_Y, MAX_Z, "structure_void")
 fill(0, 1, 0, 8, 7, 6, "air")
@@ -179,18 +185,51 @@ for z, ys in [(1, (1, 2, 3)), (2, (2, 3)), (5, (2, 3)), (4, (3,))]:
         setb(-1, y, z, "vine[east=true]")
 for x, y, z in [(1, 2, -1), (4, 2, -1), (6, 2, 7), (-1, 5, 3), (0, 2, 7)]:
     setb(x, y, z, "cobweb")
-for x, z in [(-1, 8), (0, 9), (4, 8), (5, 9), (9, 4), (10, 5), (-2, 2), (2, 9), (9, 7)]:
-    setb(x, 0, z, "coarse_dirt")
 short, tall = ("fern", "large_fern") if spruce else ("short_grass", "tall_grass")
-for x, z in [(-1, 6), (9, 3), (9, 5), (2, -1), (4, -1), (8, 7), (-1, 0)]:
-    plant(x, z, short)
-for x, z in [(6, 8), (9, 1), (3, -1), (-1, -1)]:
-    plant(x, z, tall, tall=True)
-for x, z in [(4, 7), (-1, 7), (5, -1)]:
-    plant(x, z, "fern")
+# Plants only under the long eaves (z=-1, z=7) and the gable-corner overhang, where the roof is 3-4 blocks up.
+PLANTS = {(-1, 0): short, (-1, 6): short, (2, -1): short, (4, -1): short, (8, 7): short,
+          (3, -1): (tall, True), (-1, -1): (tall, True), (4, 7): "fern", (-1, 7): "fern", (5, -1): "fern"}
 if not spruce:
-    plant(0, 8, "poppy")
-    plant(5, 8, "dandelion")
+    PLANTS.update({(0, 7): "poppy", (7, 7): "dandelion"})
+for (x, z), plant_spec in PLANTS.items():
+    if isinstance(plant_spec, tuple):
+        plant(x, z, plant_spec[0], tall=True)
+    else:
+        plant(x, z, plant_spec)
+
+# The yard ring: 2 blocks all round, a third block in irregular patches. None of it supports vegetation.
+def ring_distance(x, z):
+    dx = -x if x < 0 else (x - 8 if x > 8 else 0)
+    dz = -z if z < 0 else (z - 6 if z > 6 else 0)
+    return max(dx, dz)
+
+
+def noise(x, z):
+    """A fixed pseudo-random value for a column (an integer hash), so the ring looks irregular but rebuilds the same."""
+    h = (x * 374761393 + z * 668265263 + 0x5BD1E995) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return (h ^ (h >> 16)) >> 8
+
+
+KEEP = set(PLANTS) | {(1, 8), (3, 8)} | ({(-1, 3)} if spruce else set())
+TRAIL = {(2, 7), (2, 8), (2, 9), (2, 10), (3, 10)}
+RUBBLE = {(-2, 5): "mossy_cobblestone", (10, 4): "mossy_cobblestone", (5, -2): "mossy_cobblestone_slab[type=bottom]",
+          (-3, 1): "mossy_cobblestone_slab[type=bottom]", (11, 7): "mossy_cobblestone"}
+for x in range(MIN_X, MAX_X + 1):
+    for z in range(MIN_Z, MAX_Z + 1):
+        d = ring_distance(x, z)
+        if (x, z) in TRAIL:
+            setb(x, 0, z, "dirt_path")
+            continue
+        if d == 0 or (x, z) in KEEP or not (1 <= d <= 2 or (d == 3 and noise(x, z) % 2 == 0)):
+            continue
+        n = noise(x, z) % 100
+        ground = "gravel" if n < 40 else ("packed_mud" if n < 78 else "dirt_path")
+        setb(x, 0, z, ground)
+        if (x, z) in RUBBLE:
+            setb(x, 1, z, RUBBLE[(x, z)])
+        elif ground == "packed_mud" and noise(z, x) % 4 == 0:
+            setb(x, 1, z, "moss_carpet")
 for x in (-1, 0, 1, 4):
     setb(x, 0, 10, "grass_block")
     setb(x, 1, 10, FENCE)

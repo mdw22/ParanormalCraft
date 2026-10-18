@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.config;
 
+import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -32,6 +33,16 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
     public static ServerConfig load(Path configDir, Logger log) {
 
         ConfigFile file = ConfigFile.open(configDir.resolve(FILE_NAME), log);
+        ServerConfig config = read(file);
+        file.save();
+        return config;
+    }
+
+    /**
+     * Reads (and normalises) every key from {@code file}.
+     */
+    public static ServerConfig read(ConfigFile file) {
+
         boolean griefing = file.getBoolean("hauntingGriefing", DEFAULTS.hauntingGriefing);
         double multiplier = file.getDouble("ghostSpawnMultiplier", DEFAULTS.ghostSpawnMultiplier, 0.0, 4.0);
         int[] manifest = interval(file, "manifestIntervalSeconds", DEFAULTS.manifestIntervalMinSeconds, DEFAULTS.manifestIntervalMaxSeconds);
@@ -39,9 +50,32 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
         boolean haunting = file.getBoolean("hauntingEnabled", DEFAULTS.hauntingEnabled);
         int[] hauntingInterval = interval(file, "hauntingIntervalSeconds", DEFAULTS.hauntingIntervalMinSeconds, DEFAULTS.hauntingIntervalMaxSeconds);
         int[] hallucination = interval(file, "hallucinationIntervalSeconds", DEFAULTS.hallucinationIntervalMinSeconds, DEFAULTS.hallucinationIntervalMaxSeconds);
-        file.save();
         return new ServerConfig(griefing, multiplier, manifest[0], manifest[1], debugCommands, haunting, hauntingInterval[0], hauntingInterval[1],
                 hallucination[0], hallucination[1]);
+    }
+
+    /**
+     * This config as it would be written to the file.
+     */
+    public JsonObject toJson() {
+
+        JsonObject json = new JsonObject();
+        json.addProperty("hauntingGriefing", this.hauntingGriefing);
+        json.addProperty("ghostSpawnMultiplier", this.ghostSpawnMultiplier);
+        json.add("manifestIntervalSeconds", interval(this.manifestIntervalMinSeconds, this.manifestIntervalMaxSeconds));
+        json.addProperty("enableDebugCommands", this.enableDebugCommands);
+        json.addProperty("hauntingEnabled", this.hauntingEnabled);
+        json.add("hauntingIntervalSeconds", interval(this.hauntingIntervalMinSeconds, this.hauntingIntervalMaxSeconds));
+        json.add("hallucinationIntervalSeconds", interval(this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds));
+        return json;
+    }
+
+    private static JsonObject interval(int min, int max) {
+
+        JsonObject json = new JsonObject();
+        json.addProperty("min", min);
+        json.addProperty("max", max);
+        return json;
     }
 
     /**

@@ -2,8 +2,11 @@ package io.github.mdw22.paranormalcraft;
 
 import com.mojang.brigadier.CommandDispatcher;
 import io.github.mdw22.paranormalcraft.command.ModCommands;
+import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.debug.ColdSpotDisplay;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
+import io.github.mdw22.paranormalcraft.debug.ScriptRunner;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
@@ -28,6 +31,7 @@ public class CommonEvents {
         RevealDebug.tick(server);
         ColdSpotDisplay.tick(server);
         HauntingScheduler.tick(server);
+        ScriptRunner.tick(server);
     }
 
     /**
@@ -68,5 +72,8 @@ public class CommonEvents {
         ColdSpotDisplay.clear();
         HauntingScheduler.clear();
         HallucinationScheduler.clear();
+        ScriptRunner.clear();
+        ServerTrace.clear();
+        ModConfigs.resetSession();
     }
 }

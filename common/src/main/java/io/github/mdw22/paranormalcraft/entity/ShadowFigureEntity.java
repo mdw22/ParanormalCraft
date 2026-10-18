@@ -6,6 +6,8 @@ import com.geckolib.animatable.manager.AnimatableManager;
 import com.geckolib.animation.AnimationController;
 import com.geckolib.animation.RawAnimation;
 import com.geckolib.util.GeckoLibUtil;
+import io.github.mdw22.paranormalcraft.debug.trace.ClientTraceHook;
+import io.github.mdw22.paranormalcraft.hallucination.FigureSounds;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationPlacement;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -23,16 +25,19 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The shadow hallucination: a tall, thin silhouette that exists only in one client's level. It is never spawned on
- * the server, can't be picked or hit, casts no shadow, has no hitbox outline and makes no sound when it appears. It
- * vanishes when the watcher looks within 20° of it or after 6 s: snapping away with a quiet sting at {@code full}
- * intensity, fading over 10 ticks at {@code reduced}.
+ * the server, can't be picked or hit, casts no shadow and has no hitbox outline. While it stands there it makes a
+ * quiet presence sound at its own position, for its watcher only (see {@link FigureSounds}), so it can be heard and
+ * located. It vanishes when the watcher looks within 20° of it or after 10 s: snapping away with a quiet sting at
+ * {@code full} intensity, fading over 10 ticks with no sting at {@code reduced}.
  */
 public class ShadowFigureEntity extends Entity implements GeoEntity {
 
-    public static final int LIFETIME_TICKS = 120;
+    public static final int LIFETIME_TICKS = 200;
     public static final int FADE_TICKS = 10;
     /** Eye-ish height used for the look check. */
     private static final double FOCUS_HEIGHT = 1.6;
+    /** The presence sound plays from about head height. */
+    private static final double SOUND_HEIGHT = 1.6;
 
     private static final RawAnimation SWAY = RawAnimation.begin().thenLoop("sway");
 
@@ -40,6 +45,9 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
     private boolean reduced;
     private int fadeTicksLeft = -1;
     private @Nullable Player watcher;
+    private int nextSoundTick;
+    /** Why it vanished, for the client trace: {@code looked_at} or {@code timeout}. */
+    private @Nullable String vanishReason;
 
     public ShadowFigureEntity(EntityType<? extends ShadowFigureEntity> type, Level level) {
 
@@ -85,8 +93,25 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
             }
             return;
         }
-        if (this.tickCount >= LIFETIME_TICKS || isLookedAt()) {
+        boolean lookedAt = isLookedAt();
+        if (this.tickCount >= LIFETIME_TICKS || lookedAt) {
+            this.vanishReason = lookedAt ? "looked_at" : "timeout";
             vanish();
+            return;
+        }
+        int age = this.tickCount - 1;
+        if (FigureSounds.due(age, this.nextSoundTick, false)) {
+            ClientTraceHook.markNextSoundLocal();
+            float volume = FigureSounds.volume(this.reduced);
+            this.level().playLocalSound(this.getX(), this.getY() + SOUND_HEIGHT, this.getZ(), ModSounds.SHADOW_FIGURE_PRESENCE.get(), SoundSource.HOSTILE,
+                    volume, 1.0F, false);
+            // Also traced directly, so it shows up even where there's no audio device (CI) to report played sounds.
+            ClientTraceHook.event("figure_sound", line -> {
+                ClientTraceHook.addPos(line, this.getX(), this.getY() + SOUND_HEIGHT, this.getZ());
+                line.addProperty("volume", volume);
+                line.addProperty("age", age);
+            });
+            this.nextSoundTick = age + FigureSounds.nextInterval(this.reduced, this.random.nextDouble());
         }
     }
 
@@ -99,10 +124,17 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
 
     private void vanish() {
 
+        ClientTraceHook.event("figure_vanish", line -> {
+            ClientTraceHook.addPos(line, this.getX(), this.getY(), this.getZ());
+            line.addProperty("reason", String.valueOf(this.vanishReason));
+            line.addProperty("age", this.tickCount);
+            line.addProperty("reduced", this.reduced);
+        });
         if (this.reduced) {
             this.fadeTicksLeft = FADE_TICKS;
             return;
         }
+        ClientTraceHook.markNextSoundLocal();
         this.level().playLocalSound(this.getX(), this.getY() + 1.2, this.getZ(), ModSounds.SHADOW_FIGURE_VANISH.get(), SoundSource.HOSTILE, 0.4F, 1.0F, false);
         this.discard();
     }

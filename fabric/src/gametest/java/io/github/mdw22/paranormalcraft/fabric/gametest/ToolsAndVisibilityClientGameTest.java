@@ -1,5 +1,7 @@
 package io.github.mdw22.paranormalcraft.fabric.gametest;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
 import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
@@ -20,18 +22,27 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
- * Client GameTests for the things that have to be seen. One superflat world, five checks, screenshots saved to
+ * Client GameTests for the things that have to be seen. One superflat world, six checks, screenshots saved to
  * {@code fabric/build/run/clientGameTest/screenshots}:
  * <ol>
  *     <li>a ghost is hidden without goggles and shown with them ({@code canSee} asserted on the client);</li>
  *     <li>the EMF Reader model at level 1 and at level 5;</li>
  *     <li>the thermometer's action bar while standing on a cold spot;</li>
- *     <li>a shadow figure from {@code debug hallucinate}, on screen when it appears, that vanishes once looked at;</li>
+ *     <li>a manifest fading out step by step for a player without goggles (from the client trace), with a
+ *     {@code debug screenshot} of the middle of the fade;</li>
+ *     <li>a shadow figure from {@code debug hallucinate}, on screen when it appears, whose presence sound plays at its
+ *     position every 20–30 ticks (from the client trace) and stops once it is looked at and vanishes;</li>
  *     <li>the Paranormal Craft creative tab and its four items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
@@ -57,6 +68,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             ghostVisibility(context, server);
             emfLevels(context, server);
             thermometerAtColdSpot(context, server);
+            manifestFadeOut(context, server);
             shadowFigure(context, server);
             creativeTab(context, server);
         }
@@ -150,6 +162,8 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         server.runCommand("kill @e[type=item]");
         server.runCommand("tp @a 0.5 -60 0.5 180 0");
         context.waitTicks(10);
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(3);
         server.runCommand("paranormalcraft debug hallucinate @a");
         context.waitTicks(5);
         Vec3 figure = context.computeOnClient(client -> {
@@ -161,7 +175,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             double distance = Math.hypot(active.getX() - client.player.getX(), active.getZ() - client.player.getZ());
             double angle = Math.abs(HallucinationPlacement.relativeAngle(client.player.getYRot(), active.getX() - client.player.getX(), active.getZ() - client.player.getZ()));
             check(distance >= 7.5 && distance <= 13.5, "figure " + distance + " blocks away");
-            check(angle >= band.min() - 1.0 && angle <= band.max() + 1.0,
+            check(angle >= band.min() - 0.01 && angle <= band.max() + 0.01,
                     String.format(Locale.ROOT, "figure %.1f degrees off the view, band %.1f-%.1f (half-FOV %.1f)", angle, band.min(), band.max(), half));
             return active.position();
         });
@@ -173,11 +187,17 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         boolean stillThere = context.computeOnClient(client -> ClientHallucinations.active() != null);
         check(stillThere, "figure vanished without the player turning");
         context.takeScreenshot("06-shadow-figure-on-appearance");
+        // Let it stand there (unlooked-at, it lasts 10 s) long enough for several presence sounds.
+        context.waitTicks(90);
         context.runOnClient(client -> client.player.lookAt(EntityAnchorArgument.Anchor.EYES, figure.add(0, 1.6, 0)));
         context.waitTicks(3);
         boolean gone = context.computeOnClient(client -> ClientHallucinations.active() == null);
         check(gone, "figure didn't vanish when looked at");
         context.takeScreenshot("07-shadow-figure-gone-after-looking");
+        context.waitTicks(40);
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        checkFigureSounds(readNewestTrace(context));
     }
 
     /**
@@ -206,6 +226,113 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         }
         context.takeScreenshot("08-creative-tab");
         context.runOnClient(client -> client.gui.setScreen(null));
+    }
+
+    /**
+     * A ghost in front of a player without goggles manifests; once the manifest ends its opacity must step down to 0
+     * over about 10 ticks rather than vanish, while staying unpickable.
+     */
+    private static void manifestFadeOut(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("kill @e[type=" + GHOST + "]");
+        server.runCommand("item replace entity @a armor.head with air");
+        server.runCommand("item replace entity @a weapon.mainhand with air");
+        server.runCommand("tp @a 0.5 -60 0.5 180 0");
+        server.runCommand("summon " + GHOST + " 0.5 -59.5 -3.5 {NoAI:1b}");
+        context.waitTicks(10);
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(3);
+        server.runCommand("paranormalcraft debug manifest @e[type=" + GHOST + "]");
+        // The manifest lasts 30 ticks; the fade-out takes the next 10. Screenshot about halfway through it.
+        context.waitTicks(GhostEntity.MANIFEST_TICKS + 5);
+        server.runCommand("execute as @p run paranormalcraft debug screenshot fade_out_middle");
+        context.waitTicks(25);
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        List<JsonObject> trace = readNewestTrace(context);
+        List<JsonObject> renders = trace.stream().filter(line -> line.get("type").getAsString().equals("ghost_render")).toList();
+        check(renders.stream().anyMatch(line -> line.get("manifesting").getAsBoolean() && line.get("alpha").getAsDouble() > 0.59),
+                "the manifest never reached full opacity: " + renders);
+        int end = -1;
+        for (int i = 1; i < renders.size(); i++) {
+            if (renders.get(i - 1).get("manifesting").getAsBoolean() && !renders.get(i).get("manifesting").getAsBoolean()) {
+                end = i;
+                break;
+            }
+        }
+        check(end > 0, "no manifest end in the trace: " + renders);
+        List<Double> alphas = new ArrayList<>();
+        for (int i = end; i < renders.size(); i++) {
+            JsonObject line = renders.get(i);
+            check(!line.get("pickable").getAsBoolean(), "ghost pickable during the fade-out: " + line);
+            alphas.add(line.get("alpha").getAsDouble());
+            if (line.get("alpha").getAsDouble() == 0.0) {
+                check(!line.get("visible").getAsBoolean(), "ghost still drawn at alpha 0: " + line);
+                break;
+            }
+        }
+        System.out.println("[client gametest] fade-out alphas: " + alphas);
+        check(alphas.size() >= 9 && alphas.size() <= 12, "fade-out took " + alphas.size() + " frames: " + alphas);
+        for (int i = 1; i < alphas.size(); i++) {
+            check(alphas.get(i) < alphas.get(i - 1), "fade-out not falling step by step: " + alphas);
+        }
+        check(alphas.getFirst() < 0.6 && alphas.getFirst() > 0.45 && alphas.getLast() == 0.0, "fade-out alphas " + alphas);
+        boolean shot = trace.stream().anyMatch(line -> line.get("type").getAsString().equals("screenshot")
+                && line.get("path").getAsString().endsWith("fade_out_middle.png") && Files.exists(Path.of(line.get("path").getAsString())));
+        check(shot, "the debug screenshot wasn't saved");
+        server.runCommand("kill @e[type=" + GHOST + "]");
+    }
+
+    /**
+     * Presence sounds: the first as the figure appears, then every 20–30 ticks, all at the figure (head height), all
+     * local, and none after it vanished.
+     */
+    private static void checkFigureSounds(List<JsonObject> trace) {
+
+        JsonObject spawn = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_spawn")).findFirst().orElse(null);
+        JsonObject vanish = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_vanish")).findFirst().orElse(null);
+        check(spawn != null && vanish != null, "figure spawn/vanish missing from the trace");
+        check(vanish.get("reason").getAsString().equals("looked_at"), "figure vanished because " + vanish.get("reason"));
+        List<JsonObject> sounds = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_sound")).toList();
+        check(sounds.size() >= 3, "only " + sounds.size() + " presence sound(s)");
+        long spawnTime = spawn.get("t").getAsLong();
+        long vanishTime = vanish.get("t").getAsLong();
+        check(sounds.getFirst().get("t").getAsLong() - spawnTime <= 2, "first presence sound came late: " + sounds.getFirst());
+        for (int i = 0; i < sounds.size(); i++) {
+            JsonObject sound = sounds.get(i);
+            check(Math.abs(sound.get("x").getAsDouble() - spawn.get("x").getAsDouble()) < 0.01
+                    && Math.abs(sound.get("y").getAsDouble() - (spawn.get("y").getAsDouble() + 1.6)) < 0.01
+                    && Math.abs(sound.get("z").getAsDouble() - spawn.get("z").getAsDouble()) < 0.01, "sound not at the figure: " + sound + " vs " + spawn);
+            check(sound.get("t").getAsLong() <= vanishTime, "presence sound after the figure vanished: " + sound);
+            if (i > 0) {
+                long gap = sound.get("t").getAsLong() - sounds.get(i - 1).get("t").getAsLong();
+                check(gap >= 20 && gap <= 30, "presence sounds " + gap + " ticks apart");
+            }
+        }
+        // Where an audio device exists, the played sounds are traced too, and must be the same local, positioned ones.
+        List<JsonObject> played = trace.stream().filter(line -> line.get("type").getAsString().equals("sound")
+                && line.get("id").getAsString().equals("paranormalcraft:entity.shadow_figure.presence")).toList();
+        for (JsonObject sound : played) {
+            check(sound.get("local").getAsBoolean() && !sound.get("relative").getAsBoolean(), "presence sound not local and positioned: " + sound);
+        }
+        System.out.println("[client gametest] presence sounds: " + sounds.size() + " traced, " + played.size() + " played by the sound engine; vanished at "
+                + (vanishTime - spawnTime) + " ticks");
+    }
+
+    /**
+     * The client's newest trace file, one JSON object per line.
+     */
+    private static List<JsonObject> readNewestTrace(ClientGameTestContext context) {
+
+        Path dir = context.computeOnClient(client -> client.gameDirectory.toPath().resolve("paranormalcraft-trace"));
+        try (Stream<Path> files = Files.list(dir)) {
+            // Client traces only (trace-*); the integrated server writes server-trace-* to the same folder.
+            Path newest = files.filter(path -> path.getFileName().toString().startsWith("trace-") && path.getFileName().toString().endsWith(".jsonl"))
+                    .max(Comparator.comparingLong(path -> path.toFile().lastModified())).orElseThrow();
+            return Files.readAllLines(newest).stream().map(line -> JsonParser.parseString(line).getAsJsonObject()).toList();
+        } catch (IOException e) {
+            throw new AssertionError("could not read the client trace in " + dir, e);
+        }
     }
 
     private static void check(boolean condition, String message) {

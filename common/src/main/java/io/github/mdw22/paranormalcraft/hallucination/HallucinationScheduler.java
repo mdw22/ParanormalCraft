@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.hallucination;
 
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.network.HallucinationPayload;
 import io.github.mdw22.paranormalcraft.platform.Services;
@@ -61,6 +62,19 @@ public final class HallucinationScheduler {
     public static void send(ServerPlayer player) {
 
         Services.NETWORK.sendToPlayer(player, new HallucinationPayload(HallucinationKind.SHADOW_FIGURE, player.getRandom().nextLong()));
+        ServerTrace.event("hallucination_sent", line -> {
+            line.addProperty("player", player.getGameProfile().name());
+            line.addProperty("kind", HallucinationKind.SHADOW_FIGURE.name().toLowerCase(java.util.Locale.ROOT));
+            ServerTrace.addPos(line, player);
+        });
+    }
+
+    /**
+     * Debug: this player's next attempt happens in {@code ticks}.
+     */
+    public static void setTicksUntilNext(ServerPlayer player, long ticks) {
+
+        NEXT.put(player.getUUID(), player.level().getGameTime() + Math.max(0, ticks));
     }
 
     /**
@@ -77,7 +91,7 @@ public final class HallucinationScheduler {
         ServerConfig config = ModConfigs.server();
         int min = config.hallucinationIntervalMinSeconds() * 20;
         int max = config.hallucinationIntervalMaxSeconds() * 20;
-        return min + player.getRandom().nextInt(max - min + 1);
+        return ModConfigs.paced(min + player.getRandom().nextInt(max - min + 1));
     }
 
     public static void clear() {

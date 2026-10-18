@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:toolkit_script_runner",
+  "environment": "paranormalcraft:toolkit",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 60,
+  "sky_access": true
+}

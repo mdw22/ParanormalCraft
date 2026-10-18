@@ -38,13 +38,19 @@ import java.util.Map;
 public final class ItemGameTests {
 
     private static final int LOOT_ROLLS = 200;
+    /**
+     * What the EMF Reader and Spirit Thermometer need together: 7 + 1 copper; 1 + 1 redstone, plus 1 for the EMF
+     * Reader's redstone torch. One chest must always cover both.
+     */
+    private static final int COPPER_FOR_BOTH_TOOLS = 8;
+    private static final int REDSTONE_FOR_BOTH_TOOLS = 3;
 
     /** Item -> {min, max, always}: the cabin chest's ranges (always = 1 means it must be in every roll). */
     private static final Map<Item, int[]> CABIN_LOOT = new LinkedHashMap<>();
 
     static {
-        CABIN_LOOT.put(Items.COPPER_INGOT, new int[]{6, 10, 1});
-        CABIN_LOOT.put(Items.REDSTONE, new int[]{2, 4, 1});
+        CABIN_LOOT.put(Items.COPPER_INGOT, new int[]{8, 10, 1});
+        CABIN_LOOT.put(Items.REDSTONE, new int[]{3, 4, 1});
         CABIN_LOOT.put(Items.CANDLE, new int[]{1, 3, 1});
         CABIN_LOOT.put(Items.PAPER, new int[]{1, 4, 1});
         CABIN_LOOT.put(Items.BREAD, new int[]{1, 3, 1});
@@ -101,7 +107,8 @@ public final class ItemGameTests {
 
     /**
      * Rolls {@code paranormalcraft:chests/abandoned_cabin} 200 times: every item's count stays in its range, the
-     * "always" items are in every roll, and the copper and redstone ranges are hit at both ends.
+     * "always" items are in every roll, every roll covers both the EMF Reader and the thermometer recipes, and the
+     * copper and redstone ranges are hit at both ends.
      */
     private static void cabinLootRanges(GameTestHelper helper) {
 
@@ -120,6 +127,10 @@ public final class ItemGameTests {
                 check(helper, CABIN_LOOT.containsKey(stack.getItem()), "unexpected item %s", stack);
                 counts.merge(stack.getItem(), stack.getCount(), Integer::sum);
             }
+            int copper = counts.getOrDefault(Items.COPPER_INGOT, 0);
+            int redstone = counts.getOrDefault(Items.REDSTONE, 0);
+            check(helper, copper >= COPPER_FOR_BOTH_TOOLS && redstone >= REDSTONE_FOR_BOTH_TOOLS,
+                    "roll %d: %d copper and %d redstone don't cover the EMF Reader and thermometer", roll, copper, redstone);
             for (Map.Entry<Item, int[]> entry : CABIN_LOOT.entrySet()) {
                 int count = counts.getOrDefault(entry.getKey(), 0);
                 int[] range = entry.getValue();

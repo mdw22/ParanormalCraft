@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.registry;
 
+import com.mojang.serialization.MapCodec;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.platform.services.IRegistrationHelper;
@@ -20,6 +21,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureType;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -102,6 +105,17 @@ public final class RegistrationHelper {
     public static RegistryEntry<Consumer<GameTestHelper>> testFunction(String name, Consumer<GameTestHelper> test) {
 
         return PLATFORM.register(BuiltInRegistries.TEST_FUNCTION, name, () -> test);
+    }
+
+    /**
+     * Registers a structure type, whose codec reads structures of {@code "type": "<mod id>:<name>"}.
+     */
+    public static <S extends Structure> RegistryEntry<StructureType<S>> structureType(String name, Supplier<MapCodec<S>> codec) {
+
+        return PLATFORM.register(BuiltInRegistries.STRUCTURE_TYPE, name, () -> {
+            MapCodec<S> resolved = codec.get();
+            return () -> resolved;
+        });
     }
 
     public static RegistryEntry<SoundEvent> sound(String name) {

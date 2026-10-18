@@ -10,99 +10,19 @@
       "preLaunchTask": "NeoForge client (debug)"
     },
     {
+      "name": "Debug NeoForge server",
+      "type": "java",
+      "request": "attach",
+      "hostName": "127.0.0.1",
+      "port": 5006,
+      "preLaunchTask": "NeoForge server (debug)"
+    },
+    {
       "name": "Attach to running game (5005)",
       "type": "java",
       "request": "attach",
       "hostName": "127.0.0.1",
       "port": 5005
-    },
-    {
-      "type": "java",
-      "request": "launch",
-      "name": "NeoForge Client (:neoforge)",
-      "presentation": {
-        "group": "Mod Development - neoforge",
-        "order": 0
-      },
-      "projectName": "neoforge",
-      "mainClass": "net.neoforged.devlaunch.Main",
-      "args": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/clientRunProgramArgs.txt"
-      ],
-      "vmArgs": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/clientRunVmArgs.txt",
-        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
-      ],
-      "cwd": "${workspaceFolder}/neoforge/runs/client",
-      "env": {},
-      "console": "internalConsole",
-      "shortenCommandLine": "none"
-    },
-    {
-      "type": "java",
-      "request": "launch",
-      "name": "NeoForge Client2 (:neoforge)",
-      "presentation": {
-        "group": "Mod Development - neoforge",
-        "order": 1
-      },
-      "projectName": "neoforge",
-      "mainClass": "net.neoforged.devlaunch.Main",
-      "args": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/client2RunProgramArgs.txt"
-      ],
-      "vmArgs": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/client2RunVmArgs.txt",
-        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
-      ],
-      "cwd": "${workspaceFolder}/neoforge/runs/client2",
-      "env": {},
-      "console": "internalConsole",
-      "shortenCommandLine": "none"
-    },
-    {
-      "type": "java",
-      "request": "launch",
-      "name": "NeoForge Data (:neoforge)",
-      "presentation": {
-        "group": "Mod Development - neoforge",
-        "order": 2
-      },
-      "projectName": "neoforge",
-      "mainClass": "net.neoforged.devlaunch.Main",
-      "args": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/dataRunProgramArgs.txt"
-      ],
-      "vmArgs": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/dataRunVmArgs.txt",
-        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
-      ],
-      "cwd": "${workspaceFolder}/neoforge/runs/data",
-      "env": {},
-      "console": "internalConsole",
-      "shortenCommandLine": "none"
-    },
-    {
-      "type": "java",
-      "request": "launch",
-      "name": "NeoForge Server (:neoforge)",
-      "presentation": {
-        "group": "Mod Development - neoforge",
-        "order": 3
-      },
-      "projectName": "neoforge",
-      "mainClass": "net.neoforged.devlaunch.Main",
-      "args": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/serverRunProgramArgs.txt"
-      ],
-      "vmArgs": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/serverRunVmArgs.txt",
-        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
-      ],
-      "cwd": "${workspaceFolder}/neoforge/runs/server",
-      "env": {},
-      "console": "internalConsole",
-      "shortenCommandLine": "none"
     }
   ]
 }

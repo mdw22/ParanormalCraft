@@ -3,6 +3,7 @@ package io.github.mdw22.paranormalcraft.haunting;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import net.minecraft.server.level.ServerLevel;
@@ -96,13 +97,28 @@ public final class HauntingController {
                 candidates.add(new HauntingPicker.Candidate(action, targets.has(action), this.schedule.offCooldown(action, now)));
             }
         }
-        List<HauntingAction> eligible = HauntingPicker.eligibleActions(candidates, griefingAllowed(level), ignoreCooldowns);
+        boolean griefing = griefingAllowed(level);
+        List<HauntingAction> eligible = HauntingPicker.eligibleActions(candidates, griefing, ignoreCooldowns);
         Optional<HauntingAction> picked = HauntingPicker.pick(eligible, bound -> this.ghost.getRandom().nextInt(bound));
         if (picked.isEmpty()) {
+            // Gated: something had a target and was off cooldown, but griefing is off.
+            boolean gated = !griefing && !HauntingPicker.eligibleActions(candidates, true, ignoreCooldowns).isEmpty();
+            ServerTrace.ghost("haunt_none", this.ghost, line -> {
+                line.addProperty("requested", only == null ? "any" : only.id());
+                line.addProperty("forced", ignoreCooldowns);
+                line.addProperty("gated", gated);
+            });
             return Optional.empty();
         }
         HauntingAction action = picked.get();
         String detail = HauntingEffects.perform(action, targets, level, this.ghost);
+        ServerTrace.ghost("haunt", this.ghost, line -> {
+            line.addProperty("action", action.id());
+            line.addProperty("target", String.valueOf(detail));
+            line.addProperty("forced", ignoreCooldowns);
+            line.addProperty("griefing", action.griefing());
+            line.addProperty("done", detail != null);
+        });
         if (detail == null) {
             return Optional.empty();
         }
@@ -127,6 +143,6 @@ public final class HauntingController {
 
         int min = config.hauntingIntervalMinSeconds() * 20;
         int max = config.hauntingIntervalMaxSeconds() * 20;
-        return min + this.ghost.getRandom().nextInt(max - min + 1);
+        return ModConfigs.paced(min + this.ghost.getRandom().nextInt(max - min + 1));
     }
 }

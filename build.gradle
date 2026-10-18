@@ -4,26 +4,29 @@ plugins {
     // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
     id 'net.neoforged.moddev' version '2.0.148' apply false
 }
-// Frees disk space in the dev run folders: deletes logs, crash reports, paranormalcraft-debug/ dumps, client worlds
-// (saves/), the GameTest server world and every server world except the one named in server.properties. Keeps
-// config files, options.txt and everything else.
+// Frees disk space in the dev run folders: deletes logs, crash reports, paranormalcraft-debug/ dumps, debug traces and
+// shots, client worlds (saves/), the GameTest server world and every server world except the one named in
+// server.properties. Keeps config files, options.txt and everything else. Paths are resolved at configuration time
+// and deleted with plain file operations, so the task works with the configuration cache.
 tasks.register('cleanDevRuns') {
     group = 'paranormalcraft'
     description = 'Deletes old test worlds, logs, crash reports and debug dumps from the dev run folders.'
+    def root = rootDir
+    def runRoots = ['neoforge/runs', 'fabric/runs'].collect { new File(rootDir, it) }
     doLast {
-        def runDirs = ['neoforge/runs', 'fabric/runs'].collectMany { root ->
-            def dir = file(root)
-            dir.isDirectory() ? (dir.listFiles().findAll { it.isDirectory() } as List) : []
-        }
         def deleted = []
         def remove = { File target ->
             if (target.exists()) {
-                project.delete(target)
-                deleted << rootDir.toPath().relativize(target.toPath()).toString()
+                if (target.isDirectory()) {
+                    target.deleteDir()
+                } else {
+                    target.delete()
+                }
+                deleted << root.toPath().relativize(target.toPath()).toString()
             }
         }
-        runDirs.each { File run ->
-            ['logs', 'crash-reports', 'paranormalcraft-debug', 'gametestserver'].each { remove(new File(run, it)) }
+        runRoots.findAll { it.isDirectory() }.collectMany { it.listFiles().findAll { it.isDirectory() } as List }.each { File run ->
+            ['logs', 'crash-reports', 'paranormalcraft-debug', 'paranormalcraft-trace', 'paranormalcraft-shots', 'gametestserver'].each { remove(new File(run, it)) }
             def saves = new File(run, 'saves')
             if (saves.isDirectory()) {
                 saves.listFiles().findAll { it.isDirectory() }.each { remove(it) }
@@ -37,6 +40,6 @@ tasks.register('cleanDevRuns') {
             }
             run.listFiles().findAll { it.isDirectory() && new File(it, 'level.dat').isFile() && it.name != keep }.each { remove(it) }
         }
-        logger.lifecycle(deleted ? "Deleted:\n  ${deleted.join('\n  ')}" : 'Nothing to delete.')
+        println(deleted ? "Deleted:\n  ${deleted.join('\n  ')}" : 'Nothing to delete.')
     }
 }

@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.client.hallucination;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
 import io.github.mdw22.paranormalcraft.config.ClientConfig;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
@@ -16,10 +17,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Client side of hallucinations: places and spawns a client-only {@link ShadowFigureEntity}. At most one at a time;
@@ -30,6 +35,8 @@ public final class ClientHallucinations {
     public static final int ATTEMPTS = 5;
     /** Spots this dark or darker are preferred. */
     public static final int MAX_BLOCK_LIGHT = 7;
+    /** Indoor scan: angle step through the band, in degrees. */
+    private static final double SCAN_ANGLE_STEP = 2.0;
     /** Client-only entity ids count down from here so they never clash with server ids. */
     private static int nextClientId = -1_000_000;
     private static @Nullable ShadowFigureEntity active;
@@ -73,6 +80,15 @@ public final class ClientHallucinations {
         figure.setYHeadRot(yaw);
         minecraft.level.addEntity(figure);
         active = figure;
+        boolean indoors = isIndoors(minecraft.level, minecraft.player);
+        ClientTrace.event("figure_spawn", line -> {
+            ClientTrace.addPos(line, figure);
+            line.addProperty("angle", Math.round(HallucinationPlacement.relativeAngle(minecraft.player.getYRot(), spot.x - minecraft.player.getX(), spot.z - minecraft.player.getZ()) * 10.0) / 10.0);
+            line.addProperty("distance", Math.round(Math.hypot(spot.x - minecraft.player.getX(), spot.z - minecraft.player.getZ()) * 100.0) / 100.0);
+            line.addProperty("reduced", reduced);
+            line.addProperty("indoors", indoors);
+            line.addProperty("blockLight", minecraft.level.getBrightness(LightLayer.BLOCK, BlockPos.containing(spot)));
+        });
         Constants.LOG.info("Shadow figure at {} ({} degrees off the view, {} blocks away)", BlockPos.containing(spot).toShortString(),
                 Math.round(HallucinationPlacement.relativeAngle(minecraft.player.getYRot(), spot.x - minecraft.player.getX(), spot.z - minecraft.player.getZ())),
                 Math.round(Math.hypot(spot.x - minecraft.player.getX(), spot.z - minecraft.player.getZ())));
@@ -88,11 +104,87 @@ public final class ClientHallucinations {
     }
 
     /**
-     * Up to {@link #ATTEMPTS} tries; the first dark spot (feet at block light ≤ {@link #MAX_BLOCK_LIGHT}) wins,
-     * otherwise the first valid one.
+     * Under a roof, every angle and distance in the band is tried for a spot the player can see through an opening
+     * (doorway, window, roof hole); otherwise, or if none is visible, up to {@link #ATTEMPTS} random tries. Either
+     * way the first dark spot (feet at block light ≤ {@link #MAX_BLOCK_LIGHT}) wins, otherwise the first valid one.
      */
     private static @Nullable Vec3 findSpot(ClientLevel level, LocalPlayer player, HallucinationPlacement.Band band, boolean reduced,
                                            RandomSource random) {
+
+        if (isIndoors(level, player)) {
+            Vec3 spot = scanThroughOpenings(level, player, band, reduced, random);
+            if (spot != null) {
+                return spot;
+            }
+        }
+        return randomTries(level, player, band, reduced, random);
+    }
+
+    /**
+     * Whether something solid is above the player's head (a roof).
+     */
+    public static boolean isIndoors(ClientLevel level, LocalPlayer player) {
+
+        BlockPos eye = BlockPos.containing(player.getEyePosition());
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING, eye.getX(), eye.getZ()) > eye.getY() + 1;
+    }
+
+    private static @Nullable Vec3 scanThroughOpenings(ClientLevel level, LocalPlayer player, HallucinationPlacement.Band band, boolean reduced,
+                                                     RandomSource random) {
+
+        List<double[]> candidates = new ArrayList<>();
+        double minDistance = reduced ? HallucinationPlacement.REDUCED_MIN_DISTANCE : HallucinationPlacement.NEAR_MIN_DISTANCE;
+        double maxDistance = reduced ? HallucinationPlacement.REDUCED_MAX_DISTANCE : HallucinationPlacement.NEAR_MAX_DISTANCE;
+        for (double angle = band.min(); angle <= band.max() + 1.0E-6; angle += SCAN_ANGLE_STEP) {
+            for (double distance = minDistance; distance <= maxDistance + 1.0E-6; distance += 1.0) {
+                candidates.add(new double[]{angle, distance});
+                candidates.add(new double[]{-angle, distance});
+            }
+        }
+        // Shuffle with the payload's seed so the choice is random but repeatable.
+        for (int i = candidates.size() - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            double[] swap = candidates.get(i);
+            candidates.set(i, candidates.get(j));
+            candidates.set(j, swap);
+        }
+        Vec3 fallback = null;
+        for (double[] candidate : candidates) {
+            Vec3 spot = visibleSpot(level, player, band, candidate[0], candidate[1]);
+            if (spot == null) {
+                continue;
+            }
+            if (level.getBrightness(LightLayer.BLOCK, BlockPos.containing(spot)) <= MAX_BLOCK_LIGHT) {
+                return spot;
+            }
+            if (fallback == null) {
+                fallback = spot;
+            }
+        }
+        return fallback;
+    }
+
+    /**
+     * A standable spot {@code angle} degrees off the view and {@code distance} out that the player can see, or null.
+     */
+    private static @Nullable Vec3 visibleSpot(ClientLevel level, LocalPlayer player, HallucinationPlacement.Band band, double angle, double distance) {
+
+        HallucinationPlacement.Offset offset = HallucinationPlacement.offset(player.getYRot(), angle, distance);
+        BlockPos column = BlockPos.containing(player.getX() + offset.dx(), player.getY(), player.getZ() + offset.dz());
+        BlockPos feet = standableNear(level, column);
+        if (feet == null) {
+            return null;
+        }
+        Vec3 spot = Vec3.atBottomCenterOf(feet);
+        if (!inBandAfterSnapping(player, band, spot)) {
+            return null;
+        }
+        BlockHitResult sight = level.clip(new ClipContext(player.getEyePosition(), spot.add(0, 1.6, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return sight.getType() == HitResult.Type.MISS ? spot : null;
+    }
+
+    private static @Nullable Vec3 randomTries(ClientLevel level, LocalPlayer player, HallucinationPlacement.Band band, boolean reduced,
+                                             RandomSource random) {
 
         Vec3 eye = player.getEyePosition();
         Vec3 fallback = null;
@@ -106,6 +198,9 @@ public final class ClientHallucinations {
                 continue;
             }
             Vec3 spot = Vec3.atBottomCenterOf(feet);
+            if (!inBandAfterSnapping(player, band, spot)) {
+                continue;
+            }
             BlockHitResult sight = level.clip(new ClipContext(eye, spot.add(0, 1.6, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
             if (sight.getType() != HitResult.Type.MISS) {
                 continue;
@@ -118,6 +213,16 @@ public final class ClientHallucinations {
             }
         }
         return fallback;
+    }
+
+    /**
+     * Standing the figure on a block centre moves it by up to ~0.7 blocks, which close in can push it several degrees
+     * out of the band, so the final spot is checked again.
+     */
+    private static boolean inBandAfterSnapping(LocalPlayer player, HallucinationPlacement.Band band, Vec3 spot) {
+
+        double angle = Math.abs(HallucinationPlacement.relativeAngle(player.getYRot(), spot.x - player.getX(), spot.z - player.getZ()));
+        return angle >= band.min() && angle <= band.max();
     }
 
     /**

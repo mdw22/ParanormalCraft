@@ -38,9 +38,15 @@ processResources {
 // Dev server: accept the EULA and run in offline mode so dev clients can join over localhost.
 def prepareDevServer = tasks.register('prepareDevServer') {
     group = 'multiloader'
-    description = 'Accepts the EULA and sets online-mode=false in runs/server.'
+    description = 'Accepts the EULA, sets online-mode=false and copies tools/scripts into runs/server/paranormalcraft-scripts.'
     def serverDir = file('runs/server')
+    def scriptsSource = rootProject.file('tools/scripts')
     doLast {
+        def scriptsTarget = new File(serverDir, 'paranormalcraft-scripts')
+        scriptsTarget.mkdirs()
+        scriptsSource.listFiles()?.findAll { it.name.endsWith('.txt') }?.each { script ->
+            new File(scriptsTarget, script.name).bytes = script.bytes
+        }
         serverDir.mkdirs()
         new File(serverDir, 'eula.txt').text = 'eula=true\n'
         def props = new File(serverDir, 'server.properties')

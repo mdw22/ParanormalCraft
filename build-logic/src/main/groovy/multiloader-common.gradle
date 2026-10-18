@@ -28,9 +28,11 @@ java {
     withJavadocJar()
 }
 
+// Read at configuration time: the configuration cache can't reach project properties from task actions.
+def licenseSuffix = mod_name
 tasks.withType(Jar).configureEach {
     from(rootProject.file('LICENSE')) {
-        rename { "${it}_${mod_name}" }
+        rename { "${it}_${licenseSuffix}" }
     }
 }
 

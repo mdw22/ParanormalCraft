@@ -34,6 +34,7 @@ public final class ConfigFile {
     private final JsonObject source;
     private final JsonObject normalised = new JsonObject();
     private boolean changed;
+    private boolean inMemory;
 
     private ConfigFile(Path path, Logger log, JsonObject source, boolean changed) {
 
@@ -41,6 +42,25 @@ public final class ConfigFile {
         this.log = log;
         this.source = source;
         this.changed = changed;
+    }
+
+    /**
+     * Normalises an in-memory object (e.g. a config with one key changed by {@code debug config set}). {@link #save()}
+     * on it never writes anything.
+     */
+    public static ConfigFile inMemory(JsonObject source, String label, Logger log) {
+
+        ConfigFile file = new ConfigFile(Path.of(label), log, source, false);
+        file.inMemory = true;
+        return file;
+    }
+
+    /**
+     * The normalised values read so far, as JSON.
+     */
+    public JsonObject normalised() {
+
+        return this.normalised.deepCopy();
     }
 
     public static ConfigFile open(Path path, Logger log) {
@@ -148,7 +168,7 @@ public final class ConfigFile {
      */
     public void save() {
 
-        if (!this.changed) {
+        if (!this.changed || this.inMemory) {
             return;
         }
         for (Map.Entry<String, JsonElement> entry : this.source.entrySet()) {

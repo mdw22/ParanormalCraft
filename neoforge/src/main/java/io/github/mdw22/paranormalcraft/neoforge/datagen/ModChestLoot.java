@@ -29,8 +29,8 @@ public class ModChestLoot implements LootTableSubProvider {
     public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
 
         output.accept(ModStructures.ABANDONED_CABIN_CHEST, LootTable.lootTable()
-                .withPool(item(Items.COPPER_INGOT, 6, 10, 1.0F))
-                .withPool(item(Items.REDSTONE, 2, 4, 1.0F))
+                .withPool(item(Items.COPPER_INGOT, 8, 10, 1.0F))
+                .withPool(item(Items.REDSTONE, 3, 4, 1.0F))
                 .withPool(item(Items.CANDLE, 1, 3, 1.0F))
                 .withPool(item(Items.PAPER, 1, 4, 1.0F))
                 .withPool(item(Items.BOOK, 1, 1, 0.5F))

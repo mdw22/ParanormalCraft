@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.client;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
 import io.github.mdw22.paranormalcraft.config.ClientConfig;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.network.EmfLevelPayload;
@@ -77,6 +78,8 @@ public final class ClientToolState {
 
     public static void onEmfLevel(EmfLevelPayload payload) {
 
+        ClientTrace.event("emf", line -> line.addProperty("level", payload.level()));
+
         int level = Mth.clamp(payload.level(), EmfLevels.MIN_LEVEL, EmfLevels.MAX_LEVEL);
         emfPayloadsReceived++;
         if (level != emfLevel || emfPayloadsReceived == 1) {
@@ -87,6 +90,8 @@ public final class ClientToolState {
     }
 
     public static void onThermometerReading(ThermometerReadingPayload payload) {
+
+        ClientTrace.event("thermometer", line -> line.addProperty("celsius", payload.celsius()));
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {

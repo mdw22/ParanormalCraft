@@ -5,6 +5,7 @@ import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostShyGoal;
+import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.registry.RegistrationHelper;
@@ -61,6 +62,7 @@ public final class GhostBehaviourGameTests {
         RegistrationHelper.testFunction("ghost_home_survives_reload", GhostBehaviourGameTests::homeSurvivesReload);
         RegistrationHelper.testFunction("ghost_curious_one_at_a_time", GhostBehaviourGameTests::curiousOneAtATime);
         RegistrationHelper.testFunction("ghost_shy_backs_away", GhostBehaviourGameTests::shyBacksAway);
+        RegistrationHelper.testFunction("ghost_marker_survives_water", GhostBehaviourGameTests::markerSurvivesWater);
     }
 
     private static void check(GameTestHelper helper, boolean condition, String message, Object... args) {
@@ -194,6 +196,27 @@ public final class GhostBehaviourGameTests {
             check(helper, home.equals(reloaded.getHome()) && coldSpot.equals(reloaded.getColdSpot()),
                     "home/cold spot changed after ticking: %s / %s", reloaded.getHome(), reloaded.getColdSpot());
             reloaded.discard();
+            helper.succeed();
+        });
+    }
+
+    // ---- Marker and water ----
+
+    /**
+     * Water flowing into a cabin can't wash the ghost marker away. The marker's block entity is removed first so it
+     * doesn't spawn its ghosts and vanish on the first tick, leaving just the block for the water to meet.
+     */
+    private static void markerSurvivesWater(GameTestHelper helper) {
+
+        BlockPos marker = new BlockPos(20, 1, 20);
+        helper.setBlock(marker, ModBlocks.GHOST_MARKER.get());
+        helper.getLevel().removeBlockEntity(helper.absolutePos(marker));
+        helper.setBlock(marker.east(), Blocks.WATER);
+        helper.setBlock(marker.above(), Blocks.WATER);
+        helper.runAfterDelay(40, () -> {
+            helper.assertBlockPresent(ModBlocks.GHOST_MARKER.get(), marker);
+            check(helper, helper.getBlockState(marker).getFluidState().isEmpty(), "the marker took on water");
+            check(helper, !helper.getBlockState(marker.west()).getFluidState().isEmpty(), "water didn't flow around the marker (test set-up)");
             helper.succeed();
         });
     }

@@ -70,8 +70,8 @@ public final class ModCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> debugCommands() {
 
-        return Commands.literal("debug")
-                .requires(source -> ModConfigs.debugCommandsEnabled())
+        return DebugCommands.addTo(Commands.literal("debug")
+                .requires(source -> ModConfigs.debugCommandsEnabled()))
                 .then(Commands.literal("dump")
                         .executes(context -> dump(context, DEFAULT_DUMP_RADIUS))
                         .then(Commands.argument("radius", IntegerArgumentType.integer(1, 256))

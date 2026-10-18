@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.neoforge.datagen;
 
 import com.mojang.datafixers.util.Pair;
+import io.github.mdw22.paranormalcraft.world.DryLandStructure;
 import io.github.mdw22.paranormalcraft.world.ModStructures;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.RegistrySetBuilder;
@@ -62,15 +63,15 @@ public final class ModWorldgen {
 
     /**
      * A single template placed on the surface, sunk one block so the mossy foundation sits in the ground, with a thin
-     * beard to blend the terrain.
+     * beard to blend the terrain. Wrapped in {@link DryLandStructure} so it never starts in water.
      */
     private static Structure cabin(HolderGetter<Biome> biomes, TagKey<Biome> biomeTag, HolderGetter<StructureTemplatePool> pools,
                                    ResourceKey<StructureTemplatePool> pool) {
 
         Structure.StructureSettings settings = new Structure.StructureSettings(biomes.getOrThrow(biomeTag), Map.of(),
                 GenerationStep.Decoration.SURFACE_STRUCTURES, TerrainAdjustment.BEARD_THIN);
-        return new JigsawStructure(settings, pools.getOrThrow(pool), 1, ConstantHeight.of(VerticalAnchor.absolute(-1)), false,
-                Heightmap.Types.WORLD_SURFACE_WG);
+        return new DryLandStructure(new JigsawStructure(settings, pools.getOrThrow(pool), 1, ConstantHeight.of(VerticalAnchor.absolute(-1)), false,
+                Heightmap.Types.WORLD_SURFACE_WG));
     }
 
     private static void structureSets(BootstrapContext<StructureSet> context) {

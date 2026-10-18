@@ -29,6 +29,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add("subtitles.paranormalcraft.lingering_spirit.hurt", "Spirit wavers");
         add("subtitles.paranormalcraft.spectral_goggles.equip", "Goggles click into place");
         add("subtitles.paranormalcraft.shadow_figure.vanish", "Something rushes past");
+        add("subtitles.paranormalcraft.shadow_figure.presence", "Something watches");
 
         add("commands.paranormalcraft.reveal.on", "Ghost reveal on: every ghost is visible to you and home radii are drawn");
         add("commands.paranormalcraft.reveal.off", "Ghost reveal off");

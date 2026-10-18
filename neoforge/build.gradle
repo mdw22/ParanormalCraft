@@ -57,6 +57,10 @@ neoForge {
             server()
             this.file('runs/server').createParentDirectories()
             gameDirectory = this.mkdir(this.file('runs/server'))
+            // ./gradlew :neoforge:runServer -PdebugServer waits for a debugger on 127.0.0.1:5006 (VS Code: "Debug NeoForge server").
+            if (project.hasProperty('debugServer')) {
+                jvmArguments.add('-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=127.0.0.1:5006')
+            }
         }
     }
     mods {

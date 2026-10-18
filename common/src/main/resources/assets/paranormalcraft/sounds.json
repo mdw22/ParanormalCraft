@@ -80,5 +80,35 @@
       }
     ],
     "subtitle": "subtitles.paranormalcraft.shadow_figure.vanish"
+  },
+  "entity.shadow_figure.presence": {
+    "sounds": [
+      {
+        "name": "minecraft:mob/endermen/idle1",
+        "pitch": 0.6,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/endermen/idle2",
+        "pitch": 0.6,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/endermen/idle3",
+        "pitch": 0.6,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/endermen/idle4",
+        "pitch": 0.6,
+        "attenuation_distance": 32
+      },
+      {
+        "name": "minecraft:mob/endermen/idle5",
+        "pitch": 0.6,
+        "attenuation_distance": 32
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.shadow_figure.presence"
   }
 }

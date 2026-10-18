@@ -30,7 +30,11 @@ public class GhostWanderGoal extends Goal {
     @Override
     public boolean canUse() {
 
-        return this.ghost.getNavigation().isDone() && this.ghost.getRandom().nextInt(reducedTickDelay(this.interval)) == 0;
+        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.WANDER)) {
+            return false;
+        }
+        return this.ghost.getNavigation().isDone()
+                && (this.ghost.goalForced(GhostEntity.ForcedGoal.WANDER) || this.ghost.getRandom().nextInt(reducedTickDelay(this.interval)) == 0);
     }
 
     @Override

@@ -36,6 +36,14 @@ public class GhostShyGoal extends Goal {
     @Override
     public boolean canUse() {
 
+        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.SHY)) {
+            return false;
+        }
+        if (this.ghost.goalForced(GhostEntity.ForcedGoal.SHY)) {
+            // Forced by debug: back away from the nearest player, staring or not.
+            this.starer = this.ghost.level().getNearestPlayer(this.ghost, STARE_RANGE);
+            return this.starer != null;
+        }
         long now = this.ghost.level().getGameTime();
         if (this.starer == null || !isStaring(this.starer)) {
             this.starer = findStarer();

@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.entity.ghost;
 
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import net.minecraft.core.BlockPos;
@@ -61,6 +62,10 @@ public abstract class GhostEntity extends PathfinderMob {
     private static final double DRIFT_DRAG = 0.5;
     /** 1.5 seconds. */
     public static final int MANIFEST_TICKS = 30;
+    public static final float FADE_IN_TICKS = 6.0F;
+    public static final float FADE_OUT_TICKS = 10.0F;
+    /** How long {@code debug ghost goal} forces a goal: 10 s. */
+    public static final int FORCED_GOAL_TICKS = 200;
     /** Vanilla health never matters; it is reset after every hit so the ghost only ever disperses. */
     public static final float FIXED_HEALTH = 1024.0F;
     private static final int MANIFEST_RETRY_TICKS = 20;
@@ -78,8 +83,22 @@ public abstract class GhostEntity extends PathfinderMob {
     /** Ticks until the next manifest attempt; -1 until first scheduled. Server only. */
     private int manifestCooldown = -1;
     private int manifestTicksLeft;
-    /** Client only: tick count when the current manifest started, for the fade-in. */
+    /** Client only: tick count when the current manifest started. */
     private int manifestStartTick = Integer.MIN_VALUE;
+    /**
+     * Client only: how far the manifest fade has got, 0 (hidden) to 1 (fully shown), now and last tick. It rises over
+     * {@link #FADE_IN_TICKS} while manifesting and, once the manifest ends, falls from wherever it is to 0 over
+     * {@link #FADE_OUT_TICKS}. Only viewers who can't otherwise see the ghost use it.
+     */
+    private float manifestFade;
+    private float previousManifestFade;
+    private float fadeOutStep;
+    /** Debug: a goal forced by {@code debug ghost goal}, until this game time. */
+    private @Nullable ForcedGoal forcedGoal;
+    private long forcedGoalUntil;
+    // Server trace bookkeeping.
+    private boolean spawnTraced;
+    private String tracedGoals = "";
 
     protected GhostEntity(EntityType<? extends GhostEntity> type, Level level) {
 
@@ -135,6 +154,77 @@ public abstract class GhostEntity extends PathfinderMob {
         this.coldSpot = ColdSpots.choose(level, this.home, WANDER_RADIUS, this.random);
     }
 
+    /**
+     * Debug scenes: sets home and cold spot exactly, with no random choice.
+     */
+    public void setHome(BlockPos home, BlockPos coldSpot) {
+
+        this.home = home.immutable();
+        this.coldSpot = coldSpot.immutable();
+    }
+
+    /**
+     * Ticks until the next manifest attempt (-1 before the first is scheduled). Server only.
+     */
+    public int manifestCooldown() {
+
+        return this.manifestCooldown;
+    }
+
+    /**
+     * Debug: the next manifest attempt happens in {@code ticks}.
+     */
+    public void setManifestCooldown(int ticks) {
+
+        this.manifestCooldown = Math.max(0, ticks);
+    }
+
+    /** The AI goals {@code debug ghost goal} can force. */
+    public enum ForcedGoal {
+        WANDER,
+        CURIOUS,
+        SHY,
+        HOME
+    }
+
+    /**
+     * Debug: forces one goal for {@link #FORCED_GOAL_TICKS}; the others won't start meanwhile.
+     */
+    public void forceGoal(ForcedGoal goal) {
+
+        this.forcedGoal = goal;
+        this.forcedGoalUntil = this.level().getGameTime() + FORCED_GOAL_TICKS;
+        this.goalSelector.getAvailableGoals().forEach(WrappedGoal::stop);
+    }
+
+    /**
+     * The goal forced right now, or null.
+     */
+    public @Nullable ForcedGoal forcedGoal() {
+
+        if (this.forcedGoal != null && this.level().getGameTime() >= this.forcedGoalUntil) {
+            this.forcedGoal = null;
+        }
+        return this.forcedGoal;
+    }
+
+    /**
+     * For goals: whether {@code goal} may run now. While another goal is forced, nothing else may.
+     */
+    public boolean goalAllowed(ForcedGoal goal) {
+
+        ForcedGoal forced = forcedGoal();
+        return forced == null || forced == goal;
+    }
+
+    /**
+     * For goals: whether {@code goal} is the one being forced, so it should start regardless of its usual chance.
+     */
+    public boolean goalForced(ForcedGoal goal) {
+
+        return forcedGoal() == goal;
+    }
+
     public @Nullable BlockPos getColdSpot() {
 
         return this.coldSpot;
@@ -170,8 +260,10 @@ public abstract class GhostEntity extends PathfinderMob {
      */
     public void setPresence(ServerLevel level, float value) {
 
+        float presenceBefore = this.presence.value();
         this.presence = new Presence(value, this.presence.ticksSinceHit());
         this.entityData.set(DATA_PRESENCE, this.presence.value());
+        tracePresence(presenceBefore, "set");
         if (this.presence.isDepleted()) {
             disperse(level);
         }
@@ -196,6 +288,33 @@ public abstract class GhostEntity extends PathfinderMob {
     public float manifestAge(float partialTick) {
 
         return isManifesting() && this.manifestStartTick != Integer.MIN_VALUE ? this.tickCount - this.manifestStartTick + partialTick : -1.0F;
+    }
+
+    /**
+     * Client side: the manifest fade, 0 to 1, for viewers who can't otherwise see the ghost. Visual only: while it
+     * fades out the ghost is still not pickable and hits still don't count.
+     */
+    public float manifestFade(float partialTick) {
+
+        return this.previousManifestFade + (this.manifestFade - this.previousManifestFade) * partialTick;
+    }
+
+    /**
+     * Client side: true while the manifest fade-out is still drawing the ghost.
+     */
+    public boolean isFadingOut() {
+
+        return !isManifesting() && this.manifestFade > 0.0F;
+    }
+
+    private void tickManifestFade() {
+
+        this.previousManifestFade = this.manifestFade;
+        if (isManifesting()) {
+            this.manifestFade = Math.min(1.0F, this.manifestFade + 1.0F / FADE_IN_TICKS);
+        } else if (this.manifestFade > 0.0F) {
+            this.manifestFade = Math.max(0.0F, this.manifestFade - this.fadeOutStep);
+        }
     }
 
     /**
@@ -227,8 +346,13 @@ public abstract class GhostEntity extends PathfinderMob {
     public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
 
         super.onSyncedDataUpdated(accessor);
-        if (DATA_MANIFESTING.equals(accessor) && this.level().isClientSide() && isManifesting()) {
-            this.manifestStartTick = this.tickCount;
+        if (DATA_MANIFESTING.equals(accessor) && this.level().isClientSide()) {
+            if (isManifesting()) {
+                // A new manifest during a fade-out fades back in from the current opacity.
+                this.manifestStartTick = this.tickCount;
+            } else {
+                this.fadeOutStep = Math.max(this.manifestFade, 1.0E-3F) / FADE_OUT_TICKS;
+            }
         }
     }
 
@@ -242,12 +366,17 @@ public abstract class GhostEntity extends PathfinderMob {
             if (this.home == null) {
                 setHome(serverLevel, this.blockPosition());
             }
+            float presenceBefore = this.presence.value();
             this.presence.tick();
             this.entityData.set(DATA_PRESENCE, this.presence.value());
+            tracePresence(presenceBefore, "regen");
             tickManifest(serverLevel);
             if (!this.isRemoved()) {
                 this.haunting.tick(serverLevel);
             }
+            traceTick();
+        } else {
+            tickManifestFade();
         }
     }
 
@@ -256,6 +385,8 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.manifestTicksLeft > 0) {
             if (--this.manifestTicksLeft == 0) {
                 this.entityData.set(DATA_MANIFESTING, false);
+                ServerTrace.ghost("manifest_end", this, line -> {
+                });
             }
             return;
         }
@@ -282,6 +413,7 @@ public abstract class GhostEntity extends PathfinderMob {
 
         this.manifestTicksLeft = MANIFEST_TICKS;
         this.entityData.set(DATA_MANIFESTING, true);
+        ServerTrace.ghost("manifest_start", this, line -> line.addProperty("ticks", MANIFEST_TICKS));
         level.playSound(null, this.getX(), this.getY(), this.getZ(), getWhisperSound(), this.getSoundSource(), 1.0F, 0.9F + this.random.nextFloat() * 0.2F);
         GhostEvents.onGhostActivity(this);
     }
@@ -291,7 +423,45 @@ public abstract class GhostEntity extends PathfinderMob {
         ServerConfig config = ModConfigs.server();
         int min = config.manifestIntervalMinSeconds() * 20;
         int max = config.manifestIntervalMaxSeconds() * 20;
-        return min + this.random.nextInt(max - min + 1);
+        return ModConfigs.paced(min + this.random.nextInt(max - min + 1));
+    }
+
+    // ---- Server trace ----
+
+    private void traceTick() {
+
+        if (!ServerTrace.active()) {
+            this.spawnTraced = false;
+            return;
+        }
+        if (!this.spawnTraced) {
+            this.spawnTraced = true;
+            ServerTrace.ghost("ghost_spawn", this, line -> {
+                line.addProperty("home", String.valueOf(this.home == null ? null : this.home.toShortString()));
+                line.addProperty("coldSpot", String.valueOf(this.coldSpot == null ? null : this.coldSpot.toShortString()));
+            });
+        }
+        String goals = activeGoals();
+        if (!goals.equals(this.tracedGoals)) {
+            String previous = this.tracedGoals;
+            this.tracedGoals = goals;
+            ServerTrace.ghost("goal_change", this, line -> {
+                line.addProperty("from", previous);
+                line.addProperty("to", goals);
+            });
+        }
+    }
+
+    private void tracePresence(float before, String cause) {
+
+        float after = this.presence.value();
+        if (after != before) {
+            ServerTrace.ghost("presence", this, line -> {
+                line.addProperty("from", before);
+                line.addProperty("to", after);
+                line.addProperty("cause", cause);
+            });
+        }
     }
 
     // ---- Damage and dispersal ----
@@ -316,8 +486,10 @@ public abstract class GhostEntity extends PathfinderMob {
         float dealt = healthBefore - this.getHealth();
         this.setHealth(this.getMaxHealth());
         if (dealt > 0.0F) {
+            float presenceBefore = this.presence.value();
             boolean depleted = this.presence.hit(dealt);
             this.entityData.set(DATA_PRESENCE, this.presence.value());
+            tracePresence(presenceBefore, "hit");
             if (depleted) {
                 disperse(level);
             }
@@ -351,6 +523,8 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.isRemoved()) {
             return;
         }
+        ServerTrace.ghost("ghost_disperse", this, line -> {
+        });
         level.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(), 40, 0.3, 0.4, 0.3, 0.04);
         level.sendParticles(ParticleTypes.SCULK_SOUL, this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(), 12, 0.25, 0.3, 0.25, 0.02);
         level.playSound(null, this.getX(), this.getY(), this.getZ(), getDisperseSound(), this.getSoundSource(), 1.0F, 1.0F);
@@ -369,7 +543,8 @@ public abstract class GhostEntity extends PathfinderMob {
     public boolean isInvisible() {
 
         if (this.level().isClientSide()) {
-            return !GhostVisibility.canClientSee(this);
+            // Still drawn while the manifest fades out; picking and hits follow canClientSee only.
+            return !GhostVisibility.canClientSee(this) && !isFadingOut();
         }
         return super.isInvisible();
     }

@@ -67,6 +67,23 @@
                     "endsPattern": "^.*Listening for transport dt_socket at address: 5005.*$"
                 }
             }
+        },
+        {
+            // Used by the "Debug NeoForge server" launch config: starts the dev server suspended on port 5006.
+            "label": "NeoForge server (debug)",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runServer -PdebugServer",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "gradle-debug",
+                "pattern": {
+                    "regexp": "^__never_matches__$"
+                },
+                "background": {
+                    "beginsPattern": "^.*(Starting a Gradle Daemon|Configure project|Task :).*$",
+                    "endsPattern": "^.*Listening for transport dt_socket at address: 5006.*$"
+                }
+            }
         }
     ]
 }

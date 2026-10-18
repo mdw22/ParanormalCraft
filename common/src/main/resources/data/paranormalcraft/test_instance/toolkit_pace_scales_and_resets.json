@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:toolkit_pace_scales_and_resets",
+  "environment": "paranormalcraft:toolkit",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 40,
+  "sky_access": true
+}

@@ -1,0 +1,12 @@
+# A shadow figure for a player standing inside the oak cabin at night. Traced, so the trace shows where it stood
+# (figure_spawn), each presence sound and where it played (sound), and why it vanished (figure_vanish).
+# Run with: /paranormalcraft debug run figure_indoor
+paranormalcraft debug scene figure_indoor
+wait 40
+paranormalcraft debug trace start
+paranormalcraft debug hallucinate @s
+wait 100
+paranormalcraft debug trace snapshot
+paranormalcraft debug screenshot figure_indoor
+wait 120
+paranormalcraft debug trace stop

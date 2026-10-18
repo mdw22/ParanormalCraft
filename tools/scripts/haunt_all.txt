@@ -1,0 +1,27 @@
+# Every haunting action on the haunt_props scene, 2 s apart, traced. The soul torch must never change.
+# Run with: /paranormalcraft debug run haunt_all
+paranormalcraft debug scene haunt_props
+summon item 100001.5 201 100001.5 {Item:{id:"minecraft:stick",count:1}}
+wait 20
+paranormalcraft debug trace start
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] knock_off_decoration
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] knock_off_decoration
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] snuff_light
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] snuff_light
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] flip_lever
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] toggle_opening
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] phantom_chest
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] toss_items
+wait 40
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] footsteps
+wait 60
+paranormalcraft debug haunt @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] knocking
+wait 40
+paranormalcraft debug trace stop

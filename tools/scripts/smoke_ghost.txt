@@ -1,0 +1,20 @@
+# Smoke test: arena by day, spawn a ghost, manifest it, screenshot it, disperse it. Traced.
+# Run with: /paranormalcraft debug run smoke_ghost
+# Commands keep the position the script started from (scenes teleport the player), so selectors name the scene's
+# coordinates explicitly.
+paranormalcraft debug scene arena
+execute positioned 100000 201 100000 run paranormalcraft debug ghost clear 30
+paranormalcraft debug ghost spawn 100000.5 201 100000.5
+paranormalcraft debug look 100000.5 202 100000.5
+wait 20
+paranormalcraft debug trace start
+paranormalcraft debug trace mark manifest
+paranormalcraft debug manifest @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest]
+wait 12
+paranormalcraft debug screenshot smoke_ghost_manifest
+wait 40
+paranormalcraft debug trace mark disperse
+paranormalcraft debug presence @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100000,distance=..30,limit=1,sort=nearest] 0
+wait 20
+paranormalcraft debug trace snapshot
+paranormalcraft debug trace stop

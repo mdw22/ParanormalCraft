@@ -85,32 +85,10 @@
     {
       "type": "java",
       "request": "launch",
-      "name": "NeoForge GameTestServer (:neoforge)",
-      "presentation": {
-        "group": "Mod Development - neoforge",
-        "order": 3
-      },
-      "projectName": "neoforge",
-      "mainClass": "net.neoforged.devlaunch.Main",
-      "args": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/gameTestServerRunProgramArgs.txt"
-      ],
-      "vmArgs": [
-        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/gameTestServerRunVmArgs.txt",
-        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
-      ],
-      "cwd": "${workspaceFolder}/neoforge/runs/gametest",
-      "env": {},
-      "console": "internalConsole",
-      "shortenCommandLine": "none"
-    },
-    {
-      "type": "java",
-      "request": "launch",
       "name": "NeoForge Server (:neoforge)",
       "presentation": {
         "group": "Mod Development - neoforge",
-        "order": 4
+        "order": 3
       },
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",

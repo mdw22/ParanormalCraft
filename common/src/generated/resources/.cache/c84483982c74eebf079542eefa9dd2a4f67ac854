@@ -1,3 +1,5 @@
-// 26.2	2026-10-17T17:41:06.606567	Model Definitions - paranormalcraft
-ba7330b6c4400f48c7c3b1fddb40ab484a36c739 assets/paranormalcraft/items/debug_wisp.json
-3b9ed620f823f2136f2e4a69bf296358bf72283e assets/paranormalcraft/models/item/debug_wisp.json
+// 26.2	2026-10-17T18:17:15.476373	Model Definitions - paranormalcraft
+35cf7f65393f59f9d97d5ed1a3fd4cb4338d644a assets/paranormalcraft/items/lingering_spirit_spawn_egg.json
+62d209d19a005ff95e4be5f77d0ecb19ded3d784 assets/paranormalcraft/items/spectral_goggles.json
+7e1bd747efc47780e7e7d02afe7e6c164da02973 assets/paranormalcraft/models/item/lingering_spirit_spawn_egg.json
+7309087c8a3cd7d2a3c7b1d3449b4f15a65dce41 assets/paranormalcraft/models/item/spectral_goggles.json

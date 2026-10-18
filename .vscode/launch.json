@@ -41,10 +41,32 @@
     {
       "type": "java",
       "request": "launch",
-      "name": "NeoForge Data (:neoforge)",
+      "name": "NeoForge Client2 (:neoforge)",
       "presentation": {
         "group": "Mod Development - neoforge",
         "order": 1
+      },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/client2RunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/build/moddev/client2RunVmArgs.txt",
+        "-Dfml.modFolders\u003dparanormalcraft%%/Users/michaelwhite/Desktop/Coding Projects/ParanormalCraft/neoforge/bin/main"
+      ],
+      "cwd": "${workspaceFolder}/neoforge/runs/client2",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Data (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 2
       },
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",
@@ -66,7 +88,7 @@
       "name": "NeoForge Server (:neoforge)",
       "presentation": {
         "group": "Mod Development - neoforge",
-        "order": 2
+        "order": 3
       },
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",

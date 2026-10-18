@@ -23,6 +23,22 @@ dependencies {
     // GeckoLib common API only; each loader supplies its own GeckoLib jar at runtime
     compileOnly("com.geckolib:geckolib-common-${minecraft_version}:${geckolib_version}")
 
+    // Unit tests for pure logic (config, Presence). See https://junit.org for new versions.
+    testImplementation(platform("org.junit:junit-bom:${junit_version}"))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Tests run against the same vanilla libraries (Gson, SLF4J, ...) that common compiles against.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
 
 configurations {

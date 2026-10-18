@@ -1,4 +1,12 @@
 {
-  "item.paranormalcraft.debug_wisp": "Debug Wisp",
-  "itemGroup.paranormalcraft": "Paranormal Craft"
+  "commands.paranormalcraft.reveal.off": "Ghost reveal off",
+  "commands.paranormalcraft.reveal.on": "Ghost reveal on: every ghost is visible to you and home radii are drawn",
+  "entity.paranormalcraft.lingering_spirit": "Lingering Spirit",
+  "item.paranormalcraft.lingering_spirit_spawn_egg": "Lingering Spirit Spawn Egg",
+  "item.paranormalcraft.spectral_goggles": "Spectral Goggles",
+  "itemGroup.paranormalcraft": "Paranormal Craft",
+  "subtitles.paranormalcraft.lingering_spirit.disperse": "Spirit disperses",
+  "subtitles.paranormalcraft.lingering_spirit.hurt": "Spirit wavers",
+  "subtitles.paranormalcraft.lingering_spirit.whisper": "Something whispers",
+  "subtitles.paranormalcraft.spectral_goggles.equip": "Goggles click into place"
 }

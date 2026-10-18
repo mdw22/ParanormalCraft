@@ -8,10 +8,13 @@ import net.minecraft.world.item.ItemStack;
 public final class ModCreativeTabs {
 
     public static final RegistryEntry<CreativeModeTab> PARANORMAL_CRAFT = RegistrationHelper.creativeTab(Constants.MOD_ID,
-            (parameters, output) -> output.accept(new ItemStack(ModItems.DEBUG_WISP.get())),
+            (parameters, output) -> {
+                output.accept(new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
+                output.accept(new ItemStack(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get()));
+            },
             builder -> builder
                     .title(Component.translatable("itemGroup." + Constants.MOD_ID))
-                    .icon(() -> new ItemStack(ModItems.DEBUG_WISP.get())));
+                    .icon(() -> new ItemStack(ModItems.SPECTRAL_GOGGLES.get())));
 
     private ModCreativeTabs() {
     }

@@ -11,6 +11,12 @@
             "problemMatcher": []
         },
         {
+            "label": "NeoForge client 2 (Dev2)",
+            "type": "shell",
+            "command": "./gradlew :neoforge:runClient2",
+            "problemMatcher": []
+        },
+        {
             "label": "NeoForge server",
             "type": "shell",
             "command": "./gradlew :neoforge:runServer",

@@ -18,6 +18,7 @@ public class ModModelProvider extends ModelProvider {
     @Override
     protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
 
-        itemModels.generateFlatItem(ModItems.DEBUG_WISP.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(ModItems.SPECTRAL_GOGGLES.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get(), ModelTemplates.FLAT_ITEM);
     }
 }

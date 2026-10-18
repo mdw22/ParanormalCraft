@@ -11,7 +11,7 @@ public class Constants {
     public static final Logger LOG = LoggerFactory.getLogger(MOD_NAME);
 
     /**
-     * Creates an identifier in the mod's namespace, e.g. {@code paranormalcraft:debug_wisp}.
+     * Creates an identifier in the mod's namespace, e.g. {@code paranormalcraft:spectral_goggles}.
      */
     public static Identifier id(String path) {
 

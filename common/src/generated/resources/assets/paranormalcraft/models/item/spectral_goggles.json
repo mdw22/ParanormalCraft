@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "paranormalcraft:item/debug_wisp"
+    "layer0": "paranormalcraft:item/spectral_goggles"
   }
 }

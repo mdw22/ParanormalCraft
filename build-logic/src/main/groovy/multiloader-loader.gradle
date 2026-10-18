@@ -53,6 +53,37 @@ tasks.matching { it.name == 'runServer' }.configureEach {
     dependsOn(prepareDevServer)
 }
 
+// Dev clients: seed options.txt so automated visual testing gets a fixed, distraction-free window.
+// Only these keys are set; every other option is left as the game wrote it. Dev run folders only; nothing is shipped.
+def automationOptions = [
+        'pauseOnLostFocus'      : 'false',
+        'fullscreen'            : 'false',
+        'overrideWidth'         : '1280',
+        'overrideHeight'        : '720',
+        'guiScale'              : '2',
+        'onboardAccessibility'  : 'false',
+        'tutorialStep'          : 'none',
+        'skipMultiplayerWarning': 'true',
+        'joinedFirstServer'     : 'true',
+]
+['client', 'client2'].each { runName ->
+    def taskSuffix = runName.capitalize()
+    def seedTask = tasks.register("seed${taskSuffix}Options") {
+        group = 'multiloader'
+        description = "Writes the automation options into runs/${runName}/options.txt."
+        def optionsFile = file("runs/${runName}/options.txt")
+        doLast {
+            optionsFile.parentFile.mkdirs()
+            def lines = optionsFile.exists() ? optionsFile.readLines().findAll { line -> !automationOptions.containsKey(line.split(':', 2)[0]) } : []
+            automationOptions.each { key, value -> lines << "${key}:${value}" }
+            optionsFile.text = lines.join('\n') + '\n'
+        }
+    }
+    tasks.matching { it.name == "run${taskSuffix}" }.configureEach {
+        dependsOn(seedTask)
+    }
+}
+
 tasks.named('javadoc', Javadoc).configure {
     dependsOn(configurations.commonJava)
     source(configurations.commonJava)

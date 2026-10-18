@@ -23,10 +23,23 @@ neoForge {
         client {
             client()
             gameDirectory = this.mkdir(this.file('runs/client'))
+            // -PjoinServer=localhost skips the menus and joins that server (used for automated testing).
+            if (project.hasProperty('joinServer')) {
+                programArguments.addAll('--quickPlayMultiplayer', project.property('joinServer').toString())
+            }
             // ./gradlew :neoforge:runClient -PdebugClient waits for a debugger on 127.0.0.1:5005 (VS Code: "Debug NeoForge client").
             // Gradle's --debug-jvm can bind to IPv6 [::1] only, which debuggers attaching to localhost/127.0.0.1 then miss.
             if (project.hasProperty('debugClient')) {
                 jvmArguments.add('-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=127.0.0.1:5005')
+            }
+        }
+        // Second dev client for two-player tests: ./gradlew :neoforge:runClient2 joins as Dev2.
+        client2 {
+            client()
+            gameDirectory = this.mkdir(this.file('runs/client2'))
+            programArguments.addAll('--username', 'Dev2')
+            if (project.hasProperty('joinServer')) {
+                programArguments.addAll('--quickPlayMultiplayer', project.property('joinServer').toString())
             }
         }
         data {
@@ -44,6 +57,19 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet sourceSets.main
+        }
+    }
+}
+
+// NeoForge's early loading window sets the game window size, so the automation size goes in fml.toml too.
+['client', 'client2'].each { runName ->
+    tasks.named("seed${runName.capitalize()}Options") {
+        def fmlConfig = file("runs/${runName}/config/fml.toml")
+        doLast {
+            fmlConfig.parentFile.mkdirs()
+            def lines = fmlConfig.exists() ? fmlConfig.readLines().findAll { !(it ==~ /\s*earlyWindow(Width|Height)\s*=.*/) } : []
+            lines << 'earlyWindowWidth = 1280' << 'earlyWindowHeight = 720'
+            fmlConfig.text = lines.join('\n') + '\n'
         }
     }
 }

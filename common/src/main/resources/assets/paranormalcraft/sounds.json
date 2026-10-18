@@ -1,0 +1,33 @@
+{
+  "entity.lingering_spirit.whisper": {
+    "sounds": [
+      "minecraft:ambient/nether/soulsand_valley/voices1",
+      "minecraft:ambient/nether/soulsand_valley/voices2",
+      "minecraft:ambient/nether/soulsand_valley/voices3",
+      "minecraft:ambient/nether/soulsand_valley/voices4"
+    ],
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.whisper"
+  },
+  "entity.lingering_spirit.disperse": {
+    "sounds": [
+      { "name": "minecraft:enchant/soulspeed/soulspeed1", "pitch": 0.6 },
+      { "name": "minecraft:enchant/soulspeed/soulspeed2", "pitch": 0.6 },
+      { "name": "minecraft:enchant/soulspeed/soulspeed3", "pitch": 0.6 },
+      { "name": "minecraft:enchant/soulspeed/soulspeed4", "pitch": 0.6 }
+    ],
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.disperse"
+  },
+  "entity.lingering_spirit.hurt": {
+    "sounds": [
+      { "name": "minecraft:mob/allay/hurt1", "pitch": 0.8, "volume": 0.8 },
+      { "name": "minecraft:mob/allay/hurt2", "pitch": 0.8, "volume": 0.8 }
+    ],
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.hurt"
+  },
+  "item.spectral_goggles.equip": {
+    "sounds": [
+      { "name": "minecraft:item/spyglass/use", "volume": 0.8 }
+    ],
+    "subtitle": "subtitles.paranormalcraft.spectral_goggles.equip"
+  }
+}

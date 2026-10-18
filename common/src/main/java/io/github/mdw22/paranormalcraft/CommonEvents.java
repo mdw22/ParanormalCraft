@@ -1,5 +1,10 @@
 package io.github.mdw22.paranormalcraft;
 
+import com.mojang.brigadier.CommandDispatcher;
+import io.github.mdw22.paranormalcraft.command.ModCommands;
+import io.github.mdw22.paranormalcraft.debug.RevealDebug;
+import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,6 +20,8 @@ public class CommonEvents {
      * Called at the end of every server tick.
      */
     public static void onServerTick(MinecraftServer server) {
+
+        RevealDebug.tick(server);
     }
 
     /**
@@ -27,5 +34,26 @@ public class CommonEvents {
      * Called when an entity is added to a server level, including when it is loaded from disk.
      */
     public static void onEntityJoinLevel(Entity entity, ServerLevel level) {
+
+        if (entity instanceof ServerPlayer player) {
+            RevealDebug.sync(player);
+        }
+    }
+
+    /**
+     * Called when the server registers its commands.
+     */
+    public static void onRegisterCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+
+        ModCommands.register(dispatcher);
+    }
+
+    /**
+     * Called after the server has stopped, so per-server state doesn't leak into the next world.
+     */
+    public static void onServerStopped(MinecraftServer server) {
+
+        RevealDebug.clear();
+        GhostCuriousGoal.clearClaims();
     }
 }

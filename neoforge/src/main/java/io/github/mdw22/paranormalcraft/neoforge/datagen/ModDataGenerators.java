@@ -3,7 +3,7 @@ package io.github.mdw22.paranormalcraft.neoforge.datagen;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 /**
- * Run with {@code ./gradlew :neoforge:runData}. Output goes to {@code common/src/main/resources}.
+ * Run with {@code ./gradlew :neoforge:runData}. Output goes to {@code common/src/generated/resources}.
  */
 public class ModDataGenerators {
 

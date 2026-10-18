@@ -1,5 +1,7 @@
 package io.github.mdw22.paranormalcraft.network;
 
+import io.github.mdw22.paranormalcraft.debug.RevealDebug;
+
 /**
  * The one place custom payloads are declared. Send them with {@code Services.NETWORK}.
  * <p>
@@ -17,11 +19,15 @@ public final class ModNetwork {
      * Called once per loader on both physical sides.
      */
     public static void registerPayloads(CommonPayloadRegistrar registrar) {
+
+        registrar.playToClient(RevealFlagPayload.TYPE, RevealFlagPayload.STREAM_CODEC);
     }
 
     /**
      * Called once per loader, on the physical client only.
      */
     public static void registerClientHandlers(ClientPayloadRegistrar registrar) {
+
+        registrar.playToClient(RevealFlagPayload.TYPE, (payload, player) -> RevealDebug.handleClientFlag(payload));
     }
 }

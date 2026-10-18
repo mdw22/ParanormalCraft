@@ -20,6 +20,10 @@ loom {
             setConfigName('Fabric Client')
             ideConfigGenerated(true)
             runDir('runs/client')
+            // -PjoinServer=localhost skips the menus and joins that server (used for automated testing).
+            if (project.hasProperty('joinServer')) {
+                programArgs('--quickPlayMultiplayer', project.property('joinServer').toString())
+            }
         }
         server {
             server()

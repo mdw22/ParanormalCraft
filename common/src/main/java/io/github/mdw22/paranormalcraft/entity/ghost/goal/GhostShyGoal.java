@@ -61,7 +61,9 @@ public class GhostShyGoal extends Goal {
         }
         Vec3 away = this.ghost.position().subtract(player.position()).multiply(1, 0, 1).normalize();
         Vec3 toHome = Vec3.atCenterOf(this.ghost.homeOrHere()).subtract(this.ghost.position()).multiply(1, 0, 1).normalize();
-        Vec3 direction = away.add(toHome).normalize();
+        // Lean toward home at half weight, so the ghost always ends up further from the player (the direction stays
+        // within ~30° of straight away), even when home lies between them.
+        Vec3 direction = away.add(toHome.scale(0.5)).normalize();
         if (direction.lengthSqr() < 1.0E-4) {
             direction = away;
         }

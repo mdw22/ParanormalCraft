@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:ghost_curious_one_at_a_time",
+  "environment": "paranormalcraft:ghost_behaviour",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 700,
+  "sky_access": true
+}

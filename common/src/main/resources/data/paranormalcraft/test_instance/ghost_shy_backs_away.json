@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:ghost_shy_backs_away",
+  "environment": "paranormalcraft:ghost_behaviour",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 200,
+  "sky_access": true
+}

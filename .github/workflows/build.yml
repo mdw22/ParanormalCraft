@@ -41,6 +41,7 @@ jobs:
           name: client-gametest-screenshots
           path: fabric/build/run/clientGameTest/screenshots/
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload NeoForge jar
         uses: actions/upload-artifact@v4
@@ -50,6 +51,7 @@ jobs:
             neoforge/build/libs/*.jar
             !neoforge/build/libs/*-sources.jar
             !neoforge/build/libs/*-javadoc.jar
+          retention-days: 7
 
       - name: Upload Fabric jar
         uses: actions/upload-artifact@v4
@@ -59,3 +61,4 @@ jobs:
             fabric/build/libs/*.jar
             !fabric/build/libs/*-sources.jar
             !fabric/build/libs/*-javadoc.jar
+          retention-days: 7

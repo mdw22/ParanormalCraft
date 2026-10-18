@@ -17,7 +17,7 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import java.util.function.BiConsumer;
 
 /**
- * {@code paranormalcraft:chests/abandoned_cabin}: enough for a first set of tools (copper always, leather, amethyst,
+ * {@code paranormalcraft:chests/abandoned_cabin}: enough for a first set of tools (copper and redstone always, leather, amethyst,
  * tinted glass sometimes) plus cabin clutter. One pool per item so each chance is independent.
  */
 public class ModChestLoot implements LootTableSubProvider {
@@ -29,7 +29,8 @@ public class ModChestLoot implements LootTableSubProvider {
     public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
 
         output.accept(ModStructures.ABANDONED_CABIN_CHEST, LootTable.lootTable()
-                .withPool(item(Items.COPPER_INGOT, 3, 7, 1.0F))
+                .withPool(item(Items.COPPER_INGOT, 6, 10, 1.0F))
+                .withPool(item(Items.REDSTONE, 2, 4, 1.0F))
                 .withPool(item(Items.CANDLE, 1, 3, 1.0F))
                 .withPool(item(Items.PAPER, 1, 4, 1.0F))
                 .withPool(item(Items.BOOK, 1, 1, 0.5F))

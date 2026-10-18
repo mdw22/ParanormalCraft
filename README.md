@@ -27,6 +27,14 @@ Jars are written to `neoforge/build/libs/` and `fabric/build/libs/`.
 
 In VS Code, run these from **Terminal > Run Task**. To debug the NeoForge client, open the Run and Debug view and start **Debug NeoForge client**.
 
+### Cleaning up the dev run folders
+
+```sh
+./gradlew cleanDevRuns
+```
+
+Deletes logs, crash reports and `paranormalcraft-debug/` dumps from every folder under `neoforge/runs/` and `fabric/runs/`. It also deletes test worlds: every single-player world in a client's `saves/`, the GameTest server's world, and every server world except the one named by `level-name` in that server's `server.properties`. Config files, `options.txt` and the kept server world stay. Copy any single-player world you want to keep somewhere else first. Fabric GameTest runs live under `fabric/build/run/`, which `./gradlew clean` removes.
+
 Dev servers accept the EULA automatically and run with `online-mode=false`, so a dev client can join at `localhost`.
 
 ## Layout

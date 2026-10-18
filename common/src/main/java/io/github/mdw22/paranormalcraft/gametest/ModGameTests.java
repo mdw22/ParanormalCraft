@@ -57,6 +57,8 @@ public final class ModGameTests {
         RegistrationHelper.testFunction("cold_spot_is_roofed", ModGameTests::coldSpotIsRoofed);
         RegistrationHelper.testFunction("ghost_marker_spawns_homed_ghost", ModGameTests::ghostMarkerSpawnsHomedGhost);
         HauntingGameTests.init();
+        GhostBehaviourGameTests.init();
+        ItemGameTests.init();
     }
 
     private static LingeringSpiritEntity frozenGhost(GameTestHelper helper) {
@@ -194,6 +196,7 @@ public final class ModGameTests {
     private static void spectralArrowGlowsWithoutDamage(GameTestHelper helper) {
 
         LingeringSpiritEntity ghost = frozenGhost(helper);
+        // TODO(26.3): makeMockServerPlayerInLevel is deprecated; switch once a replacement exists.
         ServerPlayer archer = helper.makeMockServerPlayerInLevel();
         archer.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
         Vec3 start = helper.absoluteVec(new Vec3(CENTRE.getX() + 0.5, CENTRE.getY() + 0.6, CENTRE.getZ() - 4.5));

@@ -4,3 +4,39 @@ plugins {
     // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
     id 'net.neoforged.moddev' version '2.0.148' apply false
 }
+// Frees disk space in the dev run folders: deletes logs, crash reports, paranormalcraft-debug/ dumps, client worlds
+// (saves/), the GameTest server world and every server world except the one named in server.properties. Keeps
+// config files, options.txt and everything else.
+tasks.register('cleanDevRuns') {
+    group = 'paranormalcraft'
+    description = 'Deletes old test worlds, logs, crash reports and debug dumps from the dev run folders.'
+    doLast {
+        def runDirs = ['neoforge/runs', 'fabric/runs'].collectMany { root ->
+            def dir = file(root)
+            dir.isDirectory() ? (dir.listFiles().findAll { it.isDirectory() } as List) : []
+        }
+        def deleted = []
+        def remove = { File target ->
+            if (target.exists()) {
+                project.delete(target)
+                deleted << rootDir.toPath().relativize(target.toPath()).toString()
+            }
+        }
+        runDirs.each { File run ->
+            ['logs', 'crash-reports', 'paranormalcraft-debug', 'gametestserver'].each { remove(new File(run, it)) }
+            def saves = new File(run, 'saves')
+            if (saves.isDirectory()) {
+                saves.listFiles().findAll { it.isDirectory() }.each { remove(it) }
+            }
+            def keep = null
+            def properties = new File(run, 'server.properties')
+            if (properties.isFile()) {
+                def props = new Properties()
+                properties.withInputStream { props.load(it) }
+                keep = props.getProperty('level-name', 'world')
+            }
+            run.listFiles().findAll { it.isDirectory() && new File(it, 'level.dat').isFile() && it.name != keep }.each { remove(it) }
+        }
+        logger.lifecycle(deleted ? "Deleted:\n  ${deleted.join('\n  ')}" : 'Nothing to delete.')
+    }
+}

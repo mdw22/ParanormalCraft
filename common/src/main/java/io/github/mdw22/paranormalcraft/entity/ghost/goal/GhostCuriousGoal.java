@@ -30,6 +30,7 @@ public class GhostCuriousGoal extends Goal {
     private final double speed;
     private final int chance;
     private @Nullable Player target;
+    private @Nullable Vec3 spot;
     private int ticksLeft;
 
     /**
@@ -41,6 +42,14 @@ public class GhostCuriousGoal extends Goal {
         this.speed = speed;
         this.chance = chance;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+    }
+
+    /**
+     * The player this goal is hanging around, while it runs.
+     */
+    public @Nullable Player target() {
+
+        return this.target;
     }
 
     public static void clearClaims() {
@@ -100,9 +109,12 @@ public class GhostCuriousGoal extends Goal {
         }
         this.ticksLeft--;
         this.ghost.getLookControl().setLookAt(player, 10.0F, this.ghost.getMaxHeadXRot());
-        double distance = this.ghost.distanceTo(player);
-        if (this.ticksLeft % REPATH_TICKS == 0 && (distance < MIN_DISTANCE - 0.5 || distance > MAX_DISTANCE + 0.5)) {
+        double distance = horizontalDistance(player);
+        if (this.ticksLeft % REPATH_TICKS == 0 && (distance < MIN_DISTANCE || distance > MAX_DISTANCE)) {
             moveToHangSpot(player);
+        } else if (this.spot != null && this.ghost.getNavigation().isDone() && this.ghost.position().distanceToSqr(this.spot) > 0.04) {
+            // The path ends at a block centre, up to ~0.7 blocks off the spot: drift the rest of the way.
+            this.ghost.getMoveControl().setWantedPosition(this.spot.x, this.spot.y, this.spot.z, this.speed);
         }
     }
 
@@ -113,17 +125,21 @@ public class GhostCuriousGoal extends Goal {
             CLAIMS.remove(this.target.getUUID(), this.ghost);
         }
         this.target = null;
+        this.spot = null;
         this.ghost.getNavigation().stop();
     }
 
     private void moveToHangSpot(Player player) {
 
         Vec3 spot = hangSpot(player);
+        this.spot = spot;
         if (spot == null) {
             this.ticksLeft = 0;
             return;
         }
-        this.ghost.getNavigation().moveTo(spot.x, spot.y, spot.z, this.speed);
+        if (!this.ghost.getNavigation().moveTo(spot.x, spot.y, spot.z, this.speed)) {
+            this.ghost.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, this.speed);
+        }
     }
 
     /**
@@ -141,6 +157,11 @@ public class GhostCuriousGoal extends Goal {
             return null;
         }
         return this.ghost.level().noCollision(this.ghost, this.ghost.getDimensions(this.ghost.getPose()).makeBoundingBox(spot)) ? spot : null;
+    }
+
+    private double horizontalDistance(Player player) {
+
+        return Math.hypot(this.ghost.getX() - player.getX(), this.ghost.getZ() - player.getZ());
     }
 
     private boolean isClaimedByOther(Player player) {

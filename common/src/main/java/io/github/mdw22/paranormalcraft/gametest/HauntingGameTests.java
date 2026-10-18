@@ -116,6 +116,7 @@ public final class HauntingGameTests {
         return helper.getLevel().getEntitiesOfClass(ItemEntity.class, box, entity -> entity.getItem().is(item)).size();
     }
 
+    // TODO(26.3): makeMockServerPlayerInLevel is deprecated; switch once a replacement exists.
     private static ServerPlayer playerAt(GameTestHelper helper, BlockPos relative) {
 
         ServerPlayer player = helper.makeMockServerPlayerInLevel();

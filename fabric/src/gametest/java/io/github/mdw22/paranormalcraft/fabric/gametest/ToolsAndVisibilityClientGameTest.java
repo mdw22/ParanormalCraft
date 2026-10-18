@@ -11,7 +11,11 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import io.github.mdw22.paranormalcraft.registry.ModCreativeTabs;
+import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -21,13 +25,14 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Client GameTests for the things that have to be seen. One superflat world, four checks, screenshots saved to
+ * Client GameTests for the things that have to be seen. One superflat world, five checks, screenshots saved to
  * {@code fabric/build/run/clientGameTest/screenshots}:
  * <ol>
  *     <li>a ghost is hidden without goggles and shown with them ({@code canSee} asserted on the client);</li>
  *     <li>the EMF Reader model at level 1 and at level 5;</li>
  *     <li>the thermometer's action bar while standing on a cold spot;</li>
- *     <li>a shadow figure from {@code debug hallucinate} that vanishes once looked at.</li>
+ *     <li>a shadow figure from {@code debug hallucinate}, on screen when it appears, that vanishes once looked at;</li>
+ *     <li>the Paranormal Craft creative tab and its four items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
  */
@@ -53,6 +58,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             emfLevels(context, server);
             thermometerAtColdSpot(context, server);
             shadowFigure(context, server);
+            creativeTab(context, server);
         }
     }
 
@@ -141,6 +147,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
 
         server.runCommand("kill @e[type=" + GHOST + "]");
         server.runCommand("item replace entity @a weapon.mainhand with air");
+        server.runCommand("kill @e[type=item]");
         server.runCommand("tp @a 0.5 -60 0.5 180 0");
         context.waitTicks(10);
         server.runCommand("paranormalcraft debug hallucinate @a");
@@ -149,31 +156,56 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             ShadowFigureEntity active = ClientHallucinations.active();
             check(active != null, "no shadow figure on the client");
             check(!active.isPickable() && active.isInvisible(), "figure is pickable or would show a hitbox");
+            double half = ClientHallucinations.halfHorizontalFov(client);
+            HallucinationPlacement.Band band = HallucinationPlacement.band(half);
             double distance = Math.hypot(active.getX() - client.player.getX(), active.getZ() - client.player.getZ());
             double angle = Math.abs(HallucinationPlacement.relativeAngle(client.player.getYRot(), active.getX() - client.player.getX(), active.getZ() - client.player.getZ()));
-            check(distance >= 9.5 && distance <= 16.5, "figure " + distance + " blocks away");
-            check(angle >= 59.0 && angle <= 81.0, "figure " + angle + " degrees off the view");
+            check(distance >= 7.5 && distance <= 13.5, "figure " + distance + " blocks away");
+            check(angle >= band.min() - 1.0 && angle <= band.max() + 1.0,
+                    String.format(Locale.ROOT, "figure %.1f degrees off the view, band %.1f-%.1f (half-FOV %.1f)", angle, band.min(), band.max(), half));
             return active.position();
         });
         UUID figureId = context.computeOnClient(client -> ClientHallucinations.active().getUUID());
         boolean onServer = server.computeOnServer(s -> s.overworld().getEntity(figureId) != null);
         check(!onServer, "the figure exists on the server");
-        // It appears 60-80° off the view, outside the default ~51° half-width of the screen, so it is only seen while
-        // turning toward it. Turn to 40° off (visible, but not yet the 20° that makes it vanish) for the screenshot.
-        context.runOnClient(client -> {
-            double off = HallucinationPlacement.relativeAngle(client.player.getYRot(), figure.x - client.player.getX(), figure.z - client.player.getZ());
-            client.player.setYRot((float) (client.player.getYRot() + off - Math.copySign(40.0, off)));
-            client.player.setXRot(0.0F);
-        });
+        // It appears just inside the screen edge, so the screenshot is taken straight away, without turning.
         context.waitTicks(2);
         boolean stillThere = context.computeOnClient(client -> ClientHallucinations.active() != null);
-        check(stillThere, "figure vanished at 40 degrees off the view");
-        context.takeScreenshot("06-shadow-figure-in-view");
+        check(stillThere, "figure vanished without the player turning");
+        context.takeScreenshot("06-shadow-figure-on-appearance");
         context.runOnClient(client -> client.player.lookAt(EntityAnchorArgument.Anchor.EYES, figure.add(0, 1.6, 0)));
         context.waitTicks(3);
         boolean gone = context.computeOnClient(client -> ClientHallucinations.active() == null);
         check(gone, "figure didn't vanish when looked at");
         context.takeScreenshot("07-shadow-figure-gone-after-looking");
+    }
+
+    /**
+     * Opens the creative inventory on our tab: it holds the goggles, EMF Reader, thermometer and spawn egg.
+     */
+    private static void creativeTab(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("gamemode creative @a");
+        context.waitTicks(5);
+        context.runOnClient(client -> {
+            CreativeModeInventoryScreen screen = new CreativeModeInventoryScreen(client.player, client.player.connection.enabledFeatures(),
+                    client.options.operatorItemsTab().get());
+            client.gui.setScreen(screen);
+            check(screen.setSelectedTab(ModCreativeTabs.PARANORMAL_CRAFT.get()), "couldn't select the Paranormal Craft tab");
+        });
+        context.waitTicks(5);
+        List<String> shown = context.computeOnClient(client -> {
+            check(client.gui.screen() instanceof CreativeModeInventoryScreen, "creative inventory isn't open");
+            CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen) client.gui.screen();
+            return screen.getMenu().items.stream().filter(stack -> !stack.isEmpty())
+                    .map(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()).toList();
+        });
+        for (var item : List.of(ModItems.SPECTRAL_GOGGLES, ModItems.EMF_READER, ModItems.SPIRIT_THERMOMETER, ModItems.LINGERING_SPIRIT_SPAWN_EGG)) {
+            String id = BuiltInRegistries.ITEM.getKey(item.get()).toString();
+            check(shown.contains(id), "creative tab is missing " + id + " (shows " + shown + ")");
+        }
+        context.takeScreenshot("08-creative-tab");
+        context.runOnClient(client -> client.gui.setScreen(null));
     }
 
     private static void check(boolean condition, String message) {

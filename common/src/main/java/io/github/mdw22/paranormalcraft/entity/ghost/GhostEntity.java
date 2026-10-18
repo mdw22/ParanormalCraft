@@ -25,6 +25,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.WrappedGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
@@ -37,6 +38,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -54,6 +56,9 @@ public abstract class GhostEntity extends PathfinderMob {
     public static final int LEASH_RADIUS = 16;
     /** How far players can be for curiosity and manifesting. */
     public static final double PLAYER_RANGE = 10.0;
+    /** See {@link #travel}: top speed is {@code speed × 1.0 / (1 − 0.5)} blocks per tick. */
+    private static final float DRIFT_ACCELERATION = 1.0F;
+    private static final double DRIFT_DRAG = 0.5;
     /** 1.5 seconds. */
     public static final int MANIFEST_TICKS = 30;
     /** Vanilla health never matters; it is reset after every hit so the ghost only ever disperses. */
@@ -133,6 +138,19 @@ public abstract class GhostEntity extends PathfinderMob {
     public @Nullable BlockPos getColdSpot() {
 
         return this.coldSpot;
+    }
+
+    /**
+     * The running AI goal of a given type, if any (for tests and debugging).
+     */
+    public <T extends Goal> Optional<T> runningGoal(Class<T> type) {
+
+        return this.goalSelector.getAvailableGoals().stream()
+                .filter(WrappedGoal::isRunning)
+                .map(WrappedGoal::getGoal)
+                .filter(type::isInstance)
+                .map(type::cast)
+                .findFirst();
     }
 
     /**
@@ -373,20 +391,30 @@ public abstract class GhostEntity extends PathfinderMob {
         return GhostMovement.createNavigation(this, level);
     }
 
+    /**
+     * A steady drift: velocity follows the move control's speed linearly (about 1.2 blocks/s when wandering, 2 when
+     * curious, 2.4 returning home, 2.8 backing away). Vanilla's {@code travelFlying} applies the speed twice and keeps
+     * 91% of the velocity each tick, so at ghost speeds the push stayed under the 0.003 that {@code aiStep} zeroes
+     * every tick, and wandering ghosts barely moved.
+     */
     @Override
     public void travel(Vec3 input) {
 
-        this.travelFlying(input, this.getSpeed());
+        this.moveRelative(DRIFT_ACCELERATION, input);
+        this.move(MoverType.SELF, this.getDeltaMovement());
+        this.setDeltaMovement(this.getDeltaMovement().scale(DRIFT_DRAG));
     }
 
     @Override
     public void move(MoverType type, Vec3 delta) {
 
         // Drift through doors and thin walls without turning on noPhysics.
-        if (type == MoverType.SELF && delta.lengthSqr() > 1.0E-7
-                && GhostMovement.onlyPassableBlocksIn(this.level(), this.getBoundingBox().expandTowards(delta))) {
-            this.setPos(this.getX() + delta.x, this.getY() + delta.y, this.getZ() + delta.z);
-            return;
+        if (type == MoverType.SELF && delta.lengthSqr() > 1.0E-7) {
+            Vec3 allowed = GhostMovement.moveThroughPassable(this.level(), this.getBoundingBox(), delta);
+            if (allowed != null) {
+                this.setPos(this.getX() + allowed.x, this.getY() + allowed.y, this.getZ() + allowed.z);
+                return;
+            }
         }
         super.move(type, delta);
     }

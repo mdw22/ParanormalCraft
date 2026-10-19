@@ -9,10 +9,12 @@ import io.github.mdw22.paranormalcraft.debug.trace.TraceWriter;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
+import io.github.mdw22.paranormalcraft.network.TraceMirrorPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
@@ -38,6 +40,8 @@ public final class ClientTrace {
     private static final double GHOST_RANGE = 64.0;
 
     private static @Nullable TraceWriter writer;
+    /** While a script this player started is running, every line also goes to the server for {@code expect trace}. */
+    private static boolean mirroring;
     private static boolean soundListenerAdded;
     /** Set just before our own client-only code plays a sound, so the listener can mark it local. */
     private static boolean nextSoundLocal;
@@ -49,7 +53,16 @@ public final class ClientTrace {
 
     public static boolean active() {
 
-        return writer != null;
+        return writer != null || mirroring;
+    }
+
+    public static void setMirroring(boolean mirror) {
+
+        mirroring = mirror;
+        if (mirror) {
+            LAST_GHOST_STATE.clear();
+            lastGoggles = null;
+        }
     }
 
     public static Path start() throws IOException {
@@ -78,13 +91,18 @@ public final class ClientTrace {
 
     public static void event(String type, Consumer<JsonObject> fields) {
 
-        if (writer == null) {
+        if (!active()) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
         JsonObject line = TraceWriter.event(minecraft.level == null ? -1 : minecraft.level.getGameTime(), type);
         fields.accept(line);
-        writer.write(line);
+        if (writer != null) {
+            writer.write(line);
+        }
+        if (mirroring && minecraft.getConnection() != null) {
+            minecraft.getConnection().send(new ServerboundCustomPayloadPacket(new TraceMirrorPayload(line.toString())));
+        }
     }
 
     public static void addPos(JsonObject line, Entity entity) {
@@ -117,7 +135,7 @@ public final class ClientTrace {
             soundListenerAdded = true;
         }
         nextSoundLocal = false;
-        if (writer == null || minecraft.level == null || minecraft.player == null) {
+        if (!active() || minecraft.level == null || minecraft.player == null) {
             return;
         }
         LocalPlayer player = minecraft.player;
@@ -152,7 +170,7 @@ public final class ClientTrace {
 
     private static void onSound(SoundInstance sound, WeighedSoundEvents soundEvent, float range) {
 
-        if (writer == null || !Constants.MOD_ID.equals(sound.getIdentifier().getNamespace())) {
+        if (!active() || !Constants.MOD_ID.equals(sound.getIdentifier().getNamespace())) {
             return;
         }
         boolean local = nextSoundLocal;
@@ -223,5 +241,6 @@ public final class ClientTrace {
 
         LAST_GHOST_STATE.clear();
         lastGoggles = null;
+        mirroring = false;
     }
 }

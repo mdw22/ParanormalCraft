@@ -1,0 +1,25 @@
+# Solo capture in the capture arena. The scene's traps are cleared; the player tethers the ghost (6 Presence) from
+# 6 blocks and the tether drains it into Weakened while it jerks away. Then a trap goes down right under it (what
+# throwing one does) and pulls it in while the tether holds: a sure capture.
+# Run with: /paranormalcraft debug run capture_solo
+paranormalcraft debug scene capture_arena
+wait 20
+expect dump ghosts[0].presence=6 ghosts[0].weakened=false ghosts[0].tethers=0
+setblock 100000 201 100000 air
+setblock 100003 201 100000 air
+paranormalcraft debug tether @s on
+expect trace tether_start within 20
+expect trace tether_drain within 5
+paranormalcraft debug screenshot tether_latched
+expect trace weakened_start within 30
+wait 10
+expect dump ghosts[0].weakened=true ghosts[0].tethers=1 ghosts[0].speedFactor=0.5
+execute at @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene,limit=1] run setblock ~ 201 ~ paranormalcraft:ghost_trap
+expect trace trap_armed within 5
+expect trace trap_capture_start tethers=1 within 20
+paranormalcraft debug screenshot trap_mid_capture
+expect trace trap_capture_success tetheredThroughout=true within 40
+expect dump filledTraps.length>=1 ghosts.length=0
+wait 10
+expect trace tether_end reason=lost
+paranormalcraft debug screenshot filled_trap

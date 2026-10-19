@@ -22,6 +22,7 @@ public class ModDataGenerators {
         event.createProvider(ModBiomeTagsProvider::new);
         event.createProvider(ModStructureTagsProvider::new);
         event.createProvider((output, lookup) -> new LootTableProvider(output, Set.of(),
-                List.of(new LootTableProvider.SubProviderEntry(ModChestLoot::new, LootContextParamSets.CHEST)), lookup));
+                List.of(new LootTableProvider.SubProviderEntry(ModChestLoot::new, LootContextParamSets.CHEST),
+                        new LootTableProvider.SubProviderEntry(ModBlockLoot::new, LootContextParamSets.BLOCK)), lookup));
     }
 }

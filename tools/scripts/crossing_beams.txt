@@ -1,0 +1,19 @@
+# Crossing beams: needs Dev2 online. The scene ghost is removed, then Dev (6 south, facing north) and Dev2 (6 west,
+# facing east) fire free beams that cross over the middle. Both wands overheat, both beams end, both players are
+# knocked back and take 2 hearts.
+# Run with: /paranormalcraft debug run crossing_beams
+paranormalcraft debug scene capture_arena
+wait 20
+kill @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene]
+execute as Dev run paranormalcraft debug look 180 0
+execute as Dev2 run paranormalcraft debug look -90 0
+wait 5
+paranormalcraft debug tether Dev on
+paranormalcraft debug tether Dev2 on
+expect trace backfire within 20
+expect trace wand_overheat player=Dev within 5
+expect trace wand_overheat player=Dev2 within 5
+expect trace tether_end reason=backfire within 5
+paranormalcraft debug screenshot backfire
+paranormalcraft debug tether Dev off
+paranormalcraft debug tether Dev2 off

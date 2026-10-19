@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.platform.services.IRegistrationHelper;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.core.registries.Registries;
@@ -116,6 +117,14 @@ public final class RegistrationHelper {
             MapCodec<S> resolved = codec.get();
             return () -> resolved;
         });
+    }
+
+    /**
+     * Registers a data component type; {@code builder} sets its codecs (persistent and/or network-synchronised).
+     */
+    public static <T> RegistryEntry<DataComponentType<T>> dataComponent(String name, UnaryOperator<DataComponentType.Builder<T>> builder) {
+
+        return PLATFORM.register(BuiltInRegistries.DATA_COMPONENT_TYPE, name, () -> builder.apply(DataComponentType.builder()).build());
     }
 
     public static RegistryEntry<SoundEvent> sound(String name) {

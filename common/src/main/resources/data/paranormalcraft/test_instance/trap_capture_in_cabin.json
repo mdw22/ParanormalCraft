@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:trap_capture_in_cabin",
+  "environment": "paranormalcraft:capture_cabin",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 120,
+  "sky_access": true
+}

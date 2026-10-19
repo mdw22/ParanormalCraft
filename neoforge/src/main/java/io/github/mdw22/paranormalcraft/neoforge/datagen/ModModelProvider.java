@@ -1,12 +1,15 @@
 package io.github.mdw22.paranormalcraft.neoforge.datagen;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.block.GhostTrapBlock;
 import io.github.mdw22.paranormalcraft.client.EmfLevelProperty;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.tool.EmfLevels;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
+import net.minecraft.client.data.models.blockstates.PropertyDispatch;
 import net.minecraft.client.data.models.ModelProvider;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
@@ -33,6 +36,16 @@ public class ModModelProvider extends ModelProvider {
         itemModels.generateFlatItem(ModItems.SPIRIT_THERMOMETER.get(), ModelTemplates.FLAT_ITEM);
         generateEmfReader(itemModels);
         blockModels.createAirLikeBlock(ModBlocks.GHOST_MARKER.get(), Items.SOUL_LANTERN);
+        itemModels.generateFlatItem(ModItems.TETHER_WAND.get(), ModelTemplates.FLAT_HANDHELD_ITEM);
+        itemModels.generateFlatItem(ModItems.GHOST_TRAP.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(ModItems.FILLED_GHOST_TRAP.get(), ModelTemplates.FLAT_ITEM);
+        // The trap blocks use hand-written cuboid models (assets/paranormalcraft/models/block/*ghost_trap*.json).
+        blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(ModBlocks.GHOST_TRAP.get())
+                .with(PropertyDispatch.initial(GhostTrapBlock.OPEN)
+                        .select(false, BlockModelGenerators.plainVariant(Constants.id("block/ghost_trap")))
+                        .select(true, BlockModelGenerators.plainVariant(Constants.id("block/ghost_trap_open")))));
+        blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(ModBlocks.FILLED_GHOST_TRAP.get(),
+                BlockModelGenerators.plainVariant(Constants.id("block/filled_ghost_trap"))));
     }
 
     /**

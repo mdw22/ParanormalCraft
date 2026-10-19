@@ -1,11 +1,14 @@
 package io.github.mdw22.paranormalcraft.network;
 
+import com.google.gson.JsonParser;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
 import io.github.mdw22.paranormalcraft.client.debug.ClientDebugTools;
 import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
 import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
+import io.github.mdw22.paranormalcraft.client.tether.ClientBeams;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
@@ -31,6 +34,21 @@ public final class ModNetwork {
         registrar.playToClient(ThermometerReadingPayload.TYPE, ThermometerReadingPayload.STREAM_CODEC);
         registrar.playToClient(HallucinationPayload.TYPE, HallucinationPayload.STREAM_CODEC);
         registrar.playToClient(DebugClientPayload.TYPE, DebugClientPayload.STREAM_CODEC);
+        registrar.playToClient(BeamStatePayload.TYPE, BeamStatePayload.STREAM_CODEC);
+        registrar.playToServer(FigureResultPayload.TYPE, FigureResultPayload.STREAM_CODEC, (payload, player) -> {
+            Constants.LOG.info("Shadow figure for {}: {}", player.getGameProfile().name(), payload.result());
+            ServerTrace.event("figure_result", line -> {
+                line.addProperty("player", player.getGameProfile().name());
+                line.addProperty("result", payload.result());
+            });
+        });
+        registrar.playToServer(TraceMirrorPayload.TYPE, TraceMirrorPayload.STREAM_CODEC, (payload, player) -> {
+            try {
+                ServerTrace.addClientLine(player.getGameProfile().name(), JsonParser.parseString(payload.json()).getAsJsonObject());
+            } catch (RuntimeException e) {
+                Constants.LOG.warn("Bad mirrored trace line from {}: {}", player.getGameProfile().name(), e.getMessage());
+            }
+        });
         registrar.playToServer(DebugReplyPayload.TYPE, DebugReplyPayload.STREAM_CODEC, (payload, player) ->
                 Constants.LOG.info("[debug] {} replied: {}", player.getGameProfile().name(), payload.message()));
     }
@@ -56,5 +74,7 @@ public final class ModNetwork {
         traced.playToClient(ThermometerReadingPayload.TYPE, (payload, player) -> ClientToolState.onThermometerReading(payload));
         traced.playToClient(HallucinationPayload.TYPE, (payload, player) -> ClientHallucinations.handle(payload));
         traced.playToClient(DebugClientPayload.TYPE, (payload, player) -> ClientDebugTools.handle(payload));
+        // Beams arrive every tick while active: not traced as payloads (beam_render records the changes).
+        registrar.playToClient(BeamStatePayload.TYPE, (payload, player) -> ClientBeams.handle(payload));
     }
 }

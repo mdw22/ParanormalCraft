@@ -1,8 +1,11 @@
 package io.github.mdw22.paranormalcraft.entity.ghost;
 
+import io.github.mdw22.paranormalcraft.capture.PresenceRules;
+
 /**
- * A ghost's Presence, the meter that replaces health. Valid hits drain it; after {@link #REGEN_DELAY_TICKS} without a
- * valid hit it comes back by {@link #REGEN_AMOUNT} every {@link #REGEN_INTERVAL_TICKS}. At zero the ghost disperses.
+ * A ghost's Presence, the meter that replaces health. Valid hits and tethers drain it, never below
+ * {@link PresenceRules#FLOOR}; after {@link #REGEN_DELAY_TICKS} without a drain it comes back by {@link #REGEN_AMOUNT}
+ * every {@link #REGEN_INTERVAL_TICKS} (not while Weakened). Only setting it to zero (debug, {@code /kill}) disperses.
  * <p>
  * Plain logic with no game types, so it can be unit tested. {@link GhostEntity} ticks it on the server and syncs the
  * value.
@@ -46,24 +49,22 @@ public final class Presence {
     }
 
     /**
-     * Applies a valid hit.
-     *
-     * @return true if this hit depleted the Presence, meaning the ghost should disperse now
+     * Drains {@code amount}, never below {@link PresenceRules#FLOOR}, and restarts the regeneration delay.
      */
-    public boolean hit(float damage) {
+    public void drain(float amount) {
 
-        if (damage <= 0.0F || isDepleted()) {
-            return false;
+        if (amount <= 0.0F || isDepleted()) {
+            return;
         }
-        this.value = Math.max(0.0F, this.value - damage);
+        this.value = PresenceRules.afterDrain(this.value, amount);
         this.ticksSinceHit = 0;
-        return isDepleted();
     }
 
     /**
-     * Advances one tick. A depleted Presence never regenerates.
+     * Advances one tick. A depleted Presence never regenerates, and neither does one that may not regenerate now
+     * (a Weakened ghost waits for its recovery instead).
      */
-    public void tick() {
+    public void tick(boolean mayRegenerate) {
 
         if (isDepleted()) {
             return;
@@ -72,7 +73,7 @@ public final class Presence {
             this.ticksSinceHit++;
         }
         int regenTicks = this.ticksSinceHit - REGEN_DELAY_TICKS;
-        if (regenTicks > 0 && regenTicks % REGEN_INTERVAL_TICKS == 0 && this.value < MAX) {
+        if (mayRegenerate && regenTicks > 0 && regenTicks % REGEN_INTERVAL_TICKS == 0 && this.value < MAX) {
             this.value = Math.min(MAX, this.value + REGEN_AMOUNT);
         }
     }

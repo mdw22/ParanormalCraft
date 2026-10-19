@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.registry;
 
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
+import io.github.mdw22.paranormalcraft.entity.ThrownGhostTrap;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -22,6 +23,13 @@ public final class ModEntities {
                     .noSummon()
                     .noLootTable()
                     .clientTrackingRange(0));
+
+    /** A thrown Ghost Trap, arming where it lands. */
+    public static final RegistryEntry<EntityType<ThrownGhostTrap>> THROWN_GHOST_TRAP = RegistrationHelper.entityType("thrown_ghost_trap",
+            () -> EntityType.Builder.<ThrownGhostTrap>of(ThrownGhostTrap::new, MobCategory.MISC)
+                    .sized(0.4F, 0.4F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10));
 
     static {
         RegistrationHelper.entityAttributes(LINGERING_SPIRIT, GhostEntity::createGhostAttributes);

@@ -45,6 +45,7 @@ public final class ClientDebugTools {
                     }
                 }
                 case "config_set" -> reply("Client config " + payload.arg(0, "") + " = " + ModConfigs.setClient(payload.arg(0, ""), payload.arg(1, "")) + " (in memory)");
+                case "trace_mirror" -> ClientTrace.setMirroring(Boolean.parseBoolean(payload.arg(0, "false")));
                 case "config_reload" -> {
                     ModConfigs.loadClient();
                     reply("Client config reloaded from disk");

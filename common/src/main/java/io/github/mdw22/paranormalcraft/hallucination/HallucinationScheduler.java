@@ -42,7 +42,7 @@ public final class HallucinationScheduler {
             return;
         }
         if (conditionsMet(player)) {
-            send(player);
+            send(player, false);
             NEXT.put(player.getUUID(), now + rollInterval(player));
         } else {
             NEXT.put(player.getUUID(), now + RETRY_TICKS);
@@ -57,11 +57,12 @@ public final class HallucinationScheduler {
     }
 
     /**
-     * Sends a shadow figure to this player only (also used by {@code debug hallucinate}, which skips the checks).
+     * Sends a shadow figure to this player only (also used by {@code debug hallucinate}, which skips the checks and
+     * asks for a report of what happened).
      */
-    public static void send(ServerPlayer player) {
+    public static void send(ServerPlayer player, boolean report) {
 
-        Services.NETWORK.sendToPlayer(player, new HallucinationPayload(HallucinationKind.SHADOW_FIGURE, player.getRandom().nextLong()));
+        Services.NETWORK.sendToPlayer(player, new HallucinationPayload(HallucinationKind.SHADOW_FIGURE, player.getRandom().nextLong(), report));
         ServerTrace.event("hallucination_sent", line -> {
             line.addProperty("player", player.getGameProfile().name());
             line.addProperty("kind", HallucinationKind.SHADOW_FIGURE.name().toLowerCase(java.util.Locale.ROOT));

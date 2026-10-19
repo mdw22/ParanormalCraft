@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:stone_pressure_plate",
+    "R": "minecraft:redstone",
+    "T": "minecraft:tinted_glass"
+  },
+  "pattern": [
+    "ITI",
+    "CRC",
+    "IPI"
+  ],
+  "result": {
+    "id": "paranormalcraft:ghost_trap"
+  }
+}

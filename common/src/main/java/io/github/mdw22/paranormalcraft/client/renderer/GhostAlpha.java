@@ -31,9 +31,26 @@ public final class GhostAlpha {
      */
     public static float alpha(GhostEntity ghost, @Nullable Player viewer, float partialTick) {
 
+        if (ghost.isWeakened()) {
+            return weakenedFlicker(ghost.tickCount + partialTick);
+        }
         if (seesAnyway(viewer)) {
             return OPACITY;
         }
         return OPACITY * ghost.manifestFade(partialTick);
+    }
+
+    /** A Weakened ghost flickers for everyone, goggles or not: a fast pulse between these. */
+    public static final float WEAKENED_MIN = 0.2F;
+    public static final float WEAKENED_MAX = 0.5F;
+    private static final float FLICKER_SPEED = 1.3F;
+
+    /**
+     * The Weakened flicker: about two pulses a second between {@link #WEAKENED_MIN} and {@link #WEAKENED_MAX}.
+     */
+    public static float weakenedFlicker(float ticks) {
+
+        float wave = 0.5F + 0.5F * (float) Math.sin(ticks * FLICKER_SPEED);
+        return WEAKENED_MIN + (WEAKENED_MAX - WEAKENED_MIN) * wave;
     }
 }

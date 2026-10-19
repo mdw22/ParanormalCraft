@@ -9,6 +9,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -20,13 +24,74 @@ public final class ServerTrace {
 
     private static @Nullable TraceWriter writer;
     private static @Nullable MinecraftServer server;
+    /** While scripts run, events (server and mirrored client ones) are also kept here for {@code expect trace}. */
+    private static final Deque<JsonObject> BUFFER = new ArrayDeque<>();
+    private static final int BUFFER_SIZE = 20_000;
+    private static int bufferUsers;
 
     private ServerTrace() {
     }
 
     public static boolean active() {
 
-        return writer != null;
+        return writer != null || bufferUsers > 0;
+    }
+
+    /**
+     * Starts keeping events in memory (a script with {@code expect} is running). Balanced by {@link #stopBuffering}.
+     */
+    public static void startBuffering(MinecraftServer minecraftServer) {
+
+        if (bufferUsers++ == 0) {
+            BUFFER.clear();
+        }
+        server = minecraftServer;
+    }
+
+    public static void stopBuffering() {
+
+        bufferUsers = Math.max(0, bufferUsers - 1);
+        if (bufferUsers == 0) {
+            BUFFER.clear();
+            if (writer == null) {
+                server = null;
+            }
+        }
+    }
+
+    /**
+     * A trace line from a client (mirrored while a script runs), stored with {@code side=client} and the player name.
+     */
+    public static void addClientLine(String player, JsonObject line) {
+
+        if (bufferUsers == 0) {
+            return;
+        }
+        line.addProperty("side", "client");
+        line.addProperty("player", player);
+        remember(line);
+    }
+
+    /**
+     * Buffered events at or after game time {@code since}, oldest first.
+     */
+    public static List<JsonObject> since(long since) {
+
+        List<JsonObject> lines = new ArrayList<>();
+        for (JsonObject line : BUFFER) {
+            if (line.get("t").getAsLong() >= since) {
+                lines.add(line);
+            }
+        }
+        return lines;
+    }
+
+    private static void remember(JsonObject line) {
+
+        BUFFER.addLast(line);
+        while (BUFFER.size() > BUFFER_SIZE) {
+            BUFFER.removeFirst();
+        }
     }
 
     public static Path start(MinecraftServer minecraftServer) throws IOException {
@@ -52,7 +117,9 @@ public final class ServerTrace {
         Path path = writer.path();
         writer.close();
         writer = null;
-        server = null;
+        if (bufferUsers == 0) {
+            server = null;
+        }
         return path;
     }
 
@@ -66,12 +133,19 @@ public final class ServerTrace {
      */
     public static void event(String type, Consumer<JsonObject> fields) {
 
-        if (writer == null || server == null) {
+        if ((writer == null && bufferUsers == 0) || server == null) {
             return;
         }
         JsonObject line = TraceWriter.event(server.overworld().getGameTime(), type);
         fields.accept(line);
-        writer.write(line);
+        if (writer != null) {
+            writer.write(line);
+        }
+        if (bufferUsers > 0) {
+            JsonObject copy = line.deepCopy();
+            copy.addProperty("side", "server");
+            remember(copy);
+        }
     }
 
     /**
@@ -104,5 +178,8 @@ public final class ServerTrace {
             Constants.LOG.info("Closing server trace {} as the server stops", writer.path());
         }
         stop();
+        bufferUsers = 0;
+        BUFFER.clear();
+        server = null;
     }
 }

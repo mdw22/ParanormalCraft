@@ -7,6 +7,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
+import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
+import io.github.mdw22.paranormalcraft.capture.FilledTraps;
+import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.haunting.HauntingAction;
@@ -15,6 +19,7 @@ import io.github.mdw22.paranormalcraft.haunting.HauntingSchedule;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -52,6 +57,27 @@ public final class DebugDump {
      */
     public static @Nullable Path dump(ServerLevel level, Vec3 centre, double radius, Consumer<Component> chat) {
 
+        JsonObject root = build(level, centre, radius, chat);
+        Path folder = level.getServer().getServerDirectory().resolve(FOLDER);
+        Path file = folder.resolve("dump-" + LocalDateTime.now().format(STAMP) + ".json");
+        try {
+            Files.createDirectories(folder);
+            Files.writeString(file, GSON.toJson(root), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            Constants.LOG.error("Could not write debug dump {}", file, e);
+            return null;
+        }
+        line(chat, "%d ghost(s), %d player(s); wrote %s", root.getAsJsonArray("ghosts").size(), root.getAsJsonArray("players").size(), file.toAbsolutePath());
+        return file;
+    }
+
+    /**
+     * The dump as JSON, without writing a file (script {@code expect dump} uses this).
+     *
+     * @param chat receives each human-readable line; pass {@code line -> {}} for none
+     */
+    public static JsonObject build(ServerLevel level, Vec3 centre, double radius, Consumer<Component> chat) {
+
         List<GhostEntity> ghosts = level.getEntitiesOfClass(GhostEntity.class, new AABB(centre, centre).inflate(radius),
                 ghost -> ghost.position().distanceTo(centre) <= radius);
         JsonObject root = new JsonObject();
@@ -65,11 +91,20 @@ public final class DebugDump {
             JsonObject json = new JsonObject();
             json.addProperty("type", BuiltInRegistries.ENTITY_TYPE.getKey(ghost.getType()).toString());
             json.addProperty("uuid", ghost.getUUID().toString());
+            json.addProperty("name", ghost.ghostName());
             json.add("position", vec(ghost.position()));
             json.add("home", pos(ghost.getHome()));
             json.add("coldSpot", pos(ghost.getColdSpot()));
             json.addProperty("presence", ghost.getPresence());
             json.addProperty("manifesting", ghost.isManifesting());
+            json.addProperty("weakened", ghost.isWeakened());
+            json.addProperty("tethers", ghost.tetherCount());
+            JsonArray holders = new JsonArray();
+            TetherManager.holdersOf(ghost).forEach(holders::add);
+            json.add("tetheredBy", holders);
+            json.addProperty("recoveryTicksLeft", ghost.recoveryTicksLeft());
+            json.addProperty("speedFactor", ghost.speedFactor());
+            json.addProperty("beingCaptured", ghost.capturingTrap() != null);
             json.addProperty("activeGoal", ghost.activeGoals());
             HauntingSchedule schedule = ghost.haunting().schedule();
             JsonObject haunting = new JsonObject();
@@ -87,9 +122,9 @@ public final class DebugDump {
             haunting.add("recent", recent);
             json.add("haunting", haunting);
             ghostArray.add(json);
-            line(chat, "Ghost %s %s at %s home %s cold spot %s presence %.1f manifesting %s goal %s next haunt in %s ticks",
-                    json.get("type").getAsString(), ghost.getUUID(), fmt(ghost.position()), ghost.getHome(), ghost.getColdSpot(),
-                    ghost.getPresence(), ghost.isManifesting(), ghost.activeGoals(),
+            line(chat, "Ghost %s \"%s\" %s at %s home %s cold spot %s presence %.1f weakened %s tethers %d manifesting %s goal %s next haunt in %s ticks",
+                    json.get("type").getAsString(), ghost.ghostName(), ghost.getUUID(), fmt(ghost.position()), ghost.getHome(), ghost.getColdSpot(),
+                    ghost.getPresence(), ghost.isWeakened(), ghost.tetherCount(), ghost.isManifesting(), ghost.activeGoals(),
                     schedule.isScheduled() ? Math.max(0, schedule.nextAttempt() - level.getGameTime()) : "?");
         }
         root.add("ghosts", ghostArray);
@@ -117,25 +152,40 @@ public final class DebugDump {
         }
         root.add("players", playerArray);
 
-        Path folder = level.getServer().getServerDirectory().resolve(FOLDER);
-        Path file = folder.resolve("dump-" + LocalDateTime.now().format(STAMP) + ".json");
-        try {
-            Files.createDirectories(folder);
-            Files.writeString(file, GSON.toJson(root), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            Constants.LOG.error("Could not write debug dump {}", file, e);
-            return null;
+        JsonArray trapArray = new JsonArray();
+        for (BlockPos trapPos : FilledTraps.near(level, centre, radius)) {
+            if (!(level.getBlockEntity(trapPos) instanceof FilledGhostTrapBlockEntity trap)) {
+                continue;
+            }
+            JsonObject json = new JsonObject();
+            json.add("pos", pos(trapPos));
+            CapturedGhost contents = trap.contents();
+            json.addProperty("name", contents == null ? "none" : contents.name());
+            json.addProperty("entityType", contents == null ? "none" : contents.entityType());
+            json.addProperty("captor", contents == null ? "none" : contents.captor());
+            json.addProperty("structure", contents == null ? "none" : contents.structure().orElse("none"));
+            json.addProperty("uuid", contents == null || !contents.entity().contains("UUID") ? "none"
+                    : UUIDUtil.uuidFromIntArray(contents.entity().getIntArray("UUID").orElse(new int[4])).toString());
+            trapArray.add(json);
+            line(chat, "Filled trap at %s holds %s (caught by %s)", trapPos.toShortString(), json.get("name").getAsString(), json.get("captor").getAsString());
         }
-        line(chat, "%d ghost(s), %d player(s); wrote %s", ghosts.size(), playerArray.size(), file.toAbsolutePath());
-        return file;
+        root.add("filledTraps", trapArray);
+        return root;
     }
 
     private static void line(Consumer<Component> chat, String format, Object... args) {
 
+        if (chat == SILENT) {
+            return;
+        }
         String text = String.format(Locale.ROOT, format, args);
         Constants.LOG.info("[debug dump] {}", text);
         chat.accept(Component.literal(text));
     }
+
+    /** Pass to {@link #build} for no chat or log lines. */
+    public static final Consumer<Component> SILENT = line -> {
+    };
 
     private static String fmt(Vec3 vec) {
 

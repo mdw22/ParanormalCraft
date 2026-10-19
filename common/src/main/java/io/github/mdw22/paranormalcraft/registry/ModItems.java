@@ -1,11 +1,15 @@
 package io.github.mdw22.paranormalcraft.registry;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.item.FilledGhostTrapItem;
+import io.github.mdw22.paranormalcraft.item.GhostTrapItem;
+import io.github.mdw22.paranormalcraft.item.TetherWandItem;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.item.equipment.EquipmentAssets;
@@ -41,6 +45,21 @@ public final class ModItems {
      * Shows the temperature in the action bar while held in either hand; cold spots read colder.
      */
     public static final RegistryEntry<Item> SPIRIT_THERMOMETER = RegistrationHelper.item("spirit_thermometer", Item::new, () -> new Item.Properties().stacksTo(1));
+
+    /**
+     * Hold use to fire a tether beam at a visible ghost; 300 s of beam time, repaired with copper.
+     */
+    public static final RegistryEntry<TetherWandItem> TETHER_WAND = RegistrationHelper.item("tether_wand", TetherWandItem::new,
+            () -> new Item.Properties().durability(300).repairable(Items.COPPER_INGOT));
+
+    /** Throw it, or sneak-place it, to arm a Ghost Trap. */
+    public static final RegistryEntry<GhostTrapItem> GHOST_TRAP = RegistrationHelper.item("ghost_trap",
+            properties -> new GhostTrapItem(ModBlocks.GHOST_TRAP.get(), properties), () -> new Item.Properties().useBlockDescriptionPrefix());
+
+    /** A trap with a ghost in it; one per stack, since each holds a different ghost. */
+    public static final RegistryEntry<FilledGhostTrapItem> FILLED_GHOST_TRAP = RegistrationHelper.item("filled_ghost_trap",
+            properties -> new FilledGhostTrapItem(ModBlocks.FILLED_GHOST_TRAP.get(), properties),
+            () -> new Item.Properties().stacksTo(1).useBlockDescriptionPrefix());
 
     private ModItems() {
     }

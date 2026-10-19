@@ -1,16 +1,20 @@
 package io.github.mdw22.paranormalcraft.entity.ghost;
 
+import io.github.mdw22.paranormalcraft.capture.PresenceRules;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.haunting.HauntingController;
+import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
@@ -74,6 +78,9 @@ public abstract class GhostEntity extends PathfinderMob {
 
     private static final EntityDataAccessor<Float> DATA_PRESENCE = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_MANIFESTING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_WEAKENED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Players within this distance hear "<name> has dispersed". */
+    private static final double DISPERSE_MESSAGE_RANGE = 32.0;
 
     private Presence presence = new Presence();
     private final HauntingController haunting = new HauntingController(this);
@@ -96,6 +103,15 @@ public abstract class GhostEntity extends PathfinderMob {
     /** Debug: a goal forced by {@code debug ghost goal}, until this game time. */
     private @Nullable ForcedGoal forcedGoal;
     private long forcedGoalUntil;
+    /** Server: latched tethers this tick, and where each holder stands (set by the tether manager every tick). */
+    private int tetherCount;
+    private List<Vec3> tetherSources = List.of();
+    /** Server: game time of the last tick a tether was on it, or it became Weakened, for the 15 s recovery. */
+    private long lastTetherTime;
+    /** Server: the trap pulling it in, if any; while set it neither recovers nor acts on its own. */
+    private @Nullable BlockPos capturingTrap;
+    /** Generated once and saved: "Ada Crane". */
+    private @Nullable String ghostName;
     // Server trace bookkeeping.
     private boolean spawnTraced;
     private String tracedGoals = "";
@@ -130,6 +146,157 @@ public abstract class GhostEntity extends PathfinderMob {
     public float getPresence() {
 
         return this.entityData.get(DATA_PRESENCE);
+    }
+
+    /**
+     * At 5 Presence or below: flickers for everyone, moves at half speed, heads home, and can be trapped.
+     */
+    public boolean isWeakened() {
+
+        return this.entityData.get(DATA_WEAKENED);
+    }
+
+    /**
+     * The ghost's generated name, or "Unknown spirit" before it has one.
+     */
+    public String ghostName() {
+
+        return this.ghostName != null ? this.ghostName : "Unknown spirit";
+    }
+
+    public void setGhostName(String name) {
+
+        this.ghostName = name;
+    }
+
+    /**
+     * Server: how many tethers are latched on it this tick.
+     */
+    public int tetherCount() {
+
+        return this.tetherCount;
+    }
+
+    /**
+     * Server, from the tether manager every tick: the latched tethers' holder positions (empty for none).
+     */
+    public void setTethers(List<Vec3> sources) {
+
+        this.tetherSources = List.copyOf(sources);
+        this.tetherCount = sources.size();
+        if (this.tetherCount > 0) {
+            this.lastTetherTime = this.level().getGameTime();
+        }
+    }
+
+    public List<Vec3> tetherSources() {
+
+        return this.tetherSources;
+    }
+
+    /**
+     * Ticks until a Weakened ghost recovers (-1 if not Weakened, or held by a tether or trap).
+     */
+    public long recoveryTicksLeft() {
+
+        if (!isWeakened() || this.tetherCount > 0 || this.capturingTrap != null) {
+            return -1;
+        }
+        return Math.max(0, PresenceRules.RECOVERY_TICKS - (this.level().getGameTime() - this.lastTetherTime));
+    }
+
+    public @Nullable BlockPos capturingTrap() {
+
+        return this.capturingTrap;
+    }
+
+    /**
+     * Server: a trap starts (non-null) or stops (null) pulling this ghost in. While held it has no AI of its own.
+     */
+    public void setCapturingTrap(@Nullable BlockPos trap) {
+
+        this.capturingTrap = trap;
+        this.setNoAi(trap != null);
+        if (trap != null) {
+            this.getNavigation().stop();
+        }
+    }
+
+    /**
+     * Server: one tick of Tether drain (never below the floor).
+     */
+    public void drainByTether(float amount) {
+
+        float before = this.presence.value();
+        this.presence.drain(amount);
+        this.entityData.set(DATA_PRESENCE, this.presence.value());
+        if (this.presence.value() != before) {
+            ServerTrace.ghost("tether_drain", this, line -> {
+                line.addProperty("amount", Math.round((before - this.presence.value()) * 1000.0) / 1000.0);
+                line.addProperty("presence", Math.round(this.presence.value() * 1000.0) / 1000.0);
+            });
+        }
+        updateWeakened();
+    }
+
+    /**
+     * A trap capture failed: it shakes free at {@link PresenceRules#BREAK_FREE_PRESENCE}, no longer Weakened.
+     */
+    public void breakFree(ServerLevel level) {
+
+        setCapturingTrap(null);
+        float before = this.presence.value();
+        this.presence = new Presence(PresenceRules.BREAK_FREE_PRESENCE, 0);
+        this.entityData.set(DATA_PRESENCE, this.presence.value());
+        tracePresence(before, "broke_free");
+        setWeakened(false, "broke_free");
+    }
+
+    private void updateWeakened() {
+
+        boolean weak = PresenceRules.isWeakened(this.presence.value());
+        if (weak != isWeakened()) {
+            setWeakened(weak, weak ? "presence" : "presence_rose");
+        }
+    }
+
+    private void setWeakened(boolean weakened, String reason) {
+
+        if (weakened == isWeakened()) {
+            return;
+        }
+        this.entityData.set(DATA_WEAKENED, weakened);
+        if (weakened) {
+            this.lastTetherTime = this.level().getGameTime();
+        }
+        ServerTrace.ghost(weakened ? "weakened_start" : "weakened_end", this, line -> {
+            line.addProperty("reason", reason);
+            line.addProperty("presence", this.presence.value());
+        });
+    }
+
+    private void tickWeakened(ServerLevel level) {
+
+        if (!isWeakened() || this.capturingTrap != null || this.tetherCount > 0) {
+            return;
+        }
+        if (PresenceRules.shouldRecover(level.getGameTime(), this.lastTetherTime)) {
+            float before = this.presence.value();
+            this.presence = new Presence(PresenceRules.RECOVERED_PRESENCE, 0);
+            this.entityData.set(DATA_PRESENCE, this.presence.value());
+            tracePresence(before, "recovered");
+            setWeakened(false, "recovered");
+            level.playSound(null, this.getX(), this.getY(), this.getZ(), ModSounds.GHOST_RECOVER.get(), this.getSoundSource(), 0.8F, 1.0F);
+        }
+    }
+
+    /**
+     * How fast it moves: half while Weakened, half again with two or more tethers on it.
+     */
+    public double speedFactor() {
+
+        double factor = isWeakened() ? 0.5 : 1.0;
+        return this.tetherCount >= 2 ? factor * 0.5 : factor;
     }
 
     public @Nullable BlockPos getHome() {
@@ -266,7 +433,9 @@ public abstract class GhostEntity extends PathfinderMob {
         tracePresence(presenceBefore, "set");
         if (this.presence.isDepleted()) {
             disperse(level);
+            return;
         }
+        updateWeakened();
     }
 
     /**
@@ -340,6 +509,7 @@ public abstract class GhostEntity extends PathfinderMob {
         super.defineSynchedData(entityData);
         entityData.define(DATA_PRESENCE, Presence.MAX);
         entityData.define(DATA_MANIFESTING, false);
+        entityData.define(DATA_WEAKENED, false);
     }
 
     @Override
@@ -366,10 +536,15 @@ public abstract class GhostEntity extends PathfinderMob {
             if (this.home == null) {
                 setHome(serverLevel, this.blockPosition());
             }
+            if (this.ghostName == null) {
+                this.ghostName = GhostNames.random(this.random);
+            }
             float presenceBefore = this.presence.value();
-            this.presence.tick();
+            this.presence.tick(!isWeakened());
             this.entityData.set(DATA_PRESENCE, this.presence.value());
             tracePresence(presenceBefore, "regen");
+            updateWeakened();
+            tickWeakened(serverLevel);
             tickManifest(serverLevel);
             if (!this.isRemoved()) {
                 this.haunting.tick(serverLevel);
@@ -486,13 +661,14 @@ public abstract class GhostEntity extends PathfinderMob {
         float dealt = healthBefore - this.getHealth();
         this.setHealth(this.getMaxHealth());
         if (dealt > 0.0F) {
+            // Melee (the attacker hitting directly) drains half; arrows and the like drain in full. Never below 1.
+            boolean melee = source.getEntity() != null && source.getDirectEntity() == source.getEntity();
+            float drain = melee ? PresenceRules.meleeDrain(dealt) : dealt;
             float presenceBefore = this.presence.value();
-            boolean depleted = this.presence.hit(dealt);
+            this.presence.drain(drain);
             this.entityData.set(DATA_PRESENCE, this.presence.value());
-            tracePresence(presenceBefore, "hit");
-            if (depleted) {
-                disperse(level);
-            }
+            tracePresence(presenceBefore, melee ? "melee" : "hit");
+            updateWeakened();
         }
         return hurt;
     }
@@ -523,8 +699,13 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.isRemoved()) {
             return;
         }
-        ServerTrace.ghost("ghost_disperse", this, line -> {
-        });
+        ServerTrace.ghost("ghost_disperse", this, line -> line.addProperty("name", ghostName()));
+        Component message = Component.translatable("entity.paranormalcraft.ghost.dispersed", ghostName());
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(this) <= DISPERSE_MESSAGE_RANGE * DISPERSE_MESSAGE_RANGE) {
+                player.sendSystemMessage(message);
+            }
+        }
         level.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(), 40, 0.3, 0.4, 0.3, 0.04);
         level.sendParticles(ParticleTypes.SCULK_SOUL, this.getX(), this.getY() + this.getBbHeight() * 0.5, this.getZ(), 12, 0.25, 0.3, 0.25, 0.02);
         level.playSound(null, this.getX(), this.getY(), this.getZ(), getDisperseSound(), this.getSoundSource(), 1.0F, 1.0F);
@@ -575,7 +756,7 @@ public abstract class GhostEntity extends PathfinderMob {
     @Override
     public void travel(Vec3 input) {
 
-        this.moveRelative(DRIFT_ACCELERATION, input);
+        this.moveRelative((float) (DRIFT_ACCELERATION * speedFactor()), input);
         this.move(MoverType.SELF, this.getDeltaMovement());
         this.setDeltaMovement(this.getDeltaMovement().scale(DRIFT_DRAG));
     }
@@ -657,6 +838,9 @@ public abstract class GhostEntity extends PathfinderMob {
         output.putFloat("Presence", this.presence.value());
         output.putInt("PresenceTicksSinceHit", this.presence.ticksSinceHit());
         output.putInt("ManifestCooldown", this.manifestCooldown);
+        if (this.ghostName != null) {
+            output.putString("GhostName", this.ghostName);
+        }
     }
 
     @Override
@@ -668,5 +852,7 @@ public abstract class GhostEntity extends PathfinderMob {
         this.presence = new Presence(input.getFloatOr("Presence", Presence.MAX), input.getIntOr("PresenceTicksSinceHit", Presence.REGEN_DELAY_TICKS));
         this.entityData.set(DATA_PRESENCE, this.presence.value());
         this.manifestCooldown = input.getIntOr("ManifestCooldown", -1);
+        this.ghostName = input.getString("GhostName").orElse(null);
+        this.entityData.set(DATA_WEAKENED, PresenceRules.isWeakened(this.presence.value()));
     }
 }

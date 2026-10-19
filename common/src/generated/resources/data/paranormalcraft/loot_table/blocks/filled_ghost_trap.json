@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "function": "minecraft:copy_components",
+              "include": [
+                "paranormalcraft:captured_ghost"
+              ],
+              "source": "block_entity"
+            }
+          ],
+          "name": "paranormalcraft:filled_ghost_trap"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "paranormalcraft:blocks/filled_ghost_trap"
+}

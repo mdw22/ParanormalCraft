@@ -17,9 +17,11 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
@@ -27,7 +29,7 @@ import org.jspecify.annotations.Nullable;
  * The shadow hallucination: a tall, thin silhouette that exists only in one client's level. It is never spawned on
  * the server, can't be picked or hit, casts no shadow and has no hitbox outline. While it stands there it makes a
  * quiet presence sound at its own position, for its watcher only (see {@link FigureSounds}), so it can be heard and
- * located. It vanishes when the watcher looks within 20° of it or after 10 s: snapping away with a quiet sting at
+ * located. It vanishes when the watcher looks within 20° of it with it in sight, or 10 s after it was placed: snapping away with a quiet sting at
  * {@code full} intensity, fading over 10 ticks with no sting at {@code reduced}.
  */
 public class ShadowFigureEntity extends Entity implements GeoEntity {
@@ -46,6 +48,8 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
     private int fadeTicksLeft = -1;
     private @Nullable Player watcher;
     private int nextSoundTick;
+    /** Whether it has been on screen and in sight yet (a sound-first figure starts unseen). */
+    private boolean seen;
     /** Why it vanished, for the client trace: {@code looked_at} or {@code timeout}. */
     private @Nullable String vanishReason;
 
@@ -63,6 +67,16 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
 
         this.watcher = watcher;
         this.reduced = reduced;
+    }
+
+    public boolean wasSeen() {
+
+        return this.seen;
+    }
+
+    public void markSeen() {
+
+        this.seen = true;
     }
 
     public boolean isFading() {
@@ -94,6 +108,14 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
             return;
         }
         boolean lookedAt = isLookedAt();
+        if (lookedAt && !this.seen) {
+            // Turning straight to it shows it and makes it vanish in the same tick: it was seen.
+            this.seen = true;
+            ClientTraceHook.event("figure_seen", line -> {
+                ClientTraceHook.addPos(line, this.getX(), this.getY(), this.getZ());
+                line.addProperty("age", this.tickCount);
+            });
+        }
         if (this.tickCount >= LIFETIME_TICKS || lookedAt) {
             this.vanishReason = lookedAt ? "looked_at" : "timeout";
             vanish();
@@ -115,11 +137,20 @@ public class ShadowFigureEntity extends Entity implements GeoEntity {
         }
     }
 
+    /**
+     * Within 20° of the view and actually in sight: a sound-first figure behind a wall doesn't vanish when the player
+     * turns toward the wall.
+     */
     private boolean isLookedAt() {
 
+        Vec3 eye = this.watcher.getEyePosition();
+        Vec3 focus = this.position().add(0, FOCUS_HEIGHT, 0);
         Vec3 look = this.watcher.getViewVector(1.0F);
-        Vec3 toFigure = this.position().add(0, FOCUS_HEIGHT, 0).subtract(this.watcher.getEyePosition());
-        return HallucinationPlacement.angleBetween(look.x, look.y, look.z, toFigure.x, toFigure.y, toFigure.z) < HallucinationPlacement.VANISH_VIEW_ANGLE;
+        Vec3 toFigure = focus.subtract(eye);
+        if (HallucinationPlacement.angleBetween(look.x, look.y, look.z, toFigure.x, toFigure.y, toFigure.z) >= HallucinationPlacement.VANISH_VIEW_ANGLE) {
+            return false;
+        }
+        return this.level().clip(new ClipContext(eye, focus, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this.watcher)).getType() == HitResult.Type.MISS;
     }
 
     private void vanish() {

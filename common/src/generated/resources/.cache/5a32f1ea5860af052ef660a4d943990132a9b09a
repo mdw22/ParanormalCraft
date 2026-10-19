@@ -1,7 +1,11 @@
-// 26.2	2026-10-17T19:00:04.695291	Paranormal Craft recipes
+// 26.2	2026-10-18T17:11:34.896395	Paranormal Craft recipes
 3e6876685dfd00273596b0382b2046f8f2ebcb86 data/paranormalcraft/advancement/recipes/tools/emf_reader.json
+6a4b4d09e6fd006d414ec224f37169e451551c28 data/paranormalcraft/advancement/recipes/tools/ghost_trap.json
 94ae0a82fa11884bb98a75002bfca8713dfb287a data/paranormalcraft/advancement/recipes/tools/spectral_goggles.json
 cdecb49ca7762cd3d14979b0f9ef1b4eb8f0191b data/paranormalcraft/advancement/recipes/tools/spirit_thermometer.json
+5d4358aa2e81035dae6d6e757c8ae2840cd74cdc data/paranormalcraft/advancement/recipes/tools/tether_wand.json
 4b6827083a86efd31c3a2aa779b48ef7293bd954 data/paranormalcraft/recipe/emf_reader.json
+2cd032831e57d1956829345b0978430493632263 data/paranormalcraft/recipe/ghost_trap.json
 844baf7e8e67f663c2531e104855945e4d74577a data/paranormalcraft/recipe/spectral_goggles.json
 b3c8256fe9cb653357d6ca8198556991fa1859c1 data/paranormalcraft/recipe/spirit_thermometer.json
+ee3cb23cdedccd92bc041134bade33f141ea9ae2 data/paranormalcraft/recipe/tether_wand.json

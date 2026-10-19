@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "open=false": {
+      "model": "paranormalcraft:block/ghost_trap"
+    },
+    "open=true": {
+      "model": "paranormalcraft:block/ghost_trap_open"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# Co-op capture: needs Dev2 online (./gradlew :neoforge:runClient2). Both players tether the ghost: two tethers drain
+# twice as fast (4 Presence a second) and halve its speed (no jerks), then the trap takes it.
+# Run with: /paranormalcraft debug run capture_coop
+paranormalcraft debug scene capture_arena
+wait 20
+# Full Presence first, so the drain rate can be measured before it reaches Weakened.
+paranormalcraft debug presence @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] 20
+paranormalcraft debug tether Dev on
+paranormalcraft debug tether Dev2 on
+expect trace tether_start player=Dev within 20
+expect trace tether_start player=Dev2 within 20
+wait 2
+expect dump ghosts[0].tethers=2 ghosts[0].speedFactor=0.5
+wait 20
+# 20 ticks of two tethers: 4.0 drained (from at most 20), allowing a few ticks of slack either side.
+expect dump ghosts[0].presence<=16.6 ghosts[0].presence>=14.8
+expect trace weakened_start within 100
+expect trace trap_capture_start tethers=2 within 40
+expect trace trap_capture_success tetheredThroughout=true within 40
+paranormalcraft debug tether Dev off
+paranormalcraft debug tether Dev2 off
+expect dump filledTraps.length>=1 ghosts.length=0
+# The beams end with the capture: no backfire from the two now-free beams.
+wait 10
+expect trace tether_end reason=lost

@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.debug.DebugKit;
 import io.github.mdw22.paranormalcraft.debug.DebugScenes;
@@ -42,8 +43,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, timers, pace,
- * config and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
+ * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, tether,
+ * timers, pace, config and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
  * development). See the README's "How to test" section.
  */
 public final class DebugCommands {
@@ -74,6 +75,10 @@ public final class DebugCommands {
                 .then(look())
                 .then(ghost())
                 .then(timers())
+                .then(Commands.literal("tether")
+                        .then(Commands.argument("players", EntityArgument.players())
+                                .then(Commands.literal("on").executes(context -> tether(context, true)))
+                                .then(Commands.literal("off").executes(context -> tether(context, false)))))
                 .then(Commands.literal("pace")
                         .then(Commands.literal("fast").executes(context -> pace(context, ModConfigs.FAST_PACE)))
                         .then(Commands.literal("normal").executes(context -> pace(context, 1.0))))
@@ -293,6 +298,23 @@ public final class DebugCommands {
         List<GhostEntity> ghosts = ghosts(context);
         ghosts.forEach(ghost -> ghost.forceGoal(goal));
         return ok(context, "Forced " + name + " on " + ghosts.size() + " ghost(s) for " + GhostEntity.FORCED_GOAL_TICKS / 20 + " s");
+    }
+
+    /**
+     * Keeps players firing their held Tether Wand without holding use (scripts and tests), or stops them.
+     */
+    private static int tether(CommandContext<CommandSourceStack> context, boolean on) throws CommandSyntaxException {
+
+        int count = 0;
+        for (ServerPlayer player : EntityArgument.getPlayers(context, "players")) {
+            if (on && TetherManager.heldWand(player) == null) {
+                context.getSource().sendFailure(Component.literal(player.getGameProfile().name() + " isn't holding a Tether Wand"));
+                continue;
+            }
+            TetherManager.setForced(player, on);
+            count++;
+        }
+        return ok(context, (on ? "Firing" : "Stopped") + " the Tether Wand for " + count + " player(s)");
     }
 
     // ---- timers and pace ----

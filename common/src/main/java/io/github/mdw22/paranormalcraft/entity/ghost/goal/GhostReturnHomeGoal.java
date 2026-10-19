@@ -26,17 +26,18 @@ public class GhostReturnHomeGoal extends Goal {
     @Override
     public boolean canUse() {
 
-        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.HOME) || this.ghost.getHome() == null) {
+        if (!this.ghost.goalAllowed(GhostEntity.ForcedGoal.HOME) || this.ghost.getHome() == null || this.ghost.tetherCount() > 0) {
             return false;
         }
-        double leash = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) ? 1.0 : GhostEntity.LEASH_RADIUS;
+        // Forced, or Weakened (it flees home): go all the way.
+        double leash = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) || this.ghost.isWeakened() ? 1.0 : GhostEntity.LEASH_RADIUS;
         return this.ghost.distanceToHomeSqr() > leash * leash;
     }
 
     @Override
     public boolean canContinueToUse() {
 
-        double arrived = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) ? 1.0 : ARRIVED_DISTANCE;
+        double arrived = this.ghost.goalForced(GhostEntity.ForcedGoal.HOME) || this.ghost.isWeakened() ? 1.0 : ARRIVED_DISTANCE;
         return this.ghost.goalAllowed(GhostEntity.ForcedGoal.HOME) && this.ghost.distanceToHomeSqr() > arrived * arrived;
     }
 

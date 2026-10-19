@@ -108,7 +108,7 @@ public final class ModCommands {
                 .then(Commands.literal("hallucinate")
                         .then(Commands.argument("player", EntityArgument.players()).executes(context -> {
                             Collection<ServerPlayer> players = EntityArgument.getPlayers(context, "player");
-                            players.forEach(HallucinationScheduler::send);
+                            players.forEach(player -> HallucinationScheduler.send(player, true));
                             return report(context, "commands.paranormalcraft.debug.hallucinate", players.size());
                         })))
                 .then(Commands.literal("savestructure")

@@ -9,7 +9,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.function.Supplier;
 
 /**
- * The one rule for who can see a ghost, used by the client renderer and picking and by server damage checks.
+ * The one rule for who can see a ghost, used by the client renderer and picking and by server damage checks. A
+ * Weakened ghost flickers visibly for everyone, so everyone can see (and hit and tether) it.
  */
 public final class GhostVisibility {
 
@@ -23,6 +24,7 @@ public final class GhostVisibility {
 
         return wearsGoggles(viewer)
                 || ghost.isManifesting()
+                || ghost.isWeakened()
                 || RevealDebug.isRevealed(viewer)
                 || viewer.isSpectator();
     }

@@ -1,10 +1,17 @@
 package io.github.mdw22.paranormalcraft.debug;
 
+import com.google.gson.JsonObject;
 import com.mojang.brigadier.ParseResults;
+import com.mojang.brigadier.context.CommandContextBuilder;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
+import io.github.mdw22.paranormalcraft.network.DebugClientPayload;
+import io.github.mdw22.paranormalcraft.platform.Services;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,16 +28,21 @@ import java.util.function.Consumer;
  * <ul>
  *     <li>a command, without the leading {@code /};</li>
  *     <li>{@code wait <ticks>}: game ticks, so it follows {@code /tick freeze}, {@code step} and {@code sprint};</li>
- *     <li>{@code # comment} and blank lines are skipped.</li>
+ *     <li>{@code # comment} and blank lines are skipped;</li>
+ *     <li>{@code expect trace <type> [field<op>value …] [within <ticks>]} and {@code expect dump <path><op><value> …}:
+ *     see {@link Expectation}. Trace expectations look at events since the script's last command, from the server
+ *     and from the client of the player who started the script (mirrored while the script runs).</li>
  * </ul>
  * A script stops at the first line that doesn't parse or whose command fails, and reports that line's number. Every
  * line runs from where the script was started: a scene that teleports the player doesn't move later commands' {@code ~}
- * or {@code @e[sort=nearest]}, so name coordinates explicitly after a scene.
- * ({@code expect} lines aren't supported yet; use {@code debug trace} and read the file afterwards.)
+ * or {@code @e[sort=nearest]}, so name coordinates explicitly after a scene. A failed expectation stops the script
+ * and reports the line, the expectation and the closest event seen.
  */
 public final class ScriptRunner {
 
     public static final String SCRIPT_DIR = "paranormalcraft-scripts";
+    /** {@code expect dump} looks this far around the player who started the script. */
+    private static final double DUMP_RADIUS = 48.0;
 
     /**
      * How a script ended. {@code line} is the 1-based line of the error, or 0 when it finished.
@@ -49,6 +61,11 @@ public final class ScriptRunner {
         private final long startTime;
         private int next;
         private long waitUntil = Long.MIN_VALUE;
+        /** Game time of the last command run; trace expectations look at events from then on. */
+        private long lastCommandTime;
+        private Expectation pending;
+        private int pendingLine;
+        private long pendingDeadline;
 
         private Run(String name, List<String> lines, CommandSourceStack source, Consumer<Result> onDone) {
 
@@ -57,6 +74,7 @@ public final class ScriptRunner {
             this.source = source;
             this.onDone = onDone;
             this.startTime = source.getLevel().getGameTime();
+            this.lastCommandTime = this.startTime;
         }
     }
 
@@ -80,7 +98,27 @@ public final class ScriptRunner {
 
     public static void start(CommandSourceStack source, String name, List<String> lines, Consumer<Result> onDone) {
 
+        ServerTrace.startBuffering(source.getServer());
+        mirror(source, true);
         RUNNING.add(new Run(name, List.copyOf(lines), source, onDone));
+    }
+
+    /**
+     * Turns client trace mirroring on or off for the player who started a script.
+     */
+    private static void mirror(CommandSourceStack source, boolean on) {
+
+        if (source.getEntity() instanceof ServerPlayer player) {
+            Services.NETWORK.sendToPlayer(player, DebugClientPayload.of("trace_mirror", Boolean.toString(on)));
+        }
+    }
+
+    private static void finish(Run run, Result result) {
+
+        RUNNING.remove(run);
+        ServerTrace.stopBuffering();
+        mirror(run.source, false);
+        run.onDone.accept(result);
     }
 
     /**
@@ -110,8 +148,7 @@ public final class ScriptRunner {
         for (Run run : List.copyOf(RUNNING)) {
             Result result = advance(server, run);
             if (result != null) {
-                RUNNING.remove(run);
-                run.onDone.accept(result);
+                finish(run, result);
             }
         }
     }
@@ -124,6 +161,13 @@ public final class ScriptRunner {
         long now = run.source.getLevel().getGameTime();
         if (now < run.waitUntil) {
             return null;
+        }
+        if (run.pending != null) {
+            String failure = check(run, now);
+            if (failure != null) {
+                return now >= run.pendingDeadline ? error(run, run.pendingLine, failure, now) : null;
+            }
+            run.pending = null;
         }
         while (run.next < run.lines.size()) {
             int lineNumber = run.next + 1;
@@ -148,14 +192,66 @@ public final class ScriptRunner {
                 }
             }
             if (lower.startsWith("expect ")) {
-                return error(run, lineNumber, "expect isn't supported yet", now);
+                try {
+                    run.pending = Expectation.parse(line.substring(7));
+                } catch (IllegalArgumentException e) {
+                    return error(run, lineNumber, e.getMessage(), now);
+                }
+                run.pendingLine = lineNumber;
+                run.pendingDeadline = now + run.pending.within();
+                String failure = check(run, now);
+                if (failure == null) {
+                    run.pending = null;
+                    continue;
+                }
+                if (now >= run.pendingDeadline) {
+                    return error(run, lineNumber, failure, now);
+                }
+                return null;
             }
             String failure = execute(server, run.source, line);
+            run.lastCommandTime = now;
             if (failure != null) {
                 return error(run, lineNumber, failure, now);
             }
         }
         return new Result(run.name, true, 0, "finished", now - run.startTime);
+    }
+
+    /**
+     * Null if the pending expectation holds now, otherwise why not (with the closest thing seen).
+     */
+    private static String check(Run run, long now) {
+
+        Expectation expectation = run.pending;
+        if (expectation.kind() == Expectation.Kind.DUMP) {
+            Vec3 at = run.source.getEntity() != null ? run.source.getEntity().position() : run.source.getPosition();
+            JsonObject dump = DebugDump.build(run.source.getLevel(), at, DUMP_RADIUS, DebugDump.SILENT);
+            if (expectation.matchesDump(dump)) {
+                return null;
+            }
+            List<String> actual = new ArrayList<>();
+            for (Expectation.Condition condition : expectation.conditions()) {
+                actual.add(condition.path() + " is " + Expectation.resolve(dump, condition.path()));
+            }
+            return "expect " + expectation.describe() + " failed; " + String.join(", ", actual);
+        }
+        String player = run.source.getEntity() instanceof ServerPlayer serverPlayer ? serverPlayer.getGameProfile().name() : null;
+        List<JsonObject> events = new ArrayList<>();
+        for (JsonObject event : ServerTrace.since(run.lastCommandTime)) {
+            boolean fromClient = event.has("side") && event.get("side").getAsString().equals("client");
+            if (!fromClient || (player != null && player.equals(event.get("player").getAsString()))) {
+                events.add(event);
+            }
+        }
+        for (JsonObject event : events) {
+            if (expectation.matchesEvent(event)) {
+                return null;
+            }
+        }
+        JsonObject closest = expectation.closest(events);
+        return "expect " + expectation.describe() + " not met (" + events.size() + " event(s) since the last command); closest: "
+                + (closest == null ? "none" : closest);
     }
 
     private static Result error(Run run, int line, String message, long now) {
@@ -171,7 +267,9 @@ public final class ScriptRunner {
         boolean[] failed = {false};
         CommandSourceStack tracked = source.withCallback((success, result) -> failed[0] |= !success);
         ParseResults<CommandSourceStack> parse = server.getCommands().getDispatcher().parse(command, tracked);
-        if (parse.getReader().canRead() || !parse.getExceptions().isEmpty() || parse.getContext().getCommand() == null) {
+        // Redirecting commands (execute … run …) keep the command on the last child context.
+        CommandContextBuilder<CommandSourceStack> last = parse.getContext().getLastChild();
+        if (parse.getReader().canRead() || !parse.getExceptions().isEmpty() || last.getCommand() == null) {
             String reason = parse.getExceptions().isEmpty() ? "unknown or incomplete command" : parse.getExceptions().values().iterator().next().getMessage();
             return "'" + command + "': " + reason;
         }
@@ -181,6 +279,9 @@ public final class ScriptRunner {
 
     public static void clear() {
 
+        for (int i = 0; i < RUNNING.size(); i++) {
+            ServerTrace.stopBuffering();
+        }
         RUNNING.clear();
     }
 }

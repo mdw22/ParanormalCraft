@@ -1,6 +1,8 @@
 package io.github.mdw22.paranormalcraft;
 
 import com.mojang.brigadier.CommandDispatcher;
+import io.github.mdw22.paranormalcraft.capture.FilledTraps;
+import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.command.ModCommands;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.debug.ColdSpotDisplay;
@@ -31,6 +33,7 @@ public class CommonEvents {
         RevealDebug.tick(server);
         ColdSpotDisplay.tick(server);
         HauntingScheduler.tick(server);
+        TetherManager.tick(server);
         ScriptRunner.tick(server);
     }
 
@@ -73,6 +76,8 @@ public class CommonEvents {
         HauntingScheduler.clear();
         HallucinationScheduler.clear();
         ScriptRunner.clear();
+        TetherManager.clear();
+        FilledTraps.clear();
         ServerTrace.clear();
         ModConfigs.resetSession();
     }

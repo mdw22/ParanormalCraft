@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.gametest;
 
+import io.github.mdw22.paranormalcraft.capture.PresenceRules;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.ColdSpots;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
@@ -60,6 +61,8 @@ public final class ModGameTests {
         GhostBehaviourGameTests.init();
         ItemGameTests.init();
         ToolkitGameTests.init();
+        CabinGameTests.init();
+        CaptureGameTests.init();
     }
 
     private static LingeringSpiritEntity frozenGhost(GameTestHelper helper) {
@@ -93,7 +96,8 @@ public final class ModGameTests {
 
         player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
         boolean hurtWith = ghost.hurtServer(helper.getLevel(), punch, 4.0F);
-        check(helper, hurtWith && ghost.getPresence() == Presence.MAX - 4.0F, "hit with goggles didn't count (hurt=%s, presence=%.1f)", hurtWith, ghost.getPresence());
+        // Melee drains half the damage.
+        check(helper, hurtWith && ghost.getPresence() == Presence.MAX - 2.0F, "hit with goggles didn't count (hurt=%s, presence=%.1f)", hurtWith, ghost.getPresence());
         ghost.discard();
         helper.succeed();
     }
@@ -115,19 +119,26 @@ public final class ModGameTests {
     }
 
     /**
-     * Draining Presence to 0 by valid hits disperses the ghost, and so does setting it to 0 (the debug command path).
+     * Hits never disperse: a huge valid hit leaves the ghost at the Presence floor. Only the debug command (setting
+     * Presence to 0) and /kill do.
      */
     private static void presenceZeroDisperses(GameTestHelper helper) {
 
         LingeringSpiritEntity byHits = frozenGhost(helper);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
-        byHits.hurtServer(helper.getLevel(), helper.getLevel().damageSources().playerAttack(player), Presence.MAX + 5.0F);
-        check(helper, byHits.isRemoved(), "ghost survived a hit that zeroed its Presence (%.1f left)", byHits.getPresence());
+        byHits.hurtServer(helper.getLevel(), helper.getLevel().damageSources().playerAttack(player), Presence.MAX * 4.0F);
+        check(helper, !byHits.isRemoved() && byHits.getPresence() == PresenceRules.FLOOR, "a huge hit: removed=%s, %.1f left",
+                byHits.isRemoved(), byHits.getPresence());
+        byHits.discard();
 
         LingeringSpiritEntity bySetting = frozenGhost(helper);
         bySetting.setPresence(helper.getLevel(), 0.0F);
         check(helper, bySetting.isRemoved(), "ghost survived Presence being set to 0");
+
+        LingeringSpiritEntity byKill = frozenGhost(helper);
+        byKill.kill(helper.getLevel());
+        check(helper, byKill.isRemoved(), "ghost survived /kill");
         helper.succeed();
     }
 

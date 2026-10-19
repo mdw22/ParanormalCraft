@@ -12,7 +12,8 @@ import net.minecraft.world.item.Items;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Tool recipes. Each unlocks in the recipe book once the player has a copper ingot.
+ * Tool recipes. The Milestone 1 tools unlock in the recipe book with a copper ingot; the Tether Wand with a lightning
+ * rod or an amethyst shard; the Ghost Trap with tinted glass or a Tether Wand.
  */
 public class ModRecipeProvider extends RecipeProvider {
 
@@ -52,6 +53,29 @@ public class ModRecipeProvider extends RecipeProvider {
                 .define('R', Items.REDSTONE)
                 .define('C', Items.COPPER_INGOT)
                 .unlockedBy(HAS_COPPER, has(Items.COPPER_INGOT))
+                .save(this.output);
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.TOOLS, ModItems.TETHER_WAND.get())
+                .pattern(" A ")
+                .pattern(" L ")
+                .pattern("CRC")
+                .define('A', Items.AMETHYST_SHARD)
+                .define('L', Items.LIGHTNING_ROD.weathering().unaffected())
+                .define('C', Items.COPPER_INGOT)
+                .define('R', Items.REDSTONE)
+                .unlockedBy("has_lightning_rod", has(Items.LIGHTNING_ROD.weathering().unaffected()))
+                .unlockedBy("has_amethyst_shard", has(Items.AMETHYST_SHARD))
+                .save(this.output);
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.TOOLS, ModItems.GHOST_TRAP.get())
+                .pattern("ITI")
+                .pattern("CRC")
+                .pattern("IPI")
+                .define('I', Items.IRON_INGOT)
+                .define('T', Items.TINTED_GLASS)
+                .define('C', Items.COPPER_INGOT)
+                .define('R', Items.REDSTONE)
+                .define('P', Items.STONE_PRESSURE_PLATE)
+                .unlockedBy("has_tinted_glass", has(Items.TINTED_GLASS))
+                .unlockedBy("has_tether_wand", has(ModItems.TETHER_WAND.get()))
                 .save(this.output);
     }
 

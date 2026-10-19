@@ -1,10 +1,12 @@
 package io.github.mdw22.paranormalcraft.debug;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
+import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
@@ -12,7 +14,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -60,6 +64,8 @@ public final class DebugScenes {
     private static final int STONE_DEPTH = 3;
     private static final long NOON = 6000;
     private static final long MIDNIGHT = 18000;
+    /** {@code capture_arena}: one Presence above Weakened. */
+    public static final float CAPTURE_ARENA_PRESENCE = 6.0F;
     /** Every entity a scene creates carries this tag. */
     public static final String SCENE_TAG = "paranormalcraft_scene";
     /** Ticks after a build when leftovers from earlier builds are swept away. */
@@ -81,12 +87,21 @@ public final class DebugScenes {
 
     /**
      * Where the players go: first player position, yaw and pitch; the second player stands {@code secondOffset}
-     * away with the same view. {@code ghosts} lists what was spawned.
+     * away, facing {@code secondYaw} (NaN: the same as the first). {@code ghosts} lists what was spawned; with
+     * {@code goggles} both players wear Spectral Goggles and hold the Tether Wand.
      */
-    public record Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, List<LingeringSpiritEntity> ghosts) {
+    public record Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, float secondYaw, List<LingeringSpiritEntity> ghosts,
+                            boolean goggles) {
+
+        Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, List<LingeringSpiritEntity> ghosts) {
+
+            this(position, yaw, pitch, secondOffset, Float.NaN, ghosts, false);
+        }
     }
 
     private static final Map<String, Scene> SCENES = new LinkedHashMap<>();
+    /** Builds so far; each build's sweeps run only while it is the latest. */
+    private static int buildCount;
 
     static {
         SCENES.put("arena", level -> arena(level, NOON));
@@ -96,6 +111,7 @@ public final class DebugScenes {
         SCENES.put("haunt_props", DebugScenes::hauntProps);
         SCENES.put("two_player", DebugScenes::twoPlayer);
         SCENES.put("figure_indoor", level -> cabin(level, "oak", false));
+        SCENES.put("capture_arena", DebugScenes::captureArena);
     }
 
     private DebugScenes() {
@@ -127,8 +143,14 @@ public final class DebugScenes {
             entity.addTag(SCENE_TAG);
             current.add(entity.getUUID());
         }
+        // A sweep still pending from an earlier build would take this build's entities for leftovers.
+        int build = ++buildCount;
         for (long delay : SWEEP_DELAYS) {
-            HauntingScheduler.schedule(level, delay, () -> sweep(level, current));
+            HauntingScheduler.schedule(level, delay, () -> {
+                if (build == buildCount) {
+                    sweep(level, current);
+                }
+            });
         }
         List<ServerPlayer> players = new ArrayList<>();
         if (player != null) {
@@ -141,10 +163,17 @@ public final class DebugScenes {
         for (int i = 0; i < players.size(); i++) {
             ServerPlayer target = players.get(i);
             Vec3 at = i == 0 ? placement.position() : placement.position().add(placement.secondOffset());
+            float yaw = i == 0 || Float.isNaN(placement.secondYaw()) ? placement.yaw() : placement.secondYaw();
             target.setGameMode(GameType.SURVIVAL);
-            target.teleportTo(level, at.x, at.y, at.z, Set.of(), placement.yaw(), placement.pitch(), true);
+            target.teleportTo(level, at.x, at.y, at.z, Set.of(), yaw, placement.pitch(), true);
             target.setDeltaMovement(Vec3.ZERO);
+            target.setHealth(target.getMaxHealth());
+            TetherManager.setForced(target, false);
             DebugKit.give(target, true);
+            if (placement.goggles()) {
+                target.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
+                DebugKit.select(target, DebugKit.WAND_SLOT);
+            }
         }
         Constants.LOG.info("Built debug scene {} at {} ({} ghost(s))", name, CENTRE.toShortString(), placement.ghosts().size());
         return Optional.of(placement);
@@ -309,6 +338,22 @@ public final class DebugScenes {
         // Held still (no AI) so every prop stays in haunting range; haunting itself doesn't need the AI.
         ghost.setNoAi(true);
         return new Placement(at(0, 7), 180.0F, 10.0F, new Vec3(2, 0, 0), List.of(ghost));
+    }
+
+    /**
+     * Day. One ghost in the middle at 6 Presence (a second of tether makes it Weakened), an armed trap right under it
+     * and a second one 3 blocks east. The player stands 6 blocks south facing it, wearing goggles and holding the Tether
+     * Wand; Dev2, if online, stands 6 blocks west facing east, for co-op.
+     */
+    private static Placement captureArena(ServerLevel level) {
+
+        time(level, NOON);
+        BlockPos home = CENTRE.above();
+        LingeringSpiritEntity ghost = ghost(level, home, home);
+        ghost.setPresence(level, CAPTURE_ARENA_PRESENCE);
+        set(level, CENTRE.above(), ModBlocks.GHOST_TRAP.get().defaultBlockState());
+        set(level, CENTRE.offset(3, 1, 0), ModBlocks.GHOST_TRAP.get().defaultBlockState());
+        return new Placement(at(0, 6), 180.0F, 5.0F, new Vec3(-6, 0, -6), -90.0F, List.of(ghost), true);
     }
 
     /**

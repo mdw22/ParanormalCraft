@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
 import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
+import io.github.mdw22.paranormalcraft.client.renderer.GhostAlpha;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
@@ -19,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -33,7 +35,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * Client GameTests for the things that have to be seen. One superflat world, six checks, screenshots saved to
+ * Client GameTests for the things that have to be seen. One superflat world, eight checks, screenshots saved to
  * {@code fabric/build/run/clientGameTest/screenshots}:
  * <ol>
  *     <li>a ghost is hidden without goggles and shown with them ({@code canSee} asserted on the client);</li>
@@ -43,7 +45,12 @@ import java.util.stream.Stream;
  *     {@code debug screenshot} of the middle of the fade;</li>
  *     <li>a shadow figure from {@code debug hallucinate}, on screen when it appears, whose presence sound plays at its
  *     position every 20–30 ticks (from the client trace) and stops once it is looked at and vanishes;</li>
- *     <li>the Paranormal Craft creative tab and its four items.</li>
+ *     <li>indoors, facing a wall: the figure is placed "sound first" within 2.5 s, its presence sounds play, and
+ *     turning toward it shows it;</li>
+ *     <li>in {@code scene capture_arena}: a latched Tether Wand beam (client trace and a {@code debug screenshot}),
+ *     the wand's heat bar filling while it fires, and a Weakened ghost flickering (alpha 0.2–0.5) for a player
+ *     without goggles;</li>
+ *     <li>the Paranormal Craft creative tab and its items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
  */
@@ -70,6 +77,8 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             thermometerAtColdSpot(context, server);
             manifestFadeOut(context, server);
             shadowFigure(context, server);
+            figureIndoorFacingWall(context, server);
+            captureVisuals(context, server);
             creativeTab(context, server);
         }
     }
@@ -201,7 +210,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
     }
 
     /**
-     * Opens the creative inventory on our tab: it holds the goggles, EMF Reader, thermometer and spawn egg.
+     * Opens the creative inventory on our tab: it holds the goggles, EMF Reader, thermometer, spawn egg, Tether Wand and Ghost Trap.
      */
     private static void creativeTab(ClientGameTestContext context, TestServerContext server) {
 
@@ -220,7 +229,8 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             return screen.getMenu().items.stream().filter(stack -> !stack.isEmpty())
                     .map(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()).toList();
         });
-        for (var item : List.of(ModItems.SPECTRAL_GOGGLES, ModItems.EMF_READER, ModItems.SPIRIT_THERMOMETER, ModItems.LINGERING_SPIRIT_SPAWN_EGG)) {
+        for (var item : List.of(ModItems.SPECTRAL_GOGGLES, ModItems.EMF_READER, ModItems.SPIRIT_THERMOMETER, ModItems.LINGERING_SPIRIT_SPAWN_EGG,
+                ModItems.TETHER_WAND, ModItems.GHOST_TRAP)) {
             String id = BuiltInRegistries.ITEM.getKey(item.get()).toString();
             check(shown.contains(id), "creative tab is missing " + id + " (shows " + shown + ")");
         }
@@ -317,6 +327,126 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         }
         System.out.println("[client gametest] presence sounds: " + sounds.size() + " traced, " + played.size() + " played by the sound engine; vanished at "
                 + (vanishTime - spawnTime) + " ticks");
+    }
+
+    /**
+     * The user's bug: inside the cabin, facing a wall, nothing on screen can show the figure. It must still be placed
+     * (sound first) within 2.5 s, make its presence sound, and become visible when the camera turns toward it.
+     */
+    private static void figureIndoorFacingWall(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene figure_indoor");
+        context.waitTicks(40);
+        // House (3, 1, 3), facing the west wall (yaw 90): no window or doorway in the on-screen band.
+        server.runCommand("execute as @p run paranormalcraft debug look 90 0");
+        context.waitTicks(5);
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(3);
+        server.runCommand("paranormalcraft debug hallucinate @a");
+        context.waitTicks(50);
+        Vec3 figure = context.computeOnClient(client -> {
+            ShadowFigureEntity active = ClientHallucinations.active();
+            check(active != null, "no figure 2.5 s after the request, facing a wall indoors");
+            check(!active.wasSeen(), "the figure counts as seen while the player faces the wall");
+            return active.position();
+        });
+        context.waitTicks(30);
+        context.runOnClient(client -> client.player.lookAt(EntityAnchorArgument.Anchor.EYES, figure.add(0, 1.6, 0)));
+        context.waitTicks(5);
+        context.takeScreenshot("09-figure-indoor-after-turning");
+        context.waitTicks(10);
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        List<JsonObject> trace = readNewestTrace(context);
+        JsonObject request = trace.stream().filter(line -> line.get("type").getAsString().equals("payload")
+                && line.get("payload").getAsString().equals("paranormalcraft:hallucination")).findFirst().orElse(null);
+        JsonObject result = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_result")).findFirst().orElse(null);
+        JsonObject spawn = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_spawn")).findFirst().orElse(null);
+        check(request != null && result != null && spawn != null, "request, result or spawn missing from the trace");
+        check(result.get("result").getAsString().equals("placed (sound-first)"), "result was " + result.get("result"));
+        long placedAfter = spawn.get("t").getAsLong() - request.get("t").getAsLong();
+        check(placedAfter <= 50, "sound-first placement took " + placedAfter + " ticks");
+        check(spawn.get("indoors").getAsBoolean() && !spawn.get("visible").getAsBoolean(), "spawn not indoors/sound-first: " + spawn);
+        long sounds = trace.stream().filter(line -> line.get("type").getAsString().equals("figure_sound")).count();
+        check(sounds >= 2, "only " + sounds + " presence sound(s) while it stood unseen");
+        boolean seen = trace.stream().anyMatch(line -> line.get("type").getAsString().equals("figure_seen"));
+        check(seen, "the figure never came into view after turning toward it");
+        System.out.println("[client gametest] indoor figure: placed sound-first after " + placedAfter + " ticks, " + sounds
+                + " presence sounds, seen after turning: " + spawn);
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * The capture tools as the player sees them: the beam latched on the scene ghost (traced, and in a debug
+     * screenshot), the heat bar rising while firing, then, goggles off and the traps cleared, the Weakened ghost
+     * flickering between 0.2 and 0.5 alpha where it would otherwise be invisible.
+     */
+    private static void captureVisuals(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene capture_arena");
+        context.waitTicks(40);
+        // Full Presence, so the tether doesn't weaken it into the scene trap during the beam checks.
+        server.runCommand("paranormalcraft debug presence @e[type=" + GHOST + ",tag=paranormalcraft_scene] 20");
+        server.runCommand("paranormalcraft debug ghost freeze @e[type=" + GHOST + ",tag=paranormalcraft_scene] on");
+        server.runCommand("execute as @p run paranormalcraft debug look @e[type=" + GHOST + ",tag=paranormalcraft_scene,limit=1]");
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(3);
+        server.runCommand("paranormalcraft debug tether @a on");
+        context.waitTicks(30);
+        int[] bar = context.computeOnClient(client -> {
+            ItemStack wand = client.player.getMainHandItem();
+            check(wand.is(ModItems.TETHER_WAND.get()), "not holding the wand: " + wand);
+            return new int[]{wand.isBarVisible() ? 1 : 0, wand.getBarWidth()};
+        });
+        check(bar[0] == 1 && bar[1] > 0, "no heat bar while firing (visible " + bar[0] + ", width " + bar[1] + ")");
+        server.runCommand("execute as @p run paranormalcraft debug screenshot beam_latched");
+        context.takeScreenshot("10-tether-beam-latched");
+        context.waitTicks(20);
+        int widthLater = context.computeOnClient(client -> client.player.getMainHandItem().getBarWidth());
+        check(widthLater > bar[1], "heat bar didn't rise while firing (" + bar[1] + " then " + widthLater + ")");
+        server.runCommand("paranormalcraft debug tether @a off");
+        context.waitTicks(5);
+
+        server.runCommand("setblock 100000 201 100000 air");
+        server.runCommand("setblock 100003 201 100000 air");
+        server.runCommand("item replace entity @a armor.head with air");
+        server.runCommand("paranormalcraft debug presence @e[type=" + GHOST + ",tag=paranormalcraft_scene] 5");
+        context.waitTicks(10);
+        List<Float> alphas = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            alphas.add(context.computeOnClient(client -> {
+                GhostEntity ghost = client.level.getEntitiesOfClass(GhostEntity.class, client.player.getBoundingBox().inflate(16)).stream()
+                        .findFirst().orElse(null);
+                check(ghost != null && ghost.isWeakened(), "no Weakened ghost on the client: " + (ghost == null ? "no ghost near "
+                        + client.player.position() : ghost + " presence " + ghost.getPresence()));
+                check(GhostVisibility.canSee(client.player, ghost), "the Weakened ghost isn't visible without goggles");
+                return GhostAlpha.alpha(ghost, client.player, 0.0F);
+            }));
+            if (i == 10) {
+                context.takeScreenshot("11-weakened-flicker-no-goggles");
+                server.runCommand("execute as @p run paranormalcraft debug screenshot weakened_flicker");
+            }
+            context.waitTicks(1);
+        }
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        float min = alphas.stream().min(Float::compare).orElseThrow();
+        float max = alphas.stream().max(Float::compare).orElseThrow();
+        check(min >= GhostAlpha.WEAKENED_MIN - 0.01F && max <= GhostAlpha.WEAKENED_MAX + 0.01F, "Weakened alphas out of 0.2-0.5: " + alphas);
+        check(max - min > 0.05F, "the Weakened ghost doesn't flicker: " + alphas);
+
+        List<JsonObject> trace = readNewestTrace(context);
+        JsonObject beam = trace.stream().filter(line -> line.get("type").getAsString().equals("beam_render")
+                && line.get("active").getAsBoolean() && line.get("latched").getAsBoolean()).findFirst().orElse(null);
+        check(beam != null, "no latched beam_render in the client trace");
+        boolean shot = trace.stream().anyMatch(line -> line.get("type").getAsString().equals("screenshot")
+                && line.get("path").getAsString().endsWith("beam_latched.png") && Files.exists(Path.of(line.get("path").getAsString())));
+        check(shot, "the beam_latched debug screenshot wasn't saved");
+        System.out.println("[client gametest] beam " + beam + "; heat bar " + bar[1] + " -> " + widthLater + "; Weakened alphas " + min + "-" + max);
+        server.runCommand("kill @e[type=" + GHOST + "]");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
     }
 
     /**

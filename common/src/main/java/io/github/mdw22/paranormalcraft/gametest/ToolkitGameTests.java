@@ -157,10 +157,30 @@ public final class ToolkitGameTests {
         MinecraftServer server = helper.getLevel().getServer();
         List<ScriptRunner.Result> results = new ArrayList<>();
         var source = server.createCommandSourceStack().withSuppressedOutput();
-        ScriptRunner.start(source, "good", List.of("# a comment", "", "wait 10", "time query gametime", "wait 5"), results::add);
+        ScriptRunner.start(source, "good", List.of("# a comment", "", "wait 10", "time query gametime",
+                "execute positioned 0 0 0 run time query gametime", "wait 5"), results::add);
         ScriptRunner.start(source, "bad", List.of("wait 3", "say hello", "this_is_not_a_command at all", "say never"), results::add);
+        BlockPos ghostAt = helper.absolutePos(new BlockPos(20, 2, 20));
+        String selector = String.format(Locale.ROOT, "@e[type=paranormalcraft:lingering_spirit,x=%d,y=%d,z=%d,distance=..2,limit=1]",
+                ghostAt.getX(), ghostAt.getY(), ghostAt.getZ());
+        helper.spawnWithNoFreeWill(ModEntities.LINGERING_SPIRIT.get(), new BlockPos(20, 2, 20));
+        var atGhost = source.withPosition(net.minecraft.world.phys.Vec3.atCenterOf(ghostAt));
+        ScriptRunner.start(atGhost, "expect_ok", List.of(
+                "wait 2",
+                "paranormalcraft debug manifest " + selector,
+                "expect trace manifest_start ticks=30 within 5",
+                "expect dump ghosts.length>=1 ghosts[*].manifesting=true"), results::add);
+        ScriptRunner.start(atGhost, "expect_fail", List.of(
+                "wait 2",
+                "paranormalcraft debug presence " + selector + " 15",
+                "expect trace presence to=3 within 4"), results::add);
         helper.succeedWhen(() -> {
-            check(helper, results.size() == 2, "%d script(s) finished", results.size());
+            check(helper, results.size() == 4, "%d script(s) finished", results.size());
+            ScriptRunner.Result expectOk = results.stream().filter(result -> result.name().equals("expect_ok")).findFirst().orElseThrow();
+            ScriptRunner.Result expectFail = results.stream().filter(result -> result.name().equals("expect_fail")).findFirst().orElseThrow();
+            check(helper, expectOk.ok(), "expect_ok: %s", expectOk);
+            check(helper, !expectFail.ok() && expectFail.line() == 3 && expectFail.message().contains("closest")
+                    && expectFail.message().contains("\"to\":15.0"), "expect_fail: %s", expectFail);
             ScriptRunner.Result good = results.stream().filter(result -> result.name().equals("good")).findFirst().orElseThrow();
             ScriptRunner.Result bad = results.stream().filter(result -> result.name().equals("bad")).findFirst().orElseThrow();
             check(helper, good.ok() && good.gameTicks() == 15, "good script: %s", good);

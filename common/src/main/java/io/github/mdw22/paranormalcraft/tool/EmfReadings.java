@@ -1,6 +1,8 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -10,6 +12,9 @@ import net.minecraft.world.phys.Vec3;
  * ghost.
  */
 public final class EmfReadings {
+
+    /** A trapped ghost reads at most this. */
+    public static final int TRAPPED_MAX_LEVEL = 3;
 
     private EmfReadings() {
     }
@@ -28,8 +33,18 @@ public final class EmfReadings {
         return nearest;
     }
 
+    /**
+     * The reading: from the nearest free ghost, or from a Filled Ghost Trap (which reads like a ghost but never above
+     * {@link #TRAPPED_MAX_LEVEL}), whichever is higher.
+     */
     public static int levelAt(ServerLevel level, Vec3 pos) {
 
-        return EmfLevels.levelForDistance(nearestGhostDistance(level, pos));
+        int ghosts = EmfLevels.levelForDistance(nearestGhostDistance(level, pos));
+        double nearestTrap = Double.POSITIVE_INFINITY;
+        for (BlockPos trap : FilledTraps.near(level, pos, EmfLevels.RANGE)) {
+            nearestTrap = Math.min(nearestTrap, Vec3.atCenterOf(trap).distanceTo(pos));
+        }
+        int traps = Math.min(TRAPPED_MAX_LEVEL, EmfLevels.levelForDistance(nearestTrap));
+        return Math.max(ghosts, traps);
     }
 }

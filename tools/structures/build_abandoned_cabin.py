@@ -134,7 +134,10 @@ for x in (1, 2, 3):
     setb(x, 7, 3, "moss_carpet")
 
 # ---- porch: slab step, two fence posts holding a slab awning ----
-setb(2, 1, 7, f"{SLAB}[type=bottom]")
+# The step is a bottom slab sunk into the ground layer right outside the door: half a block below the floor, so the
+# awning (bottom of y=3) is 2.5 blocks above it and 2 above the ground in front. A step at y=1 left 1.5 blocks under
+# the awning and blocked the door.
+setb(2, 0, 7, f"{SLAB}[type=bottom]")
 for x in (1, 3):
     setb(x, 0, 8, "cobblestone")
     fill(x, 1, 8, x, 2, 8, FENCE)
@@ -211,8 +214,8 @@ def noise(x, z):
     return (h ^ (h >> 16)) >> 8
 
 
-KEEP = set(PLANTS) | {(1, 8), (3, 8)} | ({(-1, 3)} if spruce else set())
-TRAIL = {(2, 7), (2, 8), (2, 9), (2, 10), (3, 10)}
+KEEP = set(PLANTS) | {(1, 8), (3, 8), (2, 7)} | ({(-1, 3)} if spruce else set())
+TRAIL = {(2, 8), (2, 9), (2, 10), (3, 10)}
 RUBBLE = {(-2, 5): "mossy_cobblestone", (10, 4): "mossy_cobblestone", (5, -2): "mossy_cobblestone_slab[type=bottom]",
           (-3, 1): "mossy_cobblestone_slab[type=bottom]", (11, 7): "mossy_cobblestone"}
 for x in range(MIN_X, MAX_X + 1):

@@ -1,17 +1,19 @@
 package io.github.mdw22.paranormalcraft.capture;
 
+import io.github.mdw22.paranormalcraft.Balance;
+
 /**
  * Ghost Trap capture rules, as plain logic so they can be unit tested.
  */
 public final class CaptureRules {
 
     /** A capture pulls the ghost down for this long (1.5 s). */
-    public static final int CAPTURE_TICKS = 30;
+    public static final int CAPTURE_TICKS = Balance.Trap.CAPTURE_TICKS;
     /** Without a tether held for the whole pull, a capture succeeds this often. */
-    public static final double UNTETHERED_CHANCE = 0.5;
+    public static final double UNTETHERED_CHANCE = Balance.Trap.UNTETHERED_CHANCE;
     /** The capture zone: this far above the trap's floor, and this far out horizontally from its centre. */
-    public static final double ZONE_HEIGHT = 3.0;
-    public static final double ZONE_HALF_WIDTH = 1.5;
+    public static final double ZONE_HEIGHT = Balance.Trap.ZONE_HEIGHT;
+    public static final double ZONE_HALF_WIDTH = Balance.Trap.ZONE_HALF_WIDTH;
 
     private CaptureRules() {
     }

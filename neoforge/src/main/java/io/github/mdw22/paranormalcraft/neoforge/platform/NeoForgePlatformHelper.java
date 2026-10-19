@@ -7,6 +7,9 @@ import net.neoforged.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 
+/**
+ * Platform information on NeoForge ({@code ModList}, {@code FMLLoader}, {@code FMLPaths}).
+ */
 public class NeoForgePlatformHelper implements IPlatformHelper {
 
     @Override

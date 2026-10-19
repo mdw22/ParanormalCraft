@@ -6,6 +6,10 @@ import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemMode
 import net.minecraft.client.renderer.item.properties.numeric.RangeSelectItemModelProperty;
 import net.minecraft.resources.Identifier;
 
+/**
+ * Client hooks on Fabric: range-select item model properties go straight into vanilla's id mapper, which Fabric
+ * API's access wideners make public.
+ */
 public class FabricClientPlatformHelper implements IClientPlatformHelper {
 
     @Override

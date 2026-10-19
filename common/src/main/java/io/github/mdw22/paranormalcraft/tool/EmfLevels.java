@@ -1,5 +1,7 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.Balance;
+
 /**
  * The EMF Reader's distance-to-level table. Plain logic so it can be unit tested.
  */
@@ -8,7 +10,7 @@ public final class EmfLevels {
     public static final int MIN_LEVEL = 1;
     public static final int MAX_LEVEL = 5;
     /** Ghosts further than this don't register; the reader shows its baseline light. */
-    public static final double RANGE = 24.0;
+    public static final double RANGE = Balance.Tools.EMF_RANGE;
 
     private EmfLevels() {
     }

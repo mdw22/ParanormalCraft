@@ -21,6 +21,10 @@ import net.minecraft.world.item.Items;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Generates item models, item definitions and blockstates. The trap blocks point at hand-written cuboid models in
+ * {@code common/src/main/resources/assets/paranormalcraft/models/block}.
+ */
 public class ModModelProvider extends ModelProvider {
 
     public ModModelProvider(PackOutput output) {

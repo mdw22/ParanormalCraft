@@ -19,6 +19,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * Registration on NeoForge: one {@code DeferredRegister} per registry, created on first use and attached to the mod
+ * bus set by {@link #setModBus}.
+ */
 public class NeoForgeRegistrationHelper implements IRegistrationHelper {
 
     private static final Map<ResourceKey<? extends Registry<?>>, DeferredRegister<?>> REGISTERS = new HashMap<>();

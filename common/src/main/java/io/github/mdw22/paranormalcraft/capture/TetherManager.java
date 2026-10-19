@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.capture;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostMovement;
@@ -54,14 +55,14 @@ import java.util.UUID;
  */
 public final class TetherManager {
 
-    public static final double RANGE = 12.0;
-    public static final double LATCH_DISTANCE = 1.0;
-    public static final double BREAK_RANGE = 14.0;
-    public static final int LOS_GRACE_TICKS = 20;
-    public static final double PULL_DISTANCE = 8.0;
-    public static final double PULL_PER_TICK = 0.04;
-    public static final float BACKFIRE_DAMAGE = 4.0F;
-    private static final double BACKFIRE_KNOCKBACK = 0.9;
+    public static final double RANGE = Balance.Tether.RANGE;
+    public static final double LATCH_DISTANCE = Balance.Tether.LATCH_DISTANCE;
+    public static final double BREAK_RANGE = Balance.Tether.BREAK_RANGE;
+    public static final int LOS_GRACE_TICKS = Balance.Tether.LOS_GRACE_TICKS;
+    public static final double PULL_DISTANCE = Balance.Tether.PULL_DISTANCE;
+    public static final double PULL_PER_TICK = Balance.Tether.PULL_PER_TICK;
+    public static final float BACKFIRE_DAMAGE = Balance.Tether.BACKFIRE_DAMAGE;
+    private static final double BACKFIRE_KNOCKBACK = Balance.Tether.BACKFIRE_KNOCKBACK;
 
     /** One player's beam. */
     public static final class Tether {

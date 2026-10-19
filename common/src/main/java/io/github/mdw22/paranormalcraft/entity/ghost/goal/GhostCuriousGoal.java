@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
@@ -17,10 +18,10 @@ import java.util.UUID;
  */
 public class GhostCuriousGoal extends Goal {
 
-    private static final double MIN_DISTANCE = 4.0;
-    private static final double MAX_DISTANCE = 6.0;
-    private static final int MIN_DURATION = 100;
-    private static final int MAX_DURATION = 200;
+    private static final double MIN_DISTANCE = Balance.Ghost.CURIOUS_MIN_DISTANCE;
+    private static final double MAX_DISTANCE = Balance.Ghost.CURIOUS_MAX_DISTANCE;
+    private static final int MIN_DURATION = Balance.Ghost.CURIOUS_MIN_TICKS;
+    private static final int MAX_DURATION = Balance.Ghost.CURIOUS_MAX_TICKS;
     private static final int REPATH_TICKS = 20;
 
     // Player UUID -> the ghost currently being curious about them. Server thread only.

@@ -4,6 +4,10 @@ import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.WandHeat;
 import net.minecraft.core.component.DataComponentType;
 
+/**
+ * Item data components: the Tether Wand's heat ({@code wand_heat}) and a Filled Ghost Trap's ghost
+ * ({@code captured_ghost}).
+ */
 public final class ModDataComponents {
 
     /** The Tether Wand's heat, overheat lockout and beam-time count; synced so the item bar can show heat. */

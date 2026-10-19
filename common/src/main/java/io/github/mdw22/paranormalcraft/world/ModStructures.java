@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.world;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -32,8 +33,8 @@ public final class ModStructures {
     public static final String SPRUCE_TEMPLATE = Constants.MOD_ID + ":abandoned_cabin_spruce";
     /** The structure set's placement salt, unique to this mod. */
     public static final int SALT = 1_627_384_951;
-    public static final int SPACING = 32;
-    public static final int SEPARATION = 12;
+    public static final int SPACING = Balance.World.CABIN_SPACING;
+    public static final int SEPARATION = Balance.World.CABIN_SEPARATION;
 
     private ModStructures() {
     }

@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -13,7 +14,7 @@ import java.util.EnumSet;
  */
 public class GhostWanderGoal extends Goal {
 
-    public static final int COLD_SPOT_RADIUS = 4;
+    public static final int COLD_SPOT_RADIUS = Balance.Ghost.WANDER_COLD_SPOT_RADIUS;
 
     private final GhostEntity ghost;
     private final double speed;

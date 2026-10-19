@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.PresenceRules;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
@@ -56,31 +57,31 @@ import java.util.stream.Collectors;
 public abstract class GhostEntity extends PathfinderMob {
 
     /** Idle wandering stays within this many blocks of home. */
-    public static final int WANDER_RADIUS = 12;
+    public static final int WANDER_RADIUS = Balance.Ghost.WANDER_RADIUS;
     /** Beyond this the ghost drifts back home. */
-    public static final int LEASH_RADIUS = 16;
+    public static final int LEASH_RADIUS = Balance.Ghost.LEASH_RADIUS;
     /** How far players can be for curiosity and manifesting. */
-    public static final double PLAYER_RANGE = 10.0;
+    public static final double PLAYER_RANGE = Balance.Ghost.PLAYER_RANGE;
     /** See {@link #travel}: top speed is {@code speed × 1.0 / (1 − 0.5)} blocks per tick. */
-    private static final float DRIFT_ACCELERATION = 1.0F;
-    private static final double DRIFT_DRAG = 0.5;
+    private static final float DRIFT_ACCELERATION = Balance.Ghost.DRIFT_ACCELERATION;
+    private static final double DRIFT_DRAG = Balance.Ghost.DRIFT_DRAG;
     /** 1.5 seconds. */
-    public static final int MANIFEST_TICKS = 30;
+    public static final int MANIFEST_TICKS = Balance.Ghost.MANIFEST_TICKS;
     public static final float FADE_IN_TICKS = 6.0F;
     public static final float FADE_OUT_TICKS = 10.0F;
     /** How long {@code debug ghost goal} forces a goal: 10 s. */
     public static final int FORCED_GOAL_TICKS = 200;
     /** Vanilla health never matters; it is reset after every hit so the ghost only ever disperses. */
     public static final float FIXED_HEALTH = 1024.0F;
-    private static final int MANIFEST_RETRY_TICKS = 20;
+    private static final int MANIFEST_RETRY_TICKS = Balance.Ghost.MANIFEST_RETRY_TICKS;
     /** Vanilla's spectral arrow Glowing duration (its private default). */
-    private static final int SPECTRAL_ARROW_GLOWING_TICKS = 200;
+    private static final int SPECTRAL_ARROW_GLOWING_TICKS = Balance.Ghost.SPECTRAL_ARROW_GLOWING_TICKS;
 
     private static final EntityDataAccessor<Float> DATA_PRESENCE = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_MANIFESTING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WEAKENED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Players within this distance hear "<name> has dispersed". */
-    private static final double DISPERSE_MESSAGE_RANGE = 32.0;
+    private static final double DISPERSE_MESSAGE_RANGE = Balance.Ghost.DISPERSE_MESSAGE_RANGE;
 
     private Presence presence = new Presence();
     private final HauntingController haunting = new HauntingController(this);

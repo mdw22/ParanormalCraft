@@ -2,6 +2,10 @@ package io.github.mdw22.paranormalcraft.registry;
 
 import net.minecraft.sounds.SoundEvent;
 
+/**
+ * Sound event registrations. Each id maps to sound files in {@code assets/paranormalcraft/sounds.json} (vanilla
+ * sounds for now), with a subtitle key in the lang file.
+ */
 public final class ModSounds {
 
     public static final RegistryEntry<SoundEvent> LINGERING_SPIRIT_WHISPER = RegistrationHelper.sound("entity.lingering_spirit.whisper");

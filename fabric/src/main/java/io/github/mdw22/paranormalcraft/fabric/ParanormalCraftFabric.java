@@ -12,6 +12,10 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.server.level.ServerPlayer;
 
+/**
+ * Fabric main entrypoint: runs {@code ParanormalCraft.init()}, registers payloads and entity attributes, and forwards
+ * Fabric API server events to {@code CommonEvents}.
+ */
 public class ParanormalCraftFabric implements ModInitializer {
 
     @Override

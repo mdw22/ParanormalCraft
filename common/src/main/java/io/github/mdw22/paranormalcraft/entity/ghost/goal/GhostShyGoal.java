@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -15,10 +16,10 @@ import java.util.EnumSet;
  */
 public class GhostShyGoal extends Goal {
 
-    public static final int STARE_TICKS = 40;
-    private static final double STARE_RANGE = 24.0;
-    private static final int FLEE_TICKS = 60;
-    private static final double FLEE_DISTANCE = 5.0;
+    public static final int STARE_TICKS = Balance.Ghost.SHY_STARE_TICKS;
+    private static final double STARE_RANGE = Balance.Ghost.SHY_STARE_RANGE;
+    private static final int FLEE_TICKS = Balance.Ghost.SHY_FLEE_TICKS;
+    private static final double FLEE_DISTANCE = Balance.Ghost.SHY_FLEE_DISTANCE;
 
     private final GhostEntity ghost;
     private final double speed;

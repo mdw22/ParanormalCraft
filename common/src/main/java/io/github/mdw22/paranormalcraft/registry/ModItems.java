@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.registry;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.item.FilledGhostTrapItem;
 import io.github.mdw22.paranormalcraft.item.GhostTrapItem;
@@ -15,6 +16,10 @@ import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.item.equipment.Equippable;
 
+/**
+ * Item registrations: Spectral Goggles (an equippable head item with a camera overlay), the EMF Reader, the Spirit
+ * Thermometer, the Tether Wand, the Ghost Trap, the Filled Ghost Trap and the Lingering Spirit spawn egg.
+ */
 public final class ModItems {
 
     public static final ResourceKey<EquipmentAsset> SPECTRAL_GOGGLES_ASSET = ResourceKey.create(EquipmentAssets.ROOT_ID, Constants.id("spectral_goggles"));
@@ -50,7 +55,7 @@ public final class ModItems {
      * Hold use to fire a tether beam at a visible ghost; 300 s of beam time, repaired with copper.
      */
     public static final RegistryEntry<TetherWandItem> TETHER_WAND = RegistrationHelper.item("tether_wand", TetherWandItem::new,
-            () -> new Item.Properties().durability(300).repairable(Items.COPPER_INGOT));
+            () -> new Item.Properties().durability(Balance.Tether.DURABILITY).repairable(Items.COPPER_INGOT));
 
     /** Throw it, or sneak-place it, to arm a Ghost Trap. */
     public static final RegistryEntry<GhostTrapItem> GHOST_TRAP = RegistrationHelper.item("ghost_trap",

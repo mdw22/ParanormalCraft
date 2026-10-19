@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.capture;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.mdw22.paranormalcraft.Balance;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -29,10 +30,10 @@ public record WandHeat(int heat, int lockout, int beamTicks) {
             ByteBufCodecs.VAR_INT, WandHeat::beamTicks,
             WandHeat::new);
 
-    public static final int MAX_HEAT = 160;
-    public static final int COOL_PER_TICK = 2;
-    public static final int LOCKOUT_TICKS = 80;
-    public static final int TICKS_PER_DURABILITY = 20;
+    public static final int MAX_HEAT = Balance.Tether.MAX_HEAT;
+    public static final int COOL_PER_TICK = Balance.Tether.COOL_PER_TICK;
+    public static final int LOCKOUT_TICKS = Balance.Tether.LOCKOUT_TICKS;
+    public static final int TICKS_PER_DURABILITY = Balance.Tether.TICKS_PER_DURABILITY;
     public static final WandHeat COLD = new WandHeat(0, 0, 0);
 
     public boolean canFire() {

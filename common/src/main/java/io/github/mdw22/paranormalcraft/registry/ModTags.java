@@ -5,6 +5,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
+/**
+ * The mod's block tag keys. The tag JSON lives in {@code data/paranormalcraft/tags/block}.
+ */
 public final class ModTags {
 
     /**

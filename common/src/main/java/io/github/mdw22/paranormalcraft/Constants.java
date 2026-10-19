@@ -4,6 +4,9 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The mod id and name, the shared logger, and {@link #id(String)} for identifiers in the mod's namespace.
+ */
 public class Constants {
 
     public static final String MOD_ID = "paranormalcraft";

@@ -1,22 +1,24 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.Balance;
+
 /**
  * The Spirit Thermometer's maths, in °C. Plain logic so it can be unit tested; {@link ThermometerReadings} feeds it
  * from the world.
  */
 public final class Temperature {
 
-    public static final double DEGREES_PER_BIOME_UNIT = 20.0;
-    public static final double NIGHT_OFFSET = -3.0;
-    public static final double BLOCKS_PER_DEGREE_OF_ALTITUDE = 16.0;
-    public static final double COLD_SPOT_STRENGTH = 10.0;
-    public static final double COLD_SPOT_RADIUS = 4.0;
-    public static final double NOISE = 0.3;
+    public static final double DEGREES_PER_BIOME_UNIT = Balance.Tools.DEGREES_PER_BIOME_UNIT;
+    public static final double NIGHT_OFFSET = Balance.Tools.NIGHT_OFFSET;
+    public static final double BLOCKS_PER_DEGREE_OF_ALTITUDE = Balance.Tools.BLOCKS_PER_DEGREE_OF_ALTITUDE;
+    public static final double COLD_SPOT_STRENGTH = Balance.Tools.COLD_SPOT_STRENGTH;
+    public static final double COLD_SPOT_RADIUS = Balance.Tools.COLD_SPOT_RADIUS;
+    public static final double NOISE = Balance.Tools.THERMOMETER_NOISE;
     /** Below this the holder's breath shows. */
-    public static final double BREATH_BELOW = 3.0;
+    public static final double BREATH_BELOW = Balance.Tools.BREATH_BELOW;
     /** Display bands: blue below, orange above. */
-    public static final double COLD_BELOW = 5.0;
-    public static final double WARM_ABOVE = 25.0;
+    public static final double COLD_BELOW = Balance.Tools.COLD_BELOW;
+    public static final double WARM_ABOVE = Balance.Tools.WARM_ABOVE;
 
     public enum Band {
         COLD,

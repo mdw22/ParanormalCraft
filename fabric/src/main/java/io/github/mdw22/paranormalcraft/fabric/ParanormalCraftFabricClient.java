@@ -10,6 +10,10 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
+/**
+ * Fabric client entrypoint: runs {@code ParanormalCraftClient.init()}, registers entity renderers and client payload
+ * handlers, and forwards the client tick.
+ */
 public class ParanormalCraftFabricClient implements ClientModInitializer {
 
     @Override

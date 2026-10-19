@@ -9,6 +9,10 @@ import net.neoforged.neoforge.client.event.RegisterRangeSelectItemModelPropertyE
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Client hooks on NeoForge: range-select item model properties are queued and registered in
+ * {@code RegisterRangeSelectItemModelPropertyEvent}.
+ */
 public class NeoForgeClientPlatformHelper implements IClientPlatformHelper {
 
     // Common client init runs before NeoForge fires the registration event, so properties wait here until then.

@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.block;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
@@ -21,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class GhostMarkerBlockEntity extends BlockEntity {
 
-    public static final double SECOND_GHOST_FACTOR = 0.3;
+    public static final double SECOND_GHOST_FACTOR = Balance.Ghost.SECOND_GHOST_FACTOR;
 
     public GhostMarkerBlockEntity(BlockPos pos, BlockState state) {
 

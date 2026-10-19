@@ -16,6 +16,10 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+/**
+ * NeoForge client entrypoint: runs {@code ParanormalCraftClient.init()}, registers client payload handlers, entity
+ * renderers and item model properties, and forwards the client tick.
+ */
 @Mod(value = Constants.MOD_ID, dist = Dist.CLIENT)
 public class ParanormalCraftNeoForgeClient {
 

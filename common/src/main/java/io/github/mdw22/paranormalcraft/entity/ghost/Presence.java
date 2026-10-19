@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.PresenceRules;
 
 /**
@@ -12,12 +13,12 @@ import io.github.mdw22.paranormalcraft.capture.PresenceRules;
  */
 public final class Presence {
 
-    public static final float MAX = 20.0F;
+    public static final float MAX = Balance.Presence.MAX;
     /** 10 seconds without a valid hit before regeneration starts. */
-    public static final int REGEN_DELAY_TICKS = 200;
+    public static final int REGEN_DELAY_TICKS = Balance.Presence.REGEN_DELAY_TICKS;
     /** Then 1 Presence every 2 seconds. */
-    public static final int REGEN_INTERVAL_TICKS = 40;
-    public static final float REGEN_AMOUNT = 1.0F;
+    public static final int REGEN_INTERVAL_TICKS = Balance.Presence.REGEN_INTERVAL_TICKS;
+    public static final float REGEN_AMOUNT = Balance.Presence.REGEN_AMOUNT;
 
     private float value;
     private int ticksSinceHit;

@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.block;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
@@ -25,8 +26,8 @@ import org.jspecify.annotations.Nullable;
  */
 public class FilledGhostTrapBlockEntity extends BlockEntity {
 
-    private static final int MIN_RATTLE_TICKS = 200;
-    private static final int MAX_RATTLE_TICKS = 400;
+    private static final int MIN_RATTLE_TICKS = Balance.Trap.MIN_RATTLE_TICKS;
+    private static final int MAX_RATTLE_TICKS = Balance.Trap.MAX_RATTLE_TICKS;
 
     private @Nullable CapturedGhost contents;
     private int nextRattle = -1;

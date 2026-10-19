@@ -10,6 +10,10 @@ import java.util.ServiceLoader;
 // Service loaders are a built-in Java feature that allow us to locate implementations of an interface that vary from one
 // environment to another. In the context of MultiLoader we use this feature to access a mock API in the common code that
 // is swapped out for the platform specific implementation at runtime.
+/**
+ * Loads the loader-specific service implementations named in each loader's {@code META-INF/services} files. Use
+ * {@link #PLATFORM} and {@link #NETWORK} directly; registration goes through {@code registry.RegistrationHelper}.
+ */
 public class Services {
 
     // Information about the running platform: loader name, loaded mods, environment, config folder.

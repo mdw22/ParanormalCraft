@@ -19,6 +19,10 @@ import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+/**
+ * NeoForge mod entrypoint: sets the mod bus for registration, runs {@code ParanormalCraft.init()}, registers payloads,
+ * entity attributes and datagen, and forwards server events to {@code CommonEvents}.
+ */
 @Mod(Constants.MOD_ID)
 public class ParanormalCraftNeoForge {
 

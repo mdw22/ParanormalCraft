@@ -1,5 +1,7 @@
 package io.github.mdw22.paranormalcraft.hallucination;
 
+import io.github.mdw22.paranormalcraft.Balance;
+
 /**
  * When a shadow figure that couldn't be placed is tried again, as plain logic so it can be unit tested. A request is
  * tried at once and then every {@link #RETRY_INTERVAL} ticks, as the player turns, for up to {@link #GIVE_UP_TICKS}.
@@ -8,16 +10,16 @@ package io.github.mdw22.paranormalcraft.hallucination;
  */
 public final class FigureRetry {
 
-    public static final int RETRY_INTERVAL = 10;
+    public static final int RETRY_INTERVAL = Balance.Hallucination.RETRY_INTERVAL;
     /** 2 s of failed tries indoors before falling back to sound first. */
-    public static final int SOUND_FIRST_AFTER = 40;
+    public static final int SOUND_FIRST_AFTER = Balance.Hallucination.SOUND_FIRST_AFTER;
     /** 10 s, after which the request is dropped. */
-    public static final int GIVE_UP_TICKS = 200;
+    public static final int GIVE_UP_TICKS = Balance.Hallucination.GIVE_UP_TICKS;
     /** Sound-first spots: this many blocks out. */
-    public static final double SOUND_FIRST_MIN_DISTANCE = 6.0;
-    public static final double SOUND_FIRST_MAX_DISTANCE = 13.0;
+    public static final double SOUND_FIRST_MIN_DISTANCE = Balance.Hallucination.SOUND_FIRST_MIN_DISTANCE;
+    public static final double SOUND_FIRST_MAX_DISTANCE = Balance.Hallucination.SOUND_FIRST_MAX_DISTANCE;
     /** Indoors, a visible spot inside (the next room) may be this close. */
-    public static final double INDOOR_MIN_DISTANCE = 3.0;
+    public static final double INDOOR_MIN_DISTANCE = Balance.Hallucination.INDOOR_MIN_DISTANCE;
 
     public enum Step {
         /** Nothing this tick. */

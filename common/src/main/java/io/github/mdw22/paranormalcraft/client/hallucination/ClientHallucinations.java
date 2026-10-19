@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.client.hallucination;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
 import io.github.mdw22.paranormalcraft.config.ClientConfig;
@@ -47,7 +48,7 @@ public final class ClientHallucinations {
 
     public static final int ATTEMPTS = 5;
     /** Spots this dark or darker are preferred. */
-    public static final int MAX_BLOCK_LIGHT = 7;
+    public static final int MAX_BLOCK_LIGHT = Balance.Hallucination.MAX_BLOCK_LIGHT;
     /** Indoor scan: angle step through the band, in degrees. */
     private static final double SCAN_ANGLE_STEP = 2.0;
     /** Sound-first scan: angle step all the way round, in degrees. */

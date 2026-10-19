@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.server.level.ServerLevel;
@@ -11,7 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class GhostEvents {
 
     /** EMF holders within this many blocks of ghost activity spike to level 5. */
-    public static final double ACTIVITY_RANGE = 16.0;
+    public static final double ACTIVITY_RANGE = Balance.Tools.EMF_SPIKE_RANGE;
 
     private GhostEvents() {
     }

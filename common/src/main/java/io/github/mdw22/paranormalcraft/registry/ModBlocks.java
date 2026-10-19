@@ -11,6 +11,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.PushReaction;
 
+/**
+ * Block and block entity registrations: the ghost marker, the Ghost Trap and the Filled Ghost Trap.
+ */
 public final class ModBlocks {
 
     /**

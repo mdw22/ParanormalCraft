@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.core.BlockPos;
@@ -14,7 +15,7 @@ import net.minecraft.world.phys.Vec3;
 public final class EmfReadings {
 
     /** A trapped ghost reads at most this. */
-    public static final int TRAPPED_MAX_LEVEL = 3;
+    public static final int TRAPPED_MAX_LEVEL = Balance.Trap.TRAPPED_EMF_MAX_LEVEL;
 
     private EmfReadings() {
     }

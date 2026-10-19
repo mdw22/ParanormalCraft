@@ -7,6 +7,10 @@ import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 
+/**
+ * Entity type registrations and their default attributes: the Lingering Spirit, the client-only shadow figure and
+ * the thrown Ghost Trap.
+ */
 public final class ModEntities {
 
     public static final RegistryEntry<EntityType<LingeringSpiritEntity>> LINGERING_SPIRIT = RegistrationHelper.entityType("lingering_spirit",

@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.item;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ThrownGhostTrap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -19,7 +20,7 @@ import net.minecraft.world.level.block.Block;
  */
 public class GhostTrapItem extends BlockItem {
 
-    private static final float THROW_SPEED = 0.8F;
+    private static final float THROW_SPEED = Balance.Trap.THROW_SPEED;
 
     public GhostTrapItem(Block block, Properties properties) {
 

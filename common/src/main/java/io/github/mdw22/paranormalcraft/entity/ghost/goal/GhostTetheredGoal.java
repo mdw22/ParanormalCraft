@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
@@ -13,10 +14,10 @@ import java.util.List;
  */
 public class GhostTetheredGoal extends Goal {
 
-    private static final double FLEE_DISTANCE = 4.0;
+    private static final double FLEE_DISTANCE = Balance.Ghost.TETHERED_FLEE_DISTANCE;
     private static final int REPATH_TICKS = 10;
-    private static final int JERK_CHANCE = 8;
-    private static final double JERK_STRENGTH = 0.35;
+    private static final int JERK_CHANCE = Balance.Ghost.TETHERED_JERK_CHANCE;
+    private static final double JERK_STRENGTH = Balance.Ghost.TETHERED_JERK_STRENGTH;
 
     private final GhostEntity ghost;
     private final double speed;

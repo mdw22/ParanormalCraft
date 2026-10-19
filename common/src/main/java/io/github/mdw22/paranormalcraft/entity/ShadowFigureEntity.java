@@ -6,6 +6,7 @@ import com.geckolib.animatable.manager.AnimatableManager;
 import com.geckolib.animation.AnimationController;
 import com.geckolib.animation.RawAnimation;
 import com.geckolib.util.GeckoLibUtil;
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.debug.trace.ClientTraceHook;
 import io.github.mdw22.paranormalcraft.hallucination.FigureSounds;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationPlacement;
@@ -34,7 +35,7 @@ import org.jspecify.annotations.Nullable;
  */
 public class ShadowFigureEntity extends Entity implements GeoEntity {
 
-    public static final int LIFETIME_TICKS = 200;
+    public static final int LIFETIME_TICKS = Balance.Hallucination.FIGURE_LIFETIME_TICKS;
     public static final int FADE_TICKS = 10;
     /** Eye-ish height used for the look check. */
     private static final double FOCUS_HEIGHT = 1.6;

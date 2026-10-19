@@ -5,6 +5,9 @@ import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Path;
 
+/**
+ * Platform information on Fabric ({@code FabricLoader}).
+ */
 public class FabricPlatformHelper implements IPlatformHelper {
 
     @Override

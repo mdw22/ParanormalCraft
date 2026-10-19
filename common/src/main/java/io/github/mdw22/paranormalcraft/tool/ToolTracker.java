@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.tool;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.network.EmfLevelPayload;
 import io.github.mdw22.paranormalcraft.network.ThermometerReadingPayload;
 import io.github.mdw22.paranormalcraft.platform.Services;
@@ -17,9 +18,9 @@ import java.util.UUID;
  */
 public final class ToolTracker {
 
-    public static final int INTERVAL_TICKS = 10;
+    public static final int INTERVAL_TICKS = Balance.Tools.READING_INTERVAL_TICKS;
     /** How long ghost activity pins nearby readers at level 5. */
-    public static final int SPIKE_TICKS = 60;
+    public static final int SPIKE_TICKS = Balance.Tools.EMF_SPIKE_TICKS;
 
     // Player UUID -> game time until which their EMF reader is pinned at level 5. Server thread only.
     private static final Map<UUID, Long> EMF_SPIKES = new HashMap<>();

@@ -12,6 +12,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
+/**
+ * Networking on NeoForge: payloads are registered on the mod bus ({@link #registerPayloads}) and sent with
+ * {@code PacketDistributor}, only over channels the client negotiated.
+ */
 public class NeoForgeNetworkHelper implements INetworkHelper {
 
     @Override

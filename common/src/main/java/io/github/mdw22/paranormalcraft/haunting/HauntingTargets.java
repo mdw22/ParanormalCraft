@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.haunting;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.registry.ModTags;
 import net.minecraft.core.BlockPos;
@@ -28,10 +29,10 @@ import java.util.Map;
  */
 public final class HauntingTargets {
 
-    public static final int RANGE = 8;
-    public static final int ITEM_RANGE = 6;
+    public static final int RANGE = Balance.Haunting.BLOCK_RANGE;
+    public static final int ITEM_RANGE = Balance.Haunting.ITEM_RANGE;
     /** A container only rattles if no player is this close (so nobody is about to open it). */
-    public static final double CONTAINER_PLAYER_CLEARANCE = 4.0;
+    public static final double CONTAINER_PLAYER_CLEARANCE = Balance.Haunting.CONTAINER_PLAYER_CLEARANCE;
 
     private final Map<HauntingAction, List<BlockPos>> blocks = new EnumMap<>(HauntingAction.class);
     final List<HangingEntity> decorations = new ArrayList<>();

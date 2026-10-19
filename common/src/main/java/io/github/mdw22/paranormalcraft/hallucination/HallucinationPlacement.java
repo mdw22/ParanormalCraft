@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.hallucination;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -13,17 +14,17 @@ import org.jspecify.annotations.Nullable;
 public final class HallucinationPlacement {
 
     /** Never closer to the view than this, so the player has to turn a little before it vanishes. */
-    public static final double MIN_ANGLE_FLOOR = 28.0;
+    public static final double MIN_ANGLE_FLOOR = Balance.Hallucination.MIN_ANGLE_FLOOR;
     /** The band's inner and outer edges, measured inward from the screen edge. */
-    public static final double INNER_FROM_EDGE = 18.0;
-    public static final double OUTER_FROM_EDGE = 6.0;
-    public static final double NEAR_MIN_DISTANCE = 8.0;
-    public static final double NEAR_MAX_DISTANCE = 13.0;
+    public static final double INNER_FROM_EDGE = Balance.Hallucination.INNER_FROM_EDGE;
+    public static final double OUTER_FROM_EDGE = Balance.Hallucination.OUTER_FROM_EDGE;
+    public static final double NEAR_MIN_DISTANCE = Balance.Hallucination.NEAR_MIN_DISTANCE;
+    public static final double NEAR_MAX_DISTANCE = Balance.Hallucination.NEAR_MAX_DISTANCE;
     /** {@code reduced} intensity keeps the figure further away. */
-    public static final double REDUCED_MIN_DISTANCE = 12.0;
-    public static final double REDUCED_MAX_DISTANCE = 16.0;
+    public static final double REDUCED_MIN_DISTANCE = Balance.Hallucination.REDUCED_MIN_DISTANCE;
+    public static final double REDUCED_MAX_DISTANCE = Balance.Hallucination.REDUCED_MAX_DISTANCE;
     /** The figure vanishes once the player's view comes this close to it. */
-    public static final double VANISH_VIEW_ANGLE = 20.0;
+    public static final double VANISH_VIEW_ANGLE = Balance.Hallucination.VANISH_VIEW_ANGLE;
 
     public record Offset(double dx, double dz) {
     }

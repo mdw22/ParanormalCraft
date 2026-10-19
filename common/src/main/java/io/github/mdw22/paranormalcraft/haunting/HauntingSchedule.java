@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.haunting;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -9,7 +10,7 @@ import java.util.Map;
 public final class HauntingSchedule {
 
     /** Each action waits at least this long before it can repeat (60 s). */
-    public static final long ACTION_COOLDOWN_TICKS = 1200;
+    public static final long ACTION_COOLDOWN_TICKS = Balance.Haunting.ACTION_COOLDOWN_TICKS;
     private static final long UNSCHEDULED = Long.MIN_VALUE;
 
     private long nextAttempt = UNSCHEDULED;

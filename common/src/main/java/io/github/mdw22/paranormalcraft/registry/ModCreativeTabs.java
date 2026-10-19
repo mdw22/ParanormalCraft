@@ -5,6 +5,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * The Paranormal Craft creative tab and what it shows.
+ */
 public final class ModCreativeTabs {
 
     public static final RegistryEntry<CreativeModeTab> PARANORMAL_CRAFT = RegistrationHelper.creativeTab(Constants.MOD_ID,

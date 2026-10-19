@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.haunting;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -38,10 +39,10 @@ import java.util.List;
 final class HauntingEffects {
 
     /** The chest lid stays up this long (about 1.5 s). */
-    static final int CHEST_OPEN_TICKS = 30;
+    static final int CHEST_OPEN_TICKS = Balance.Haunting.CHEST_OPEN_TICKS;
     /** Footsteps are spread over about 2 s. */
-    static final int FOOTSTEP_SPAN_TICKS = 40;
-    static final int KNOCK_GAP_TICKS = 6;
+    static final int FOOTSTEP_SPAN_TICKS = Balance.Haunting.FOOTSTEP_SPAN_TICKS;
+    static final int KNOCK_GAP_TICKS = Balance.Haunting.KNOCK_GAP_TICKS;
 
     private HauntingEffects() {
     }

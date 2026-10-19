@@ -11,6 +11,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 
+/**
+ * Networking on Fabric: payload types go in {@code PayloadTypeRegistry}, server handlers in
+ * {@code ServerPlayNetworking}; sending checks {@code canSend} first.
+ */
 public class FabricNetworkHelper implements INetworkHelper {
 
     @Override

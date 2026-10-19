@@ -2,6 +2,10 @@ package io.github.mdw22.paranormalcraft.platform.services;
 
 import java.nio.file.Path;
 
+/**
+ * Information about the running loader: its name, loaded mods, whether this is a development environment, and the
+ * config folder.
+ */
 public interface IPlatformHelper {
 
     /**

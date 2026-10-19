@@ -15,6 +15,9 @@ import net.minecraft.world.item.CreativeModeTab;
 
 import java.util.function.Supplier;
 
+/**
+ * Registration on Fabric: registers straight into the vanilla registry, so entries are valid immediately.
+ */
 public class FabricRegistrationHelper implements IRegistrationHelper {
 
     @Override

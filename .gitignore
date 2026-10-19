@@ -40,3 +40,7 @@ build/
 DESIGNER_RESPONSE.md
 DESIGNER_REPORT.md
 CLAUDE.md
+
+# builder knowledge base (read from disk by Claude Code, kept out of git)
+docs/
+.claude/

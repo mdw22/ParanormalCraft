@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.hallucination;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
@@ -20,9 +21,9 @@ import java.util.UUID;
  */
 public final class HallucinationScheduler {
 
-    public static final double GHOST_RANGE = 24.0;
-    public static final int MAX_BLOCK_LIGHT = 7;
-    public static final int RETRY_TICKS = 200;
+    public static final double GHOST_RANGE = Balance.Hallucination.GHOST_RANGE;
+    public static final int MAX_BLOCK_LIGHT = Balance.Hallucination.MAX_BLOCK_LIGHT;
+    public static final int RETRY_TICKS = Balance.Hallucination.RETRY_TICKS;
 
     // Player UUID -> game time of their next hallucination attempt. Server thread only.
     private static final Map<UUID, Long> NEXT = new HashMap<>();

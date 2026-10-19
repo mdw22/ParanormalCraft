@@ -1,5 +1,7 @@
 package io.github.mdw22.paranormalcraft.capture;
 
+import io.github.mdw22.paranormalcraft.Balance;
+
 /**
  * The Milestone 2 Presence rules, as plain logic so they can be unit tested.
  * <ul>
@@ -14,16 +16,16 @@ package io.github.mdw22.paranormalcraft.capture;
  */
 public final class PresenceRules {
 
-    public static final float FLOOR = 1.0F;
-    public static final float MIN_MELEE_DRAIN = 0.5F;
-    public static final float WEAKENED_AT = 5.0F;
+    public static final float FLOOR = Balance.Presence.FLOOR;
+    public static final float MIN_MELEE_DRAIN = Balance.Presence.MIN_MELEE_DRAIN;
+    public static final float WEAKENED_AT = Balance.Presence.WEAKENED_AT;
     /** 15 s. */
-    public static final int RECOVERY_TICKS = 300;
-    public static final float RECOVERED_PRESENCE = 10.0F;
+    public static final int RECOVERY_TICKS = Balance.Presence.RECOVERY_TICKS;
+    public static final float RECOVERED_PRESENCE = Balance.Presence.RECOVERED_PRESENCE;
     /** A ghost that breaks free of a trap is left at this. */
-    public static final float BREAK_FREE_PRESENCE = 8.0F;
+    public static final float BREAK_FREE_PRESENCE = Balance.Presence.BREAK_FREE_PRESENCE;
     /** Each latched Tether drains this much per second (0.1 per tick). */
-    public static final float TETHER_DRAIN_PER_SECOND = 2.0F;
+    public static final float TETHER_DRAIN_PER_SECOND = Balance.Presence.TETHER_DRAIN_PER_SECOND;
     public static final float TETHER_DRAIN_PER_TICK = TETHER_DRAIN_PER_SECOND / 20.0F;
 
     private PresenceRules() {

@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.capture;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -9,9 +10,9 @@ import org.jspecify.annotations.Nullable;
 public final class BeamMath {
 
     /** Beams this close count as crossing. */
-    public static final double CROSSING_DISTANCE = 0.4;
+    public static final double CROSSING_DISTANCE = Balance.Tether.CROSSING_DISTANCE;
     /** The last stretch of each beam, where beams on the same target meet, never counts as a crossing. */
-    public static final double TARGET_END_ZONE = 1.5;
+    public static final double TARGET_END_ZONE = Balance.Tether.TARGET_END_ZONE;
 
     public record Point(double x, double y, double z) {
 

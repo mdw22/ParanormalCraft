@@ -7,6 +7,9 @@ import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
+/**
+ * Generates {@code en_us.json}: every item, block, entity, tooltip, subtitle and message string.
+ */
 public class ModLanguageProvider extends LanguageProvider {
 
     public ModLanguageProvider(PackOutput output) {

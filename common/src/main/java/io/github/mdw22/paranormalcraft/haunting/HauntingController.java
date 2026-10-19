@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.haunting;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
@@ -22,7 +23,7 @@ import java.util.Optional;
  */
 public final class HauntingController {
 
-    public static final double PLAYER_RANGE = 16.0;
+    public static final double PLAYER_RANGE = Balance.Haunting.PLAYER_RANGE;
     private static final int HISTORY_SIZE = 8;
 
     /**

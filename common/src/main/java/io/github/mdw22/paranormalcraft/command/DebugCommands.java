@@ -31,6 +31,7 @@ import io.github.mdw22.paranormalcraft.phase.Phasing;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
+import io.github.mdw22.paranormalcraft.world.ModStructures;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -47,6 +48,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -60,7 +62,7 @@ import java.util.Set;
 
 /**
  * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, tether,
- * timers, pace, config, journal, containment, bind, familiar, phase and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
+ * timers, pace, config, journal, containment, bind, familiar, nearcabin, phase and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
  * development). See the README's "How to test" section.
  */
 public final class DebugCommands {
@@ -109,6 +111,10 @@ public final class DebugCommands {
                                                 IntegerArgumentType.getInteger(context, "index"), context.getSource().getPlayerOrException())
                                                 ? "bound into the vessel" : "can't bind that ghost")))))
                 .then(familiar())
+                .then(Commands.literal("nearcabin")
+                        .executes(context -> nearCabin(context, DEFAULT_CABIN_DISTANCE))
+                        .then(Commands.argument("distance", IntegerArgumentType.integer(8, 256))
+                                .executes(context -> nearCabin(context, IntegerArgumentType.getInteger(context, "distance")))))
                 .then(Commands.literal("phase")
                         .then(Commands.argument("player", EntityArgument.player())
                                 .then(Commands.literal("start").executes(context -> {
@@ -240,6 +246,32 @@ public final class DebugCommands {
                             BlockPos cabin = Familiars.guide(player);
                             return ok(context, cabin == null ? "No cabin within range: the wisp shakes no" : "Guiding toward the cabin at " + cabin.toShortString());
                         })));
+    }
+
+    private static final int DEFAULT_CABIN_DISTANCE = 48;
+    private static final int CABIN_SEARCH_CHUNKS = 100;
+
+    /**
+     * Teleports the player {@code distance} blocks from the nearest Abandoned Cabin, on the surface, facing away from
+     * it (for testing the wisp's guide).
+     */
+    private static int nearCabin(CommandContext<CommandSourceStack> context, int distance) throws CommandSyntaxException {
+
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ServerLevel level = player.level();
+        BlockPos cabin = level.findNearestMapStructure(ModStructures.ABANDONED_CABIN, player.blockPosition(), CABIN_SEARCH_CHUNKS, false);
+        if (cabin == null) {
+            return fail(context, "No Abandoned Cabin within " + CABIN_SEARCH_CHUNKS + " chunks");
+        }
+        Vec3 away = new Vec3(player.getX() - cabin.getX(), 0.0, player.getZ() - cabin.getZ());
+        away = away.lengthSqr() < 1.0 ? new Vec3(1.0, 0.0, 0.0) : away.normalize();
+        int x = (int) Math.floor(cabin.getX() + away.x * distance);
+        int z = (int) Math.floor(cabin.getZ() + away.z * distance);
+        level.getChunk(x >> 4, z >> 4);
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        float yaw = (float) Math.toDegrees(Math.atan2(-away.x, away.z));
+        player.teleportTo(level, x + 0.5, y, z + 0.5, Set.of(), yaw, 0.0F, true);
+        return ok(context, "Moved " + distance + " blocks from the cabin at " + cabin.toShortString() + ", facing away from it");
     }
 
     private static ItemStack boundVessel(ServerPlayer player) {

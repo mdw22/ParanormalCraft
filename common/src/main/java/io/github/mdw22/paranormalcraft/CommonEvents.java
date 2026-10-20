@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.command.ModCommands;
+import io.github.mdw22.paranormalcraft.command.PlaytestCommands;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.debug.ColdSpotDisplay;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
@@ -15,6 +16,8 @@ import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.journal.JournalEvents;
 import io.github.mdw22.paranormalcraft.phase.Phasing;
+import io.github.mdw22.paranormalcraft.playtest.BuildInfo;
+import io.github.mdw22.paranormalcraft.playtest.Playtests;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import io.github.mdw22.paranormalcraft.ward.WardEffects;
 import io.github.mdw22.paranormalcraft.world.LoadedPositions;
@@ -41,6 +44,7 @@ public class CommonEvents {
         TetherManager.tick(server);
         ScriptRunner.tick(server);
         Familiars.tick(server);
+        Playtests.tick(server);
     }
 
     /**
@@ -61,6 +65,7 @@ public class CommonEvents {
 
         if (entity instanceof ServerPlayer player) {
             RevealDebug.sync(player);
+            Playtests.offer(player);
         }
     }
 
@@ -70,6 +75,7 @@ public class CommonEvents {
     public static void onRegisterCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
 
         ModCommands.register(dispatcher);
+        PlaytestCommands.register(dispatcher);
     }
 
     /**
@@ -94,6 +100,7 @@ public class CommonEvents {
     public static void onPlayerLogout(ServerPlayer player) {
 
         Familiars.onLogout(player);
+        Playtests.onLogout(player);
         Phasing.end(player, "logout");
     }
 
@@ -114,6 +121,8 @@ public class CommonEvents {
         LoadedPositions.clearAll();
         WardEffects.clear();
         Familiars.clear();
+        Playtests.clear();
+        BuildInfo.clear();
         Phasing.clear();
         ServerTrace.clear();
         ModConfigs.resetSession();

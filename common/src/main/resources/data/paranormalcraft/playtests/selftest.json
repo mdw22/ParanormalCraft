@@ -1,0 +1,22 @@
+{
+  "title": "Playtest mode self-test",
+  "steps": [
+    {
+      "id": "setup_runs",
+      "title": "Set up and pass",
+      "lines": ["Click [Set up] (it sets noon), then [Pass]."],
+      "setup": ["time set noon", "wait 5"],
+      "auto_check": "trace playtest_setup"
+    },
+    {
+      "id": "fail_with_note",
+      "title": "Fail with a note",
+      "lines": ["Click [Fail], type a short note and press Enter."]
+    },
+    {
+      "id": "skip",
+      "title": "Skip",
+      "lines": ["Click [Skip]. The results file is written next."]
+    }
+  ]
+}

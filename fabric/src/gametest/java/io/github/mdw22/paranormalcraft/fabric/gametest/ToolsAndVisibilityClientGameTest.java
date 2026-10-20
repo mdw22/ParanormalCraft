@@ -17,6 +17,9 @@ import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
@@ -64,6 +67,7 @@ import java.util.stream.Stream;
  *     <li>the Ward Lantern's placement ring;</li>
  *     <li>the Wisp Familiar: visible without goggles, its warning tint, its light in a dark tunnel;</li>
  *     <li>the Spectral Step: walking through a closed door with client and server in agreement;</li>
+ *     <li>playtest mode: a step's clickable chat buttons and boss-bar line;</li>
  *     <li>the Paranormal Craft creative tab and its items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
@@ -99,6 +103,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             wardRing(context, server);
             wispFamiliar(context, server);
             phaseThroughDoor(context, server);
+            playtestStep(context, server);
             creativeTab(context, server);
         }
     }
@@ -715,6 +720,56 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         server.runCommand("paranormalcraft debug phase @p end");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
         context.waitTicks(20);
+    }
+
+    /** Every system message the client receives, for the playtest step (Fabric's message API). */
+    private static final List<Component> RECEIVED = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static boolean listening;
+
+    /**
+     * Playtest mode: {@code /pt start update10} shows step 1 in chat with clickable buttons (run and suggest click
+     * events) and the boss-bar line; a screenshot of both; then {@code /pt stop}.
+     */
+    private static void playtestStep(ClientGameTestContext context, TestServerContext server) {
+
+        if (!listening) {
+            ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+                if (!overlay) {
+                    RECEIVED.add(message);
+                }
+            });
+            listening = true;
+        }
+        RECEIVED.clear();
+        context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
+        server.runCommand("execute as @p run pt start update10");
+        context.waitTicks(10);
+        List<ClickEvent> clicks = new java.util.ArrayList<>();
+        RECEIVED.forEach(message -> collectClicks(message, clicks));
+        check(clicks.contains(new ClickEvent.RunCommand("/pt setup")), "no [Set up] button: " + clicks);
+        check(clicks.contains(new ClickEvent.RunCommand("/pt pass")), "no [Pass] button: " + clicks);
+        check(clicks.contains(new ClickEvent.SuggestCommand("/pt fail ")), "no [Fail] button that suggests '/pt fail ': " + clicks);
+        check(clicks.contains(new ClickEvent.SuggestCommand("/pt note ")), "no [Note] button: " + clicks);
+        check(clicks.contains(new ClickEvent.RunCommand("/pt skip")), "no [Skip] button: " + clicks);
+        // The client's boss overlay keeps its bars private; the server's bar (sent to this player) is checked instead.
+        String bar = server.computeOnServer(minecraft -> {
+            io.github.mdw22.paranormalcraft.playtest.Playtests.Session session = io.github.mdw22.paranormalcraft.playtest.Playtests
+                    .session(minecraft.getPlayerList().getPlayers().getFirst());
+            return session == null || session.bar().getPlayers().isEmpty() ? "none" : session.bar().getName().getString();
+        });
+        check(bar.startsWith("Playtest 1/"), "no boss-bar line, got '" + bar + "'");
+        context.takeScreenshot("22-playtest-step");
+        server.runCommand("execute as @p run pt stop");
+        context.waitTicks(5);
+        context.runOnClient(client -> client.gui.hud.getChat().clearMessages(false));
+    }
+
+    private static void collectClicks(Component component, List<ClickEvent> clicks) {
+
+        if (component.getStyle().getClickEvent() != null) {
+            clicks.add(component.getStyle().getClickEvent());
+        }
+        component.getSiblings().forEach(sibling -> collectClicks(sibling, clicks));
     }
 
     /** Hides or shows the HUD (vanilla's F1) for in-world screenshots. */

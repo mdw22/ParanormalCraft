@@ -4,9 +4,14 @@ import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.NaturalSpawner;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
@@ -52,10 +57,37 @@ public final class Wards {
     }
 
     /**
-     * Whether a natural spawn of {@code category} at {@code pos} is blocked: monsters inside a ward. Called from the
-     * natural spawner's position check (see {@code NaturalSpawnerMixin}).
+     * Whether a natural spawn of {@code category} at {@code pos} is blocked: monsters from the biome's own list inside
+     * a ward. Structure spawn overrides (witch huts, fortresses, monuments, outposts) are let through, so vanilla
+     * farms and progression still work. Called from the natural spawner's position check (see
+     * {@code NaturalSpawnerMixin}).
      */
-    public static boolean blocksNaturalSpawn(Level level, MobCategory category, BlockPos pos) {
+    public static boolean blocksNaturalSpawn(ServerLevel level, MobCategory category, BlockPos pos, StructureManager structures, ChunkGenerator generator) {
+
+        if (category != MobCategory.MONSTER || isStructureOverride(level, category, pos, structures, generator)) {
+            return false;
+        }
+        return blocksBiomeSpawn(level, category, pos);
+    }
+
+    /**
+     * Whether vanilla would pick {@code pos}'s spawns from a structure's override list rather than the biome's: the
+     * Nether fortress special case, or any structure whose spawn override for {@code category} covers {@code pos}
+     * ({@code ChunkGenerator.getMobsAt} returns the biome's own list otherwise).
+     */
+    public static boolean isStructureOverride(ServerLevel level, MobCategory category, BlockPos pos, StructureManager structures, ChunkGenerator generator) {
+
+        if (NaturalSpawner.isInNetherFortressBounds(pos, level, category, structures)) {
+            return true;
+        }
+        Holder<Biome> biome = level.getBiome(pos);
+        return generator.getMobsAt(biome, structures, category, pos) != biome.value().getMobSettings().getMobs(category);
+    }
+
+    /**
+     * The ward part of {@link #blocksNaturalSpawn}, for a biome spawn: blocked inside a ward (with a puff).
+     */
+    public static boolean blocksBiomeSpawn(Level level, MobCategory category, BlockPos pos) {
 
         if (category != MobCategory.MONSTER) {
             return false;

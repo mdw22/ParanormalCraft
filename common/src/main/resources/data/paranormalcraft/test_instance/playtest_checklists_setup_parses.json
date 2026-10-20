@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:playtest_checklists_setup_parses",
+  "environment": "paranormalcraft:playtest",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 20,
+  "sky_access": true
+}

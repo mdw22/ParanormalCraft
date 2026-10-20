@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -223,10 +224,19 @@ public final class ScriptRunner {
      */
     private static String check(Run run, long now) {
 
-        Expectation expectation = run.pending;
+        return evaluate(run.pending, run.source, run.lastCommandTime);
+    }
+
+    /**
+     * Null if {@code expectation} holds now for {@code source} (a dump around its entity, or a trace event since game
+     * time {@code since}), otherwise why not, with the closest thing seen. Trace events need buffering on
+     * ({@link ServerTrace#startBuffering}). Also used by playtest auto-checks.
+     */
+    public static @Nullable String evaluate(Expectation expectation, CommandSourceStack source, long since) {
+
         if (expectation.kind() == Expectation.Kind.DUMP) {
-            Vec3 at = run.source.getEntity() != null ? run.source.getEntity().position() : run.source.getPosition();
-            JsonObject dump = DebugDump.build(run.source.getLevel(), at, DUMP_RADIUS, DebugDump.SILENT);
+            Vec3 at = source.getEntity() != null ? source.getEntity().position() : source.getPosition();
+            JsonObject dump = DebugDump.build(source.getLevel(), at, DUMP_RADIUS, DebugDump.SILENT);
             if (expectation.matchesDump(dump)) {
                 return null;
             }
@@ -236,9 +246,9 @@ public final class ScriptRunner {
             }
             return "expect " + expectation.describe() + " failed; " + String.join(", ", actual);
         }
-        String player = run.source.getEntity() instanceof ServerPlayer serverPlayer ? serverPlayer.getGameProfile().name() : null;
+        String player = source.getEntity() instanceof ServerPlayer serverPlayer ? serverPlayer.getGameProfile().name() : null;
         List<JsonObject> events = new ArrayList<>();
-        for (JsonObject event : ServerTrace.since(run.lastCommandTime)) {
+        for (JsonObject event : ServerTrace.since(since)) {
             boolean fromClient = event.has("side") && event.get("side").getAsString().equals("client");
             if (!fromClient || (player != null && player.equals(event.get("player").getAsString()))) {
                 events.add(event);

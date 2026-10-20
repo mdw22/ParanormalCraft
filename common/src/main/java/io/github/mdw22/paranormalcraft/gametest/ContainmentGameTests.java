@@ -25,6 +25,8 @@ import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -40,10 +42,12 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.MobSpawnSettings;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.HopperBlock;
@@ -51,6 +55,10 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -88,6 +96,7 @@ public final class ContainmentGameTests {
         RegistrationHelper.testFunction("containment_save_and_reload", ContainmentGameTests::saveAndReload);
         RegistrationHelper.testFunction("ward_blocks_natural_monster_spawns", ContainmentGameTests::wardBlocksSpawns);
         RegistrationHelper.testFunction("ward_blocks_haunting", ContainmentGameTests::wardBlocksHaunting);
+        RegistrationHelper.testFunction("ward_lets_structure_spawns_through", ContainmentGameTests::wardLetsStructureSpawnsThrough);
         RegistrationHelper.testFunction("ward_blocks_hallucinations", ContainmentGameTests::wardBlocksHallucinations);
         RegistrationHelper.testFunction("journal_capture_triggers", ContainmentGameTests::journalCapture);
         RegistrationHelper.testFunction("journal_containment_triggers", ContainmentGameTests::journalContainment);
@@ -405,12 +414,12 @@ public final class ContainmentGameTests {
         helper.runAfterDelay(10, () -> {
             BlockPos spot = helper.absolutePos(new BlockPos(4, 1, 4));
             Vec3 spotCentre = Vec3.atBottomCenterOf(spot);
-            check(helper, Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, spot) == Wards.covers(level, spotCentre), "ward check disagrees");
+            check(helper, Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, spot, level.structureManager(), level.getChunkSource().getGenerator()) == Wards.covers(level, spotCentre), "ward check disagrees");
             boolean before = spawnCheck(helper, spot);
             helper.setBlock(new BlockPos(16, 1, 16), ModBlocks.WARD_LANTERN.get());
             check(helper, Wards.covers(level, spotCentre), "the ward doesn't cover the room");
-            check(helper, Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, spot), "monsters not blocked inside the ward");
-            check(helper, !Wards.blocksNaturalSpawn(level, MobCategory.CREATURE, spot), "animals blocked inside the ward");
+            check(helper, Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, spot, level.structureManager(), level.getChunkSource().getGenerator()), "monsters not blocked inside the ward");
+            check(helper, !Wards.blocksNaturalSpawn(level, MobCategory.CREATURE, spot, level.structureManager(), level.getChunkSource().getGenerator()), "animals blocked inside the ward");
             check(helper, !spawnCheck(helper, spot), "the natural spawner still allows a zombie inside the ward");
             Constants.LOG.info("Ward spawn check: zombie allowed without a ward = {}, with a ward = false", before);
             check(helper, before, "the natural spawner refused a zombie in a dark room without a ward (test set-up)");
@@ -418,6 +427,49 @@ public final class ContainmentGameTests {
             check(helper, !Wards.covers(level, spotCentre), "the ward is still registered after breaking");
             helper.succeed();
         });
+    }
+
+    /**
+     * Structure spawn overrides pass a ward: a witch hut start is registered in the test area (as worldgen would), so
+     * vanilla picks the hut's own spawn list inside its box. Inside a ward, a spot in the hut is not blocked; a spot
+     * outside it still is.
+     */
+    private static void wardLetsStructureSpawnsThrough(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ChunkGenerator generator = level.getChunkSource().getGenerator();
+        Holder.Reference<Structure> hut = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getOrThrow(BuiltinStructures.SWAMP_HUT);
+        BlockPos origin = helper.absolutePos(new BlockPos(20, 1, 20));
+        ChunkPos startChunk = ChunkPos.containing(origin);
+        StructureStart start = hut.value().generate(hut, level.dimension(), level.registryAccess(), generator, generator.getBiomeSource(),
+                level.getChunkSource().randomState(), level.getStructureManager(), level.getSeed(), startChunk, 0, level, biome -> true);
+        check(helper, start.isValid(), "couldn't generate a witch hut start (set-up)");
+        BoundingBox box = start.getBoundingBox();
+        level.getChunk(startChunk.x(), startChunk.z()).setStartForStructure(hut.value(), start);
+        for (int cx = box.minX() >> 4; cx <= box.maxX() >> 4; cx++) {
+            for (int cz = box.minZ() >> 4; cz <= box.maxZ() >> 4; cz++) {
+                level.getChunk(cx, cz).addReferenceForStructure(hut.value(), startChunk.pack());
+            }
+        }
+        BlockPos inside = box.getCenter();
+        BlockPos outside = new BlockPos(box.maxX() + 6, inside.getY(), box.maxZ() + 6);
+        // The hut generates where worldgen would put it in that chunk, so the lantern goes on top of its box.
+        BlockPos lantern = new BlockPos(inside.getX(), box.maxY() + 2, inside.getZ());
+        level.setBlock(lantern.below(), Blocks.STONE.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(lantern, ModBlocks.WARD_LANTERN.get().defaultBlockState(), Block.UPDATE_ALL);
+        StructureManager structures = level.structureManager();
+        try {
+            check(helper, Wards.covers(level, Vec3.atCenterOf(inside)) && Wards.covers(level, Vec3.atCenterOf(outside)), "the ward doesn't cover both spots (set-up)");
+            check(helper, Wards.isStructureOverride(level, MobCategory.MONSTER, inside, structures, generator), "the hut's spawn override isn't seen");
+            check(helper, !Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, inside, structures, generator), "the ward blocked the hut's own spawns");
+            check(helper, !Wards.isStructureOverride(level, MobCategory.MONSTER, outside, structures, generator), "an override outside the hut");
+            check(helper, Wards.blocksNaturalSpawn(level, MobCategory.MONSTER, outside, structures, generator), "the ward let a biome spawn through");
+        } finally {
+            level.setBlock(lantern, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            level.setBlock(lantern.below(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            level.getChunk(startChunk.x(), startChunk.z()).setStartForStructure(hut.value(), StructureStart.INVALID_START);
+        }
+        helper.succeed();
     }
 
     private static boolean spawnCheck(GameTestHelper helper, BlockPos spot) {

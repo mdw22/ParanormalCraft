@@ -14,8 +14,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Ward Lanterns stop natural monster spawns. The one hook is vanilla's per-position check for natural spawning, which
- * spawners, spawn eggs, commands and structure spawns never go through. Same on both loaders.
+ * Ward Lanterns stop natural monster spawns from the biome's list. The one hook is vanilla's per-position check for
+ * natural spawning, which spawners, spawn eggs, commands and structure pieces placing mobs never go through; structure
+ * spawn overrides (witch huts, fortresses, monuments) do, and {@code Wards} lets them through. Same on both loaders.
  */
 @Mixin(NaturalSpawner.class)
 public abstract class NaturalSpawnerMixin {
@@ -26,7 +27,7 @@ public abstract class NaturalSpawnerMixin {
                                                             BlockPos.MutableBlockPos pos, double nearestPlayerDistanceSqr,
                                                             CallbackInfoReturnable<Boolean> cir) {
 
-        if (Wards.blocksNaturalSpawn(level, category, pos)) {
+        if (Wards.blocksNaturalSpawn(level, category, pos, structureManager, generator)) {
             cir.setReturnValue(false);
         }
     }

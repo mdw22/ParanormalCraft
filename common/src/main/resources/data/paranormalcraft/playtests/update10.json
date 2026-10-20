@@ -1,0 +1,166 @@
+{
+  "title": "Update 10 re-test: binding, the Wisp Familiar, the Spectral Step, the Ward Lantern, the journal",
+  "steps": [
+    {
+      "id": "bind",
+      "title": "Bind a ghost",
+      "lines": [
+        "Open the Containment Unit, put the Spirit Vessel (from your inventory) in the Vessel slot, pick a spirit, press Bind.",
+        "Watch the 60 s bar and listen to the tone rising; then hover the bound vessel for its tooltip."
+      ],
+      "setup": [
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "paranormalcraft debug containment 100000 202 100000 fill 2",
+        "paranormalcraft debug containment 100000 202 100000 charge 60",
+        "give @s paranormalcraft:lingering_ectoplasm 4"
+      ],
+      "auto_check": "trace bind_done"
+    },
+    {
+      "id": "wisp_light",
+      "title": "Wisp light in a dark tunnel",
+      "lines": [
+        "Use the Bound Spirit Vessel in your hand to summon the wisp, then walk the dark tunnel.",
+        "Does the light follow you smoothly, and does it feel right? (The zombie round the corner can't move yet.)"
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave"
+      ],
+      "auto_check": "trace wisp_light_place"
+    },
+    {
+      "id": "wisp_warning",
+      "title": "Wisp warning: zombie",
+      "lines": [
+        "The zombie round the corner behind you is awake now. Don't turn round yet.",
+        "Is the wisp's red glow readable, and does the chirp come from the zombie's side?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave",
+        "wait 20",
+        "paranormalcraft debug familiar @s summon",
+        "data merge entity @e[type=minecraft:zombie,tag=paranormalcraft_scene,limit=1] {NoAI:0b}"
+      ],
+      "auto_check": "trace wisp_warn mob=minecraft:zombie"
+    },
+    {
+      "id": "wisp_warning_creeper",
+      "title": "Wisp warning: creeper",
+      "lines": [
+        "A frozen creeper waits round the same corner instead.",
+        "Is its chirp sharper than the zombie's?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave",
+        "wait 20",
+        "kill @e[type=minecraft:zombie,tag=paranormalcraft_scene]",
+        "summon minecraft:creeper 100006.5 201 99993.5 {NoAI:1b,PersistenceRequired:1b}",
+        "paranormalcraft debug familiar @s summon"
+      ],
+      "auto_check": "trace wisp_warn creeper=true"
+    },
+    {
+      "id": "wisp_guide",
+      "title": "Wisp guide to a cabin",
+      "lines": [
+        "You're 48 blocks from a real Abandoned Cabin, facing away. Sneak + use the vessel.",
+        "The wisp should fly about 8 blocks toward the cabin, wait glowing, then come back. Sneak + use again for the cooldown message."
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave",
+        "wait 20",
+        "paranormalcraft debug nearcabin 48",
+        "wait 20",
+        "paranormalcraft debug familiar @s summon"
+      ],
+      "auto_check": "trace wisp_guide result=found"
+    },
+    {
+      "id": "recall",
+      "title": "Recall and auto-recall",
+      "lines": [
+        "Use the vessel to recall the wisp, then use it again to summon it.",
+        "Now drop the vessel (Q) or put it in a chest: the wisp should go back in."
+      ],
+      "auto_check": "trace familiar_recall reason=vessel_gone"
+    },
+    {
+      "id": "unbind",
+      "title": "Unbind",
+      "lines": [
+        "A ghost is already bound into the vessel in the unit's Vessel slot. Open the unit and press Unbind.",
+        "The ghost should be back in the list, and the vessel empty."
+      ],
+      "setup": [
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "paranormalcraft debug containment 100000 202 100000 fill 1",
+        "paranormalcraft debug containment 100000 202 100000 charge 60",
+        "paranormalcraft debug bind 100000 202 100000 0"
+      ],
+      "auto_check": "trace unbind"
+    },
+    {
+      "id": "spectral_step",
+      "title": "Spectral Step",
+      "lines": [
+        "Use the Spectral Step in your hand and walk north through the doors, the fence and the wall.",
+        "On another try (60 s cooldown), stop inside the fence as the phase runs out: it should last a bit longer, then nudge you out."
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena",
+        "wait 20",
+        "fill 99998 201 100005 100002 201 100005 minecraft:oak_door[facing=south,half=lower]",
+        "fill 99998 202 100005 100002 202 100005 minecraft:oak_door[facing=south,half=upper]",
+        "fill 99998 201 100003 100002 201 100003 minecraft:oak_fence",
+        "fill 99998 201 100001 100002 201 100001 minecraft:cobblestone_wall",
+        "tp @s 100000.5 201 100008.5 180 0",
+        "item replace entity @s weapon.mainhand with paranormalcraft:spectral_step"
+      ],
+      "auto_check": "trace phase_end"
+    },
+    {
+      "id": "ward_place",
+      "title": "Ward Lantern: ring and edge preview",
+      "lines": [
+        "Night on open ground. Place a Ward Lantern and watch the ring of motes trace its edge.",
+        "Then hold the other lantern: do you see the edge nearby? How does the lantern look?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena_night"
+      ],
+      "auto_check": "trace ward_ring"
+    },
+    {
+      "id": "ward_flare",
+      "title": "Ward Lantern: flare and spawn puffs",
+      "lines": [
+        "A ghost inside a ward tries to haunt: the lantern should flare, chime and push the ghost back.",
+        "Then wait in the dark for small smoke puffs where monsters would have spawned (click Set up again to repeat the flare)."
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena_night",
+        "wait 20",
+        "setblock 100000 201 99996 paranormalcraft:ward_lantern",
+        "paranormalcraft debug ghost spawn 100000 201.5 100002",
+        "wait 10",
+        "paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100002,distance=..4] haunt 1"
+      ],
+      "auto_check": "trace ward_flare"
+    },
+    {
+      "id": "journal",
+      "title": "Field Journal",
+      "lines": [
+        "Page through the journal; hover every icon for its name.",
+        "Check the portrait, the Field Notes diagram and the capture log."
+      ],
+      "setup": [
+        "paranormalcraft debug journal @s lingering_spirit 5",
+        "paranormalcraft debug journal @s open"
+      ],
+      "auto_check": "trace journal_open"
+    }
+  ]
+}

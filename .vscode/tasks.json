@@ -5,6 +5,18 @@
     },
     "tasks": [
         {
+            // One click: the NeoForge server, then the client joining it (tools/playtest.sh). Then click [Start …] in chat.
+            "label": "▶ Playtest",
+            "detail": "Starts the NeoForge server, waits for it, then starts the client and joins. Then click [Start …] in chat.",
+            "type": "shell",
+            "command": "./tools/playtest.sh",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        },
+        {
             "label": "NeoForge client",
             "type": "shell",
             "command": "./gradlew :neoforge:runClient",

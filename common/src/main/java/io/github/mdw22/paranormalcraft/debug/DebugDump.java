@@ -22,6 +22,7 @@ import io.github.mdw22.paranormalcraft.haunting.HauntingAction;
 import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.haunting.HauntingSchedule;
 import io.github.mdw22.paranormalcraft.phase.Phasing;
+import io.github.mdw22.paranormalcraft.playtest.Playtests;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
@@ -267,6 +268,21 @@ public final class DebugDump {
             }
         }
         root.add("wards", wardArray);
+
+        JsonArray playtestArray = new JsonArray();
+        for (Playtests.Session session : Playtests.active()) {
+            JsonObject json = new JsonObject();
+            json.addProperty("player", session.playerName());
+            json.addProperty("checklist", session.checklist().name());
+            json.addProperty("step", session.index() + 1);
+            json.addProperty("stepId", session.step().id());
+            json.addProperty("steps", session.checklist().steps().size());
+            json.addProperty("autoCheck", session.result().autoCheck().name().toLowerCase(java.util.Locale.ROOT));
+            playtestArray.add(json);
+            line(chat, "Playtest %s for %s: step %d/%d (%s), auto-check %s", session.checklist().name(), session.playerName(), session.index() + 1,
+                    session.checklist().steps().size(), session.step().id(), json.get("autoCheck").getAsString());
+        }
+        root.add("playtests", playtestArray);
         return root;
     }
 

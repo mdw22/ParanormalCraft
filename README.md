@@ -65,7 +65,7 @@ These need op level 2 and are on in development runs; elsewhere, set `"enableDeb
 | Command | What it does |
 | --- | --- |
 | `screenshot <name> [width height] [player]` | The target client (default: you) grabs its own frame with vanilla's screenshot code and saves `<client game dir>/paranormalcraft-shots/<name>.png`, 854×480 unless you give a size. The path comes back in chat and in both logs. |
-| `trace start` / `trace stop` | Starts or stops a JSON Lines trace. The client writes `<client game dir>/paranormalcraft-trace/trace-<timestamp>.jsonl` and the server `<server dir>/paranormalcraft-trace/server-trace-<timestamp>.jsonl`. Every line has the game time `t` and a `type`. **Client events:** our sounds as they play (id, position, volume, pitch, `local`), `ghost_render` (alpha, visible, tinted, pickable; on change and every tick of a fade), `figure_spawn` / `figure_sound` / `figure_vanish`, `emf`, `thermometer`, `payload`, `goggles_on` / `goggles_off`. **Server events:** `haunt` / `haunt_none` (action, target, forced, gated), `goal_change`, `manifest_start` / `manifest_end`, `presence`, `hallucination_sent`, `ghost_spawn` / `ghost_disperse`, `tether_start` / `tether_end` (reason) / `tether_drain`, `wand_overheat`, `backfire`, `weakened_start` / `weakened_end`, `trap_armed`, `trap_capture_start` / `trap_capture_success` / `trap_capture_fail`, `trap_release`, `figure_result`. The client also traces `beam_render` and `figure_result` / `figure_seen`. |
+| `trace start` / `trace stop` | Starts or stops a JSON Lines trace. The client writes `<client game dir>/paranormalcraft-trace/trace-<timestamp>.jsonl` and the server `<server dir>/paranormalcraft-trace/server-trace-<timestamp>.jsonl`. Every line has the game time `t` and a `type`. **Client events:** our sounds as they play (id, position, volume, pitch, `local`), `ghost_render` (alpha, visible, tinted, pickable; on change and every tick of a fade), `figure_spawn` / `figure_sound` / `figure_vanish`, `emf`, `thermometer`, `payload`, `goggles_on` / `goggles_off`. **Server events:** `haunt` / `haunt_none` (action, target, forced, gated), `goal_change`, `manifest_start` / `manifest_end`, `presence`, `hallucination_sent`, `ghost_spawn` / `ghost_disperse`, `tether_start` / `tether_end` (reason) / `tether_drain`, `wand_overheat`, `backfire`, `weakened_start` / `weakened_end`, `trap_armed`, `trap_capture_start` / `trap_capture_success` / `trap_capture_fail`, `trap_release`, `trap_release_hold`, `trap_deploy`, `containment_load`, `containment_queue`, `containment_process_start` / `containment_process_done` (yield), `containment_release`, `containment_charge`, `containment_unstable_start` / `containment_unstable_end`, `ghost_ascended`, `ward_placed`, `journal_open`, `journal_capture_logged`, `figure_result`. Trace fields must not be called `t` or `type`, which every line already has. The client also traces `beam_render`, `figure_result` / `figure_seen` and `journal_screen`. |
 | `trace mark <label>` | Writes a label into both traces, to bracket a step. |
 | `trace snapshot` | One client line with the whole state: you, goggles, every ghost in range with alpha and visibility, the active figure, EMF and thermometer. |
 | `dump [radius]` | Ghosts (with name, Weakened, tethers and who holds them, recovery timer, speed factor), filled traps (with what they hold) and players near you, written to chat and `<server dir>/paranormalcraft-debug/`. |
@@ -76,9 +76,11 @@ Prefer trace and `dump` over screenshots for anything that is state, timing or a
 
 | Command | What it does |
 | --- | --- |
-| `scene <name>` | Builds a fixed setup on a floating 48×48 grass platform at (100000, 200, 100000): clears the last scene, sets time and weather, places a cabin if the scene has one, spawns ghosts with a fixed home and cold spot, and puts you (and Dev2 if online) at a fixed spot and view in survival with the kit. Scenes: `arena`, `arena_night`, `cabin_oak_night`, `cabin_spruce_night`, `haunt_props`, `two_player`, `figure_indoor`, `capture_arena` (a ghost at 6 Presence over an armed trap, a second trap 3 blocks east, you 6 blocks south with goggles on and the Tether Wand selected, Dev2 6 blocks west facing it). Add new ones in `DebugScenes`. |
-| `kit [tools\|none]` | Goggles, EMF Reader, thermometer, a netherite sword, the Tether Wand (slot 5) and 3 Ghost Traps in the hotbar; `none` empties the inventory. |
-| `tether <players> on\|off` | Keeps those players firing their held Tether Wand without holding use (the real server path). A broken tether turns it off, as releasing use would. |
+| `scene <name>` | Builds a fixed setup on a floating 48×48 grass platform at (100000, 200, 100000): clears the last scene, sets time and weather, places a cabin if the scene has one, spawns ghosts with a fixed home and cold spot, and puts you (and Dev2 if online) at a fixed spot and view in survival with the kit. Scenes: `arena`, `arena_night`, `cabin_oak_night`, `cabin_spruce_night`, `haunt_props`, `two_player`, `figure_indoor`, `capture_arena` (a ghost at 6 Presence over an armed trap, a second trap 3 blocks east, you 6 blocks south with goggles on and the Tether Wand selected, Dev2 6 blocks west facing it), `containment_lab` (a Containment Unit with a chest of soul sand feeding it through a side hopper, a bottom hopper into a chest, and two Filled Ghost Traps on the platform). Add new ones in `DebugScenes`. |
+| `kit [tools\|none]` | Goggles, EMF Reader, thermometer, a netherite sword, the Tether Wand (slot 5), 3 Ghost Traps, 2 Ward Lanterns, a Field Journal and a Containment Unit in the hotbar, 4 soul sand in the inventory; `none` empties the inventory. |
+| `tether <players> on\|off\|deploy` | `on`/`off` keeps those players firing their held Tether Wand without holding use (the real server path); a broken tether turns it off, as releasing use would. `deploy` does what attack does while latched: drops a Ghost Trap from their inventory under the ghost. |
+| `journal <player> <ghostType> <stage>` / `journal <player> reset\|open` | Sets that player's Field Journal stage (0–4) for a ghost type, clears their journal and capture log, or opens their journal. |
+| `containment <pos> charge <n>\|fill <n>\|unstable\|process <i>\|advance <ticks>\|release <i>` | Sets a Containment Unit's charge, stores fresh Lingering Spirits, empties it to Unstable, queues or releases a stored ghost (as you), or moves processing forward. |
 | `look <x y z>` / `look <entity>` / `look <yaw> <pitch>` | Turns you to face a point or entity exactly, or sets the angles. |
 
 **Ghost control**
@@ -125,7 +127,11 @@ Every line keeps the position the script was started from, even after a scene te
 - `figure_indoor`;
 - `capture_solo` (tether, Weakened, a trap under the ghost, captured);
 - `capture_coop` (needs Dev2: two tethers, double drain, half speed, captured, no backfire);
-- `crossing_beams` (needs Dev2: crossed beams backfire).
+- `crossing_beams` (needs Dev2: crossed beams backfire);
+- `steer_to_trap` (tether, then turn: the ghost is steered over a trap and captured);
+- `containment_cycle` (a Filled Trap in through the hopper chain, fuel, processing, ectoplasm out the bottom);
+- `release_blessing` (release from containment: the ghost ascends, the player is Restful);
+- `ward_blocks_haunting` (a Ward Lantern stops a ghost's haunting; without it the ghost haunts again).
 
 ### Vanilla tools that help
 
@@ -143,11 +149,20 @@ Every line keeps the position the script was started from, even after a scene te
   3. In jdb: `redefine <class> <path to its .class file>`. The class is under `neoforge/build/classes/java/main`; copy it to a path without spaces first, because jdb splits on them.
 - **What hot-swap can't do, so these need a full restart:** new or removed methods (including adding or removing a lambda), new fields, changed signatures, new classes that existing code must reach, registry entries (items, blocks, sounds, entities), mixins, and anything read only at startup (configs, payload registration).
 
-## Capture tools (Milestone 2, part A)
+## Capture and containment tools (Milestone 2)
 
 - **Tether Wand** (amethyst shard over a lightning rod over copper, redstone, copper): hold use to fire a 12-block beam that latches onto the first ghost you can see near the crosshair. It drains 2 Presence a second, breaks past 14 blocks, after 1 s without line of sight (doors, panes, fences and glass don't block it), if you can no longer see the ghost, or on release. 8 s of fire overheats it for 4 s (heat shows on the item bar). Two crossing beams backfire.
+  - **Steering:** the ghost is held at a point in front of you (where it was when the beam latched, 4–10 blocks); turn and it follows. Sneak to reel it in, walk backward to let it out. A fresh ghost fights and jerks off the line; a Weakened one is easy to lead.
+  - **Attack while latched** drops a Ghost Trap from your inventory (off-hand first, then hotbar, then the rest) under the ghost.
 - **Ghost Trap** (iron, tinted glass, iron / copper, redstone, copper / iron, stone pressure plate, iron): right-click throws it, sneak + right-click places it. It pulls in a Weakened ghost (5 Presence or less) floating over it: always if a tether holds it for the whole 1.5 s pull, otherwise half the time.
-- **Filled Ghost Trap**: rattles, glows faintly and reads as a ghost on the EMF Reader (up to level 3). Sneak with an empty hand (or break it) to pick it up; the item keeps the ghost, its name, who caught it and where. Placed, sneak + use with an item in hand releases the ghost at full Presence, with its old home.
+- **Filled Ghost Trap**: rattles, glows faintly and reads as a ghost on the EMF Reader (up to level 3). Sneak with an empty hand (or break it) to pick it up; the item keeps the ghost, its name, who caught it and where. Hold use on it with an empty hand for 2 s to release the ghost at full Presence, with its old home.
+- **Containment Unit** (iron, tinted glass, iron / copper block, Ghost Trap, copper block / iron, redstone block, iron): holds 4 ghosts. Load Filled Traps in the trap slot (the empty trap comes back out), fuel it with soul sand or soul soil (each adds 20 charge; every stored ghost drains 1 per 30 s). At 0 charge with ghosts inside it goes Unstable: an alarm, a red flicker, processing stops. Pick a ghost and:
+  - **Process** it over 5 minutes into 3–5 Lingering Ectoplasm (and sometimes a Spectral Residue);
+  - **Release** it: it rises and fades, and you get Restful (no phantoms for 3 days).
+
+  Hoppers: fuel from the top or sides, traps from the sides, outputs from the bottom. A comparator reads how many ghosts it holds. Breaking it drops its ghosts as Filled Traps.
+- **Ward Lantern** (lantern, 4 Lingering Ectoplasm, amethyst shard): within 32 blocks (config `wardLanternRadius`) no monsters spawn naturally, ghosts don't haunt and nobody sees shadow figures. Ghosts can still be inside, and caught.
+- **Field Journal** (book, copper ingot; one in every cabin chest): use it to read your field notes, a page per ghost type you've met (filled in as you detect, see, catch and study them) and a log of your captures. The stages are advancements in the Paranormal Craft tab.
 
 ## Layout
 

@@ -7,6 +7,7 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.world.item.Items;
 
 import java.util.concurrent.CompletableFuture;
@@ -76,6 +77,28 @@ public class ModRecipeProvider extends RecipeProvider {
                 .define('P', Items.STONE_PRESSURE_PLATE)
                 .unlockedBy("has_tinted_glass", has(Items.TINTED_GLASS))
                 .unlockedBy("has_tether_wand", has(ModItems.TETHER_WAND.get()))
+                .save(this.output);
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.MISC, ModItems.CONTAINMENT_UNIT.get())
+                .pattern("IGI")
+                .pattern("CTC")
+                .pattern("IRI")
+                .define('I', Items.IRON_INGOT)
+                .define('G', Items.TINTED_GLASS)
+                .define('C', Items.COPPER_BLOCK.weathering().unaffected())
+                .define('T', ModItems.GHOST_TRAP.get())
+                .define('R', Items.REDSTONE_BLOCK)
+                .unlockedBy("has_ghost_trap", has(ModItems.GHOST_TRAP.get()))
+                .save(this.output);
+        ShapelessRecipeBuilder.shapeless(this.items, RecipeCategory.DECORATIONS, ModItems.WARD_LANTERN.get())
+                .requires(Items.LANTERN)
+                .requires(ModItems.LINGERING_ECTOPLASM.get(), 4)
+                .requires(Items.AMETHYST_SHARD)
+                .unlockedBy("has_lingering_ectoplasm", has(ModItems.LINGERING_ECTOPLASM.get()))
+                .save(this.output);
+        ShapelessRecipeBuilder.shapeless(this.items, RecipeCategory.MISC, ModItems.FIELD_JOURNAL.get())
+                .requires(Items.BOOK)
+                .requires(Items.COPPER_INGOT)
+                .unlockedBy(HAS_COPPER, has(Items.COPPER_INGOT))
                 .save(this.output);
     }
 

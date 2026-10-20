@@ -166,12 +166,12 @@ class ServerConfigTest {
     void validFileIsNotRewritten() throws IOException {
 
         String valid = "{\"hauntingGriefing\":false,\"ghostSpawnMultiplier\":2.5,\"manifestIntervalSeconds\":{\"min\":30,\"max\":60},\"enableDebugCommands\":true,"
-                + "\"hauntingEnabled\":false,\"hauntingIntervalSeconds\":{\"min\":5,\"max\":10},\"hallucinationIntervalSeconds\":{\"min\":20,\"max\":40}}";
+                + "\"hauntingEnabled\":false,\"hauntingIntervalSeconds\":{\"min\":5,\"max\":10},\"hallucinationIntervalSeconds\":{\"min\":20,\"max\":40},\"wardLanternRadius\":24}";
         write(valid);
 
         ServerConfig config = ServerConfig.load(this.dir, this.log);
 
-        assertEquals(new ServerConfig(false, 2.5, 30, 60, true, false, 5, 10, 20, 40), config);
+        assertEquals(new ServerConfig(false, 2.5, 30, 60, true, false, 5, 10, 20, 40, 24), config);
         assertEquals(valid, Files.readString(file(), StandardCharsets.UTF_8));
         assertEquals(0, this.log.count(Level.WARN));
     }

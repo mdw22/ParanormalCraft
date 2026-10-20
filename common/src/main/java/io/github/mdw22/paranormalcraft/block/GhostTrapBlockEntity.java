@@ -6,6 +6,7 @@ import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.journal.JournalEvents;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.world.ModStructures;
@@ -157,6 +158,10 @@ public class GhostTrapBlockEntity extends BlockEntity {
         // Released first, so the saved ghost doesn't keep the trap's no-AI hold.
         ghost.setCapturingTrap(null);
         CapturedGhost captured = describe(level, ghost);
+        ServerPlayer captor = level.getServer().getPlayerList().getPlayerByName(captured.captor());
+        if (captor != null) {
+            JournalEvents.captured(captor, ghost);
+        }
         ServerTrace.ghost("trap_capture_success", ghost, line -> {
             line.addProperty("trap", pos.toShortString());
             line.addProperty("name", captured.name());

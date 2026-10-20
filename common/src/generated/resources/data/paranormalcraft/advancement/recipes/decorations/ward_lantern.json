@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_lingering_ectoplasm": {
+      "conditions": {
+        "items": [
+          {
+            "items": "paranormalcraft:lingering_ectoplasm"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "paranormalcraft:ward_lantern"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_lingering_ectoplasm"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "paranormalcraft:ward_lantern"
+    ]
+  }
+}

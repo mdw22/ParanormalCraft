@@ -1,0 +1,11 @@
+# Ward Lantern: in haunt_props a ghost sits among things it could haunt. With a Ward Lantern 10 blocks away its next
+# haunting attempt is refused (warded); with the lantern gone it haunts again.
+# Run with: /paranormalcraft debug run ward_blocks_haunting
+paranormalcraft debug scene haunt_props
+wait 20
+setblock 100000 201 99990 paranormalcraft:ward_lantern
+paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] haunt 1
+expect trace haunt_none reason=warded within 10
+setblock 100000 201 99990 air
+paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] haunt 1
+expect trace haunt within 10

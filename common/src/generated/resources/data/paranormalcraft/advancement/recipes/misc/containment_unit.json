@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_ghost_trap": {
+      "conditions": {
+        "items": [
+          {
+            "items": "paranormalcraft:ghost_trap"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "paranormalcraft:containment_unit"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_ghost_trap"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "paranormalcraft:containment_unit"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:journal_capture_triggers",
+  "environment": "paranormalcraft:journal",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 140,
+  "sky_access": true
+}

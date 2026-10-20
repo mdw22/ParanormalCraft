@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:containment_unstable_pauses_processing",
+  "environment": "paranormalcraft:containment",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 80,
+  "sky_access": true
+}

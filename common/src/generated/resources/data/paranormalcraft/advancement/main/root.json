@@ -1,0 +1,56 @@
+{
+  "criteria": {
+    "has_emf_reader": {
+      "conditions": {
+        "items": [
+          {
+            "items": "paranormalcraft:emf_reader"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_field_journal": {
+      "conditions": {
+        "items": [
+          {
+            "items": "paranormalcraft:field_journal"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_spectral_goggles": {
+      "conditions": {
+        "items": [
+          {
+            "items": "paranormalcraft:spectral_goggles"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": false,
+    "background": "minecraft:gui/advancements/backgrounds/stone",
+    "description": {
+      "translate": "advancements.paranormalcraft.root.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:field_journal"
+    },
+    "show_toast": false,
+    "title": {
+      "translate": "advancements.paranormalcraft.root.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_emf_reader",
+      "has_field_journal",
+      "has_spectral_goggles"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

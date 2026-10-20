@@ -25,6 +25,7 @@ public final class GhostVisibility {
         return wearsGoggles(viewer)
                 || ghost.isManifesting()
                 || ghost.isWeakened()
+                || ghost.isAscending()
                 || RevealDebug.isRevealed(viewer)
                 || viewer.isSpectator();
     }

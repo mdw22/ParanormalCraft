@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:lantern",
+    "paranormalcraft:lingering_ectoplasm",
+    "paranormalcraft:lingering_ectoplasm",
+    "paranormalcraft:lingering_ectoplasm",
+    "paranormalcraft:lingering_ectoplasm",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "paranormalcraft:ward_lantern"
+  }
+}

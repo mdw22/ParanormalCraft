@@ -12,7 +12,9 @@ public final class ModDataComponents {
 
     /** The Tether Wand's heat, overheat lockout and beam-time count; synced so the item bar can show heat. */
     public static final RegistryEntry<DataComponentType<WandHeat>> WAND_HEAT = RegistrationHelper.dataComponent("wand_heat",
-            builder -> builder.persistent(WandHeat.CODEC).networkSynchronized(WandHeat.STREAM_CODEC));
+            // Heat changes every tick while firing: without ignoreSwapAnimation the held wand would keep replaying
+            // vanilla's re-equip animation.
+            builder -> builder.persistent(WandHeat.CODEC).networkSynchronized(WandHeat.STREAM_CODEC).ignoreSwapAnimation());
     /** The ghost inside a Filled Ghost Trap. */
     public static final RegistryEntry<DataComponentType<CapturedGhost>> CAPTURED_GHOST = RegistrationHelper.dataComponent("captured_ghost",
             builder -> builder.persistent(CapturedGhost.CODEC).networkSynchronized(CapturedGhost.STREAM_CODEC));

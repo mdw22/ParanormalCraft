@@ -1,0 +1,19 @@
+# Steering, solo: the scene's traps are cleared and one trap is placed off to the side. The player tethers the ghost
+# (6 Presence) from 6 blocks; once it is Weakened the player turns to look at the trap, the tether steers the ghost
+# over it, and the trap takes it while the tether holds.
+# Run with: /paranormalcraft debug run steer_to_trap
+paranormalcraft debug scene capture_arena
+wait 20
+setblock 100000 201 100000 air
+setblock 100003 201 100000 air
+setblock 100004 201 100002 paranormalcraft:ghost_trap
+expect trace trap_armed within 5
+paranormalcraft debug tether @s on
+expect trace tether_start within 20
+expect trace weakened_start within 30
+paranormalcraft debug look 100004.5 201.7 100002.5
+expect trace trap_capture_start tethers=1 within 40
+paranormalcraft debug screenshot steer_mid_capture
+expect trace trap_capture_success tetheredThroughout=true within 40
+paranormalcraft debug tether @s off
+expect dump filledTraps.length>=1 ghosts.length=0

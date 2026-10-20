@@ -2,12 +2,14 @@ package io.github.mdw22.paranormalcraft.entity.ghost;
 
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.PresenceRules;
+import io.github.mdw22.paranormalcraft.capture.Steering;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
+import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -80,6 +82,8 @@ public abstract class GhostEntity extends PathfinderMob {
     private static final EntityDataAccessor<Float> DATA_PRESENCE = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_MANIFESTING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_WEAKENED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Released from containment: visible to everyone, rising and fading out, then gone. */
+    private static final EntityDataAccessor<Boolean> DATA_ASCENDING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Players within this distance hear "<name> has dispersed". */
     private static final double DISPERSE_MESSAGE_RANGE = Balance.Ghost.DISPERSE_MESSAGE_RANGE;
 
@@ -106,7 +110,11 @@ public abstract class GhostEntity extends PathfinderMob {
     private long forcedGoalUntil;
     /** Server: latched tethers this tick, and where each holder stands (set by the tether manager every tick). */
     private int tetherCount;
-    private List<Vec3> tetherSources = List.of();
+    private int ascendStartTick;
+    /** Where each latched tether's holder wants the ghost's centre (see {@link Steering}). */
+    private List<Vec3> tetherAnchors = List.of();
+    /** The ghost's current jerk off the tether line; decays each tick. */
+    private Steering.Vec fightOffset = Steering.Vec.ZERO;
     /** Server: game time of the last tick a tether was on it, or it became Weakened, for the 15 s recovery. */
     private long lastTetherTime;
     /** Server: the trap pulling it in, if any; while set it neither recovers nor acts on its own. */
@@ -179,20 +187,33 @@ public abstract class GhostEntity extends PathfinderMob {
     }
 
     /**
-     * Server, from the tether manager every tick: the latched tethers' holder positions (empty for none).
+     * Server, from the tether manager every tick: each latched tether's anchor point (empty for none).
      */
-    public void setTethers(List<Vec3> sources) {
+    public void setTethers(List<Vec3> anchors) {
 
-        this.tetherSources = List.copyOf(sources);
-        this.tetherCount = sources.size();
+        this.tetherAnchors = List.copyOf(anchors);
+        this.tetherCount = anchors.size();
         if (this.tetherCount > 0) {
             this.lastTetherTime = this.level().getGameTime();
+        } else {
+            this.fightOffset = Steering.Vec.ZERO;
         }
     }
 
-    public List<Vec3> tetherSources() {
+    /**
+     * Where the latched tethers want this ghost's centre, one point per tether.
+     */
+    public List<Vec3> tetherAnchors() {
 
-        return this.tetherSources;
+        return this.tetherAnchors;
+    }
+
+    /**
+     * How hard it fights the tether right now, 0 to 1 (see {@link Steering#fightStrength}).
+     */
+    public double fightStrength() {
+
+        return Steering.fightStrength(getPresence(), Presence.MAX, isWeakened(), this.tetherCount);
     }
 
     /**
@@ -511,12 +532,16 @@ public abstract class GhostEntity extends PathfinderMob {
         entityData.define(DATA_PRESENCE, Presence.MAX);
         entityData.define(DATA_MANIFESTING, false);
         entityData.define(DATA_WEAKENED, false);
+        entityData.define(DATA_ASCENDING, false);
     }
 
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> accessor) {
 
         super.onSyncedDataUpdated(accessor);
+        if (DATA_ASCENDING.equals(accessor) && isAscending()) {
+            this.ascendStartTick = this.tickCount;
+        }
         if (DATA_MANIFESTING.equals(accessor) && this.level().isClientSide()) {
             if (isManifesting()) {
                 // A new manifest during a fade-out fades back in from the current opacity.
@@ -527,12 +552,47 @@ public abstract class GhostEntity extends PathfinderMob {
         }
     }
 
+    // ---- Release: the ascension ----
+
+    /**
+     * Server: a released ghost rises and fades out for everyone over {@link Balance.Containment#ASCEND_TICKS}, then is
+     * removed. It can't be hit, tethered or trapped meanwhile.
+     */
+    public void startAscending() {
+
+        this.entityData.set(DATA_ASCENDING, true);
+        this.ascendStartTick = this.tickCount;
+        this.setNoAi(true);
+        this.setInvulnerable(true);
+    }
+
+    public boolean isAscending() {
+
+        return this.entityData.get(DATA_ASCENDING);
+    }
+
+    /**
+     * How far through its ascension (0 to 1), or 0 if not ascending.
+     */
+    public float ascendProgress(float partialTick) {
+
+        return isAscending() ? Math.min(1.0F, (this.tickCount - this.ascendStartTick + partialTick) / Balance.Containment.ASCEND_TICKS) : 0.0F;
+    }
+
     // ---- Ticking ----
 
     @Override
     public void tick() {
 
         super.tick();
+        if (isAscending()) {
+            this.setPos(this.getX(), this.getY() + Balance.Containment.ASCEND_SPEED, this.getZ());
+            if (!this.level().isClientSide() && this.tickCount - this.ascendStartTick >= Balance.Containment.ASCEND_TICKS) {
+                ServerTrace.ghost("ghost_ascended", this, line -> line.addProperty("name", ghostName()));
+                this.discard();
+            }
+            return;
+        }
         if (this.level() instanceof ServerLevel serverLevel) {
             if (this.home == null) {
                 setHome(serverLevel, this.blockPosition());
@@ -680,6 +740,9 @@ public abstract class GhostEntity extends PathfinderMob {
      */
     protected boolean hitCounts(DamageSource source) {
 
+        if (isAscending()) {
+            return false;
+        }
         if (source.is(DamageTypeTags.IS_EXPLOSION) || source.is(DamageTypeTags.IS_FIRE) || source.is(DamageTypeTags.IS_FALL)
                 || source.is(DamageTypeTags.IS_DROWNING) || source.is(DamageTypeTags.IS_FREEZING)) {
             return false;
@@ -757,9 +820,37 @@ public abstract class GhostEntity extends PathfinderMob {
     @Override
     public void travel(Vec3 input) {
 
+        if (!this.tetherAnchors.isEmpty() && this.capturingTrap == null && !this.level().isClientSide()) {
+            steer();
+            return;
+        }
         this.moveRelative((float) (DRIFT_ACCELERATION * speedFactor()), input);
         this.move(MoverType.SELF, this.getDeltaMovement());
         this.setDeltaMovement(this.getDeltaMovement().scale(DRIFT_DRAG));
+    }
+
+    /**
+     * Tethered: follow the anchors like a spring (replacing normal movement), fighting back with jerks. Collisions,
+     * including passing through {@code ghost_passable} blocks, are the normal ones, so it slides along walls.
+     */
+    private void steer() {
+
+        double fight = fightStrength();
+        if (this.random.nextInt(Balance.Tether.FIGHT_JERK_CHANCE) == 0) {
+            this.fightOffset = Steering.jerk(fight, this.random.nextDouble() * 2 - 1, this.random.nextDouble() * 2 - 1,
+                    this.random.nextDouble() * 2 - 1, this.random.nextDouble());
+        } else {
+            this.fightOffset = this.fightOffset.scale(Balance.Tether.FIGHT_DECAY);
+        }
+        List<Steering.Vec> anchors = new ArrayList<>(this.tetherAnchors.size());
+        for (Vec3 anchor : this.tetherAnchors) {
+            anchors.add(new Steering.Vec(anchor.x, anchor.y, anchor.z));
+        }
+        Vec3 centre = this.getBoundingBox().getCenter();
+        Steering.Vec velocity = Steering.velocity(anchors, new Steering.Vec(centre.x, centre.y, centre.z), fight, this.fightOffset);
+        Vec3 delta = new Vec3(velocity.x(), velocity.y(), velocity.z());
+        this.setDeltaMovement(delta);
+        this.move(MoverType.SELF, delta);
     }
 
     @Override

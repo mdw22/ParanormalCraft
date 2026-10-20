@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/root",
+  "criteria": {
+    "cold_spot": {
+      "conditions": {
+        "event": "cold_spot"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.cold_feet.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:spirit_thermometer"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.cold_feet.title"
+    }
+  },
+  "requirements": [
+    [
+      "cold_spot"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

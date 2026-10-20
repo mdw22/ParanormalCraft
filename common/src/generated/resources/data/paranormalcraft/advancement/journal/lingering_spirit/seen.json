@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "seen": {
+      "conditions": {
+        "event": "seen",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "seen"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

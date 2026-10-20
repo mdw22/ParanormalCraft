@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "detected": {
+      "conditions": {
+        "event": "detected",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "detected"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

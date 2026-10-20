@@ -7,6 +7,7 @@ import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.network.HallucinationPayload;
 import io.github.mdw22.paranormalcraft.platform.Services;
+import io.github.mdw22.paranormalcraft.ward.Wards;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.LightLayer;
 
@@ -54,7 +55,8 @@ public final class HallucinationScheduler {
 
         boolean ghostNearby = !player.level().getEntitiesOfClass(GhostEntity.class, player.getBoundingBox().inflate(GHOST_RANGE),
                 ghost -> ghost.isAlive() && ghost.distanceToSqr(player) <= GHOST_RANGE * GHOST_RANGE).isEmpty();
-        return ghostNearby && player.level().getBrightness(LightLayer.BLOCK, player.blockPosition()) <= MAX_BLOCK_LIGHT;
+        return ghostNearby && player.level().getBrightness(LightLayer.BLOCK, player.blockPosition()) <= MAX_BLOCK_LIGHT
+                && !Wards.covers(player.level(), player.position());
     }
 
     /**

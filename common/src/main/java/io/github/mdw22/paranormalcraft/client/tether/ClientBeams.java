@@ -2,11 +2,14 @@ package io.github.mdw22.paranormalcraft.client.tether;
 
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
+import io.github.mdw22.paranormalcraft.item.TetherWandItem;
 import io.github.mdw22.paranormalcraft.network.BeamStatePayload;
+import io.github.mdw22.paranormalcraft.network.DeployTrapPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -21,13 +24,24 @@ import java.util.Map;
  * Client side of Tether beams: keeps the beams the server last sent and, every client tick, draws each as a jagged
  * soul-cyan crackle of particles from its owner's wand to the latched ghost (or the free end), with a looping hum at
  * the owner. Every player sees every beam in range. Beam changes go to the client trace as {@code beam_render}.
+ * <p>
+ * The beam is kept slim (Update 9): small dust, a spark now and then, and nothing in the first {@link #TIP_CLEARANCE}
+ * blocks from the wand tip, so it reads as a thin crackling line rather than clumps over the holder's screen.
+ * <p>
+ * It also watches the local player's attack key while they fire a wand: vanilla swallows attack clicks during item
+ * use, so a press is reported to the server ({@link DeployTrapPayload}), which drops a trap under a latched ghost.
  */
 public final class ClientBeams {
 
     private static final int CYAN = 0x6FE7F0;
-    private static final DustParticleOptions DUST = new DustParticleOptions(CYAN, 0.6F);
-    private static final double SPACING = 0.35;
-    private static final double JAG = 0.08;
+    private static final DustParticleOptions DUST = new DustParticleOptions(CYAN, 0.3F);
+    private static final double SPACING = 0.45;
+    private static final double JAG = 0.06;
+    /** No particles this close to the wand tip. */
+    public static final double TIP_CLEARANCE = 1.5;
+    private static final int SPARK_CHANCE_LATCHED = 6;
+    private static final int SPARK_CHANCE_FREE = 12;
+    private static boolean attackWasDown;
 
     private static List<BeamStatePayload.Beam> beams = List.of();
     private static final Map<Integer, String> LAST_TRACED = new HashMap<>();
@@ -66,6 +80,7 @@ public final class ClientBeams {
             reset();
             return;
         }
+        watchAttack(minecraft);
         Map<Integer, BeamStatePayload.Beam> active = new HashMap<>();
         for (BeamStatePayload.Beam beam : beams) {
             if (!(level.getEntity(beam.owner()) instanceof Player owner)) {
@@ -99,19 +114,37 @@ public final class ClientBeams {
         }
     }
 
+    /**
+     * A fresh attack press while the local player fires a Tether Wand asks the server to deploy a trap.
+     */
+    private static void watchAttack(Minecraft minecraft) {
+
+        boolean down = minecraft.options.keyAttack.isDown();
+        Player player = minecraft.player;
+        if (down && !attackWasDown && player != null && player.isUsingItem() && player.getUseItem().getItem() instanceof TetherWandItem
+                && minecraft.getConnection() != null) {
+            minecraft.getConnection().send(new ServerboundCustomPayloadPacket(DeployTrapPayload.INSTANCE));
+        }
+        attackWasDown = down;
+    }
+
     private static void draw(ClientLevel level, Vec3 start, Vec3 end, boolean latched) {
 
         RandomSource random = level.getRandom();
         Vec3 span = end.subtract(start);
-        int steps = Math.max(2, (int) Math.ceil(span.length() / SPACING));
+        double length = span.length();
+        int steps = Math.max(2, (int) Math.ceil(length / SPACING));
         for (int i = 0; i <= steps; i++) {
+            if (length * i / steps < TIP_CLEARANCE) {
+                continue;
+            }
             Vec3 at = start.add(span.scale((double) i / steps));
             double jag = i == 0 || i == steps ? 0.0 : JAG;
             double x = at.x + (random.nextDouble() - 0.5) * 2 * jag;
             double y = at.y + (random.nextDouble() - 0.5) * 2 * jag;
             double z = at.z + (random.nextDouble() - 0.5) * 2 * jag;
             level.addParticle(DUST, x, y, z, 0, 0, 0);
-            if (random.nextInt(latched ? 3 : 6) == 0) {
+            if (random.nextInt(latched ? SPARK_CHANCE_LATCHED : SPARK_CHANCE_FREE) == 0) {
                 level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, 0, 0, 0);
             }
         }

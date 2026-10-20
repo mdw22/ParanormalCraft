@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:trap_release_hold",
+  "environment": "paranormalcraft:capture",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 140,
+  "sky_access": true
+}

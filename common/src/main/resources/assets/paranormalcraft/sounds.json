@@ -278,5 +278,81 @@
       }
     ],
     "subtitle": "subtitles.paranormalcraft.ghost_trap.release"
+  },
+  "block.containment_unit.hum": {
+    "sounds": [
+      {
+        "name": "minecraft:block/beacon/ambient",
+        "pitch": 0.6,
+        "volume": 0.6
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.containment_unit.hum"
+  },
+  "block.containment_unit.load": {
+    "sounds": [
+      {
+        "name": "minecraft:block/iron_trapdoor/close1",
+        "pitch": 0.6
+      },
+      {
+        "name": "minecraft:block/iron_trapdoor/close2",
+        "pitch": 0.6
+      },
+      {
+        "name": "minecraft:block/iron_trapdoor/close3",
+        "pitch": 0.6
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.containment_unit.load"
+  },
+  "block.containment_unit.bubble": {
+    "sounds": [
+      {
+        "name": "minecraft:block/bubble_column/bubble1",
+        "pitch": 0.8,
+        "volume": 0.6
+      },
+      {
+        "name": "minecraft:block/bubble_column/bubble2",
+        "pitch": 0.8,
+        "volume": 0.6
+      },
+      {
+        "name": "minecraft:block/bubble_column/bubble3",
+        "pitch": 0.8,
+        "volume": 0.6
+      },
+      {
+        "name": "minecraft:block/brewing_stand/brew1",
+        "pitch": 0.8,
+        "volume": 0.6
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.containment_unit.bubble"
+  },
+  "block.containment_unit.alarm": {
+    "sounds": [
+      {
+        "name": "minecraft:note/bell",
+        "pitch": 0.5
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.containment_unit.alarm"
+  },
+  "entity.lingering_spirit.ascend": {
+    "sounds": [
+      {
+        "name": "minecraft:block/amethyst/shimmer",
+        "pitch": 1.2,
+        "volume": 0.8
+      },
+      {
+        "name": "minecraft:block/bell/resonate",
+        "pitch": 1.2,
+        "volume": 0.8
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.ascend"
   }
 }

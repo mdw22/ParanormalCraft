@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "paranormalcraft:block/containment_unit_front_unstable",
+    "side": "paranormalcraft:block/containment_unit_side",
+    "top": "paranormalcraft:block/containment_unit_top"
+  }
+}

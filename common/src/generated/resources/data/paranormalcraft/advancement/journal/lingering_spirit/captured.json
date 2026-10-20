@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "captured": {
+      "conditions": {
+        "event": "captured",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "captured"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

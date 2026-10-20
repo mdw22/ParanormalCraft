@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:containment_fuel_at_or_below_80",
+  "environment": "paranormalcraft:containment",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 80,
+  "sky_access": true
+}

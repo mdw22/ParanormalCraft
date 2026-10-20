@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.neoforge.datagen;
 
+import net.minecraft.data.advancements.AdvancementProvider;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
@@ -17,6 +18,7 @@ public class ModDataGenerators {
         event.createProvider(ModModelProvider::new);
         event.createProvider(ModLanguageProvider::new);
         event.createProvider(ModRecipeProvider.Runner::new);
+        event.createProvider((output, lookup) -> new AdvancementProvider(output, lookup, List.of(new ModAdvancements())));
         // Worldgen entries first: the tag providers below look up the structures they add.
         event.createDatapackRegistryObjects(ModWorldgen.registries());
         event.createProvider(ModBiomeTagsProvider::new);

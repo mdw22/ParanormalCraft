@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/lockup",
+  "criteria": {
+    "processed": {
+      "conditions": {
+        "event": "processed"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.ectoplasmic.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:lingering_ectoplasm"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.ectoplasmic.title"
+    }
+  },
+  "requirements": [
+    [
+      "processed"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

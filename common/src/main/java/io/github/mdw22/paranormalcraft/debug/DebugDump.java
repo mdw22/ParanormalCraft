@@ -11,6 +11,8 @@ import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
+import io.github.mdw22.paranormalcraft.containment.StoredGhost;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.haunting.HauntingAction;
@@ -18,12 +20,14 @@ import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.haunting.HauntingSchedule;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
+import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -133,6 +137,11 @@ public final class DebugDump {
         for (ServerPlayer player : level.players()) {
             JsonObject json = new JsonObject();
             json.addProperty("name", player.getGameProfile().name());
+            JsonObject effects = new JsonObject();
+            for (MobEffectInstance effect : player.getActiveEffects()) {
+                effects.addProperty(effect.getEffect().getRegisteredName(), effect.getDuration());
+            }
+            json.add("effects", effects);
             json.add("position", vec(player.position()));
             JsonObject canSee = new JsonObject();
             StringBuilder seen = new StringBuilder();
@@ -170,6 +179,34 @@ public final class DebugDump {
             line(chat, "Filled trap at %s holds %s (caught by %s)", trapPos.toShortString(), json.get("name").getAsString(), json.get("captor").getAsString());
         }
         root.add("filledTraps", trapArray);
+
+        JsonArray unitArray = new JsonArray();
+        for (BlockPos unitPos : LoadedPositions.CONTAINMENT_UNITS.near(level, centre, radius)) {
+            if (!(level.getBlockEntity(unitPos) instanceof ContainmentUnitBlockEntity unit)) {
+                continue;
+            }
+            JsonObject json = new JsonObject();
+            json.add("pos", pos(unitPos));
+            json.addProperty("charge", unit.charge());
+            json.addProperty("unstable", unit.isUnstable());
+            json.addProperty("processTicks", unit.processTicks());
+            JsonArray storedArray = new JsonArray();
+            for (StoredGhost ghost : unit.stored()) {
+                JsonObject stored = new JsonObject();
+                stored.addProperty("name", ghost.ghost().name());
+                stored.addProperty("type", ghost.ghost().entityType());
+                stored.addProperty("uuid", ghost.id().toString());
+                stored.addProperty("queuePosition", unit.queue().indexOf(ghost.id()));
+                stored.addProperty("storedTicks", level.getGameTime() - ghost.storedAt());
+                storedArray.add(stored);
+            }
+            json.add("stored", storedArray);
+            json.addProperty("queueLength", unit.queue().size());
+            unitArray.add(json);
+            line(chat, "Containment Unit at %s: %d ghost(s), charge %d%s, processing %d/%d", unitPos.toShortString(), unit.stored().size(),
+                    unit.charge(), unit.isUnstable() ? " UNSTABLE" : "", unit.processTicks(), ContainmentUnitBlockEntity.PROCESS_TICKS);
+        }
+        root.add("containmentUnits", unitArray);
         return root;
     }
 

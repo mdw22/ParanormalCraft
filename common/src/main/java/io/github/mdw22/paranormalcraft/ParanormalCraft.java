@@ -6,10 +6,13 @@ import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModCreativeTabs;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
+import io.github.mdw22.paranormalcraft.registry.ModEffects;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
+import io.github.mdw22.paranormalcraft.registry.ModMenus;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.registry.ModStructureTypes;
+import io.github.mdw22.paranormalcraft.registry.ModTriggers;
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
 // import and access the vanilla codebase, libraries used by vanilla, and optionally third party libraries that provide
@@ -34,6 +37,9 @@ public class ParanormalCraft {
         ModBlocks.init();
         ModEntities.init();
         ModItems.init();
+        ModMenus.init();
+        ModEffects.init();
+        ModTriggers.init();
         ModCreativeTabs.init();
         ModStructureTypes.init();
         ModGameTests.init();

@@ -1,11 +1,13 @@
 package io.github.mdw22.paranormalcraft.gametest;
 
+import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlock;
 import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.block.GhostTrapBlock;
 import io.github.mdw22.paranormalcraft.block.GhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.PresenceRules;
+import io.github.mdw22.paranormalcraft.capture.ReleaseHold;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.capture.WandHeat;
 import io.github.mdw22.paranormalcraft.debug.DebugScenes;
@@ -33,6 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -74,6 +77,13 @@ public final class CaptureGameTests {
         RegistrationHelper.testFunction("crossing_beams_backfire", CaptureGameTests::crossingBeamsBackfire);
         RegistrationHelper.testFunction("coop_capture_no_backfire", CaptureGameTests::coopCaptureNoBackfire);
         RegistrationHelper.testFunction("trap_capture_in_cabin", CaptureGameTests::captureInCabin);
+        RegistrationHelper.testFunction("steer_follows_turn_weakened", helper -> steerFollowsTurn(helper, true, 20));
+        RegistrationHelper.testFunction("steer_follows_turn_full_presence", helper -> steerFollowsTurn(helper, false, 40));
+        RegistrationHelper.testFunction("steer_sneak_reels_in", CaptureGameTests::sneakReelsIn);
+        RegistrationHelper.testFunction("steer_coop_settles_between", CaptureGameTests::coopSettlesBetween);
+        RegistrationHelper.testFunction("trap_deploy_while_tethered", CaptureGameTests::deployWhileTethered);
+        RegistrationHelper.testFunction("trap_release_hold", helper -> releaseHold(helper, false));
+        RegistrationHelper.testFunction("trap_release_hold_cancelled", helper -> releaseHold(helper, true));
     }
 
     private static void check(GameTestHelper helper, boolean condition, String message, Object... args) {
@@ -190,11 +200,13 @@ public final class CaptureGameTests {
     }
 
     /**
-     * At 13.5 blocks the tether holds; past 14 it breaks.
+     * At 13.5 blocks the tether holds; past 14 it breaks. The ghost has no AI, so it can't follow its anchor (as if
+     * blocked); a free ghost would be steered along with the player.
      */
     private static void breaksAtRange(GameTestHelper helper) {
 
         LingeringSpiritEntity ghost = frozenGhost(helper, Presence.MAX);
+        ghost.setNoAi(true);
         ServerPlayer player = hunter(helper, CENTRE.offset(0, -1, -10), ghost);
         TetherManager.setForced(player, true);
         Vec3 ghostAt = ghost.position();
@@ -507,6 +519,192 @@ public final class CaptureGameTests {
                 check(helper, player.getHealth() == health, "a player took damage (health %.1f)", player.getHealth());
             }
             finish(helper, first, second);
+        });
+    }
+
+    // ---- steering (Update 9) ----
+
+    /** A ghost with its AI on (steering replaces its own movement), homed where it spawns. */
+    private static LingeringSpiritEntity steerableGhost(GameTestHelper helper, BlockPos relative, float presence) {
+
+        LingeringSpiritEntity ghost = helper.spawn(ModEntities.LINGERING_SPIRIT.get(), relative);
+        ghost.setHome(helper.getLevel(), helper.absolutePos(relative));
+        ghost.setPresence(helper.getLevel(), presence);
+        return ghost;
+    }
+
+    private static double offAnchor(ServerPlayer player, GhostEntity ghost) {
+
+        TetherManager.Tether tether = TetherManager.tetherOf(player);
+        return tether == null ? Double.MAX_VALUE : TetherManager.anchor(player, tether).distanceTo(ghost.getBoundingBox().getCenter());
+    }
+
+    /**
+     * The player turns 90° with the ghost latched: the ghost reaches the new anchor (within 1.5 blocks) inside
+     * {@code limit} ticks, 20 once Weakened, 40 at full Presence.
+     */
+    private static void steerFollowsTurn(GameTestHelper helper, boolean weakened, int limit) {
+
+        LingeringSpiritEntity ghost = steerableGhost(helper, CENTRE, weakened ? PresenceRules.WEAKENED_AT : Presence.MAX);
+        ServerPlayer player = hunter(helper, CENTRE.offset(0, -1, -6), ghost);
+        TetherManager.setForced(player, true);
+        long[] turnedAt = {-1};
+        long[] reachedAt = {-1};
+        double[] closest = {Double.MAX_VALUE};
+        helper.runAfterDelay(15, () -> {
+            check(helper, latchedOn(player, ghost), "the tether didn't latch");
+            check(helper, ghost.isWeakened() == weakened, "Weakened is %s", ghost.isWeakened());
+            // Turn 90° to the right (east of a player facing south toward the ghost is -X in this arena's frame).
+            Vec3 eye = player.getEyePosition();
+            player.lookAt(EntityAnchorArgument.Anchor.EYES, eye.add(helper.absoluteVec(new Vec3(10, 0, 0)).subtract(helper.absoluteVec(Vec3.ZERO))));
+            turnedAt[0] = helper.getTick();
+        });
+        helper.onEachTick(() -> {
+            if (turnedAt[0] < 0 || reachedAt[0] >= 0) {
+                return;
+            }
+            double off = offAnchor(player, ghost);
+            closest[0] = Math.min(closest[0], off);
+            if (off <= 1.5) {
+                reachedAt[0] = helper.getTick();
+            }
+        });
+        helper.runAfterDelay(15 + limit + 1, () -> {
+            check(helper, reachedAt[0] >= 0, "after %d ticks the ghost was still %.2f blocks from the anchor (closest)", limit, closest[0]);
+            Constants.LOG.info("Steering ({}): reached the anchor {} ticks after a 90° turn", weakened ? "Weakened" : "full Presence", reachedAt[0] - turnedAt[0]);
+            finish(helper, player);
+        });
+    }
+
+    /**
+     * Sneaking reels the ghost in at 2 blocks a second: a hold distance of 8 becomes about 4 in 2 s.
+     */
+    private static void sneakReelsIn(GameTestHelper helper) {
+
+        LingeringSpiritEntity ghost = steerableGhost(helper, CENTRE, PresenceRules.WEAKENED_AT);
+        ServerPlayer player = hunter(helper, CENTRE.offset(0, -1, -8), ghost);
+        TetherManager.setForced(player, true);
+        double[] start = new double[1];
+        helper.runAfterDelay(5, () -> {
+            TetherManager.Tether tether = TetherManager.tetherOf(player);
+            check(helper, latchedOn(player, ghost) && tether != null, "the tether didn't latch");
+            start[0] = tether.holdDistance();
+            check(helper, Math.abs(start[0] - 8.0) < 0.6, "hold distance %.2f on latching, expected about 8", start[0]);
+            player.setShiftKeyDown(true);
+        });
+        helper.runAfterDelay(45, () -> {
+            TetherManager.Tether tether = TetherManager.tetherOf(player);
+            check(helper, tether != null, "the tether broke while reeling");
+            double hold = tether.holdDistance();
+            check(helper, Math.abs(hold - (start[0] - 4.0)) < 0.3, "hold %.2f after 2 s of sneaking, from %.2f", hold, start[0]);
+            double distance = player.getEyePosition().distanceTo(ghost.getBoundingBox().getCenter());
+            check(helper, distance < hold + 1.5, "the ghost is %.2f blocks away, hold %.2f", distance, hold);
+            player.setShiftKeyDown(false);
+            finish(helper, player);
+        });
+    }
+
+    /**
+     * Two holders pull toward their own anchors; the ghost settles between them.
+     */
+    private static void coopSettlesBetween(GameTestHelper helper) {
+
+        LingeringSpiritEntity ghost = steerableGhost(helper, CENTRE, Presence.MAX);
+        ServerPlayer first = hunter(helper, CENTRE.offset(0, -1, -6), ghost);
+        ServerPlayer second = hunter(helper, CENTRE.offset(-6, -1, 0), ghost);
+        TetherManager.setForced(first, true);
+        TetherManager.setForced(second, true);
+        helper.runAfterDelay(5, () -> {
+            check(helper, latchedOn(first, ghost) && latchedOn(second, ghost), "both tethers didn't latch");
+            // Each turns 30° away from the other, so their anchors part.
+            Vec3 centre = ghost.getBoundingBox().getCenter();
+            first.lookAt(EntityAnchorArgument.Anchor.EYES, centre.add(3, 0, 0));
+            second.lookAt(EntityAnchorArgument.Anchor.EYES, centre.add(0, 0, 3));
+        });
+        helper.runAfterDelay(65, () -> {
+            Vec3 a = TetherManager.anchor(first, TetherManager.tetherOf(first));
+            Vec3 b = TetherManager.anchor(second, TetherManager.tetherOf(second));
+            Vec3 middle = a.add(b).scale(0.5);
+            double off = middle.distanceTo(ghost.getBoundingBox().getCenter());
+            check(helper, a.distanceTo(b) > 2.0, "the anchors didn't part (%.2f apart)", a.distanceTo(b));
+            check(helper, off <= 1.5, "the ghost is %.2f blocks from the middle of the two anchors", off);
+            finish(helper, first, second);
+        });
+    }
+
+    /**
+     * While latched, attack drops a trap from the inventory under the ghost and arms it; the tether holds and the
+     * capture succeeds even on a roll that would fail untethered.
+     */
+    private static void deployWhileTethered(GameTestHelper helper) {
+
+        LingeringSpiritEntity ghost = steerableGhost(helper, CENTRE, 6.0F);
+        ServerPlayer player = hunter(helper, CENTRE.offset(0, -1, -6), ghost);
+        player.getInventory().setItem(7, new ItemStack(ModItems.GHOST_TRAP.get(), 2));
+        TetherManager.setForced(player, true);
+        BlockPos[] trapAt = new BlockPos[1];
+        helper.runAfterDelay(15, () -> {
+            check(helper, latchedOn(player, ghost) && ghost.isWeakened(), "not latched and Weakened yet");
+            check(helper, TetherManager.deployTrap(player), "the deploy didn't happen");
+            check(helper, !TetherManager.deployTrap(player), "a second deploy within the cooldown happened");
+            check(helper, player.getInventory().getItem(7).getCount() == 1, "the trap wasn't taken from the inventory");
+            for (BlockPos candidate : BlockPos.betweenClosed(ghost.blockPosition().offset(-1, -4, -1), ghost.blockPosition().offset(1, 0, 1))) {
+                if (helper.getLevel().getBlockEntity(candidate) instanceof GhostTrapBlockEntity trap) {
+                    trap.setRollOverride(() -> 0.99);
+                    trapAt[0] = candidate.immutable();
+                }
+            }
+            check(helper, trapAt[0] != null, "no armed trap under the ghost");
+            check(helper, latchedOn(player, ghost), "the tether broke on deploy");
+        });
+        helper.succeedWhen(() -> {
+            check(helper, trapAt[0] != null && helper.getLevel().getBlockState(trapAt[0]).is(ModBlocks.FILLED_GHOST_TRAP.get()),
+                    "no filled trap at %s", trapAt[0]);
+            check(helper, ghost.isRemoved(), "the ghost is still out");
+            TetherManager.setForced(player, false);
+            player.level().getServer().getPlayerList().remove(player);
+        });
+    }
+
+    /**
+     * Holding use with an empty hand (a press every 4 ticks, as the client sends) releases the ghost after 40 ticks;
+     * with a 10-tick gap the hold restarts and nothing is released by then.
+     */
+    private static void releaseHold(GameTestHelper helper, boolean withGap) {
+
+        LingeringSpiritEntity ghost = frozenGhost(helper, 5.0F);
+        ghost.setGhostName("Held Spirit");
+        trap(helper, TRAP, 0.0);
+        ServerPlayer player = hunter(helper, CENTRE.offset(3, -1, 0), ghost);
+        player.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        long[] firstPress = {-1};
+        boolean[] released = {false};
+        helper.onEachTick(() -> {
+            if (released[0] || !helper.getBlockState(TRAP).is(ModBlocks.FILLED_GHOST_TRAP.get()) && firstPress[0] < 0) {
+                return;
+            }
+            if (firstPress[0] < 0) {
+                firstPress[0] = helper.getTick();
+            }
+            long since = helper.getTick() - firstPress[0];
+            boolean pressNow = since % 4 == 0 && !(withGap && since >= 12 && since < 24);
+            if (pressNow && helper.getBlockEntity(TRAP, BlockEntity.class) instanceof FilledGhostTrapBlockEntity filled) {
+                released[0] = filled.pressRelease(helper.getLevel(), player);
+            }
+        });
+        helper.succeedWhen(() -> {
+            check(helper, firstPress[0] >= 0, "the capture didn't happen");
+            long since = helper.getTick() - firstPress[0];
+            if (withGap) {
+                check(helper, since >= 44, "waiting");
+                check(helper, !released[0] || since > 60, "released despite the gap");
+                check(helper, helper.getBlockState(TRAP).is(ModBlocks.FILLED_GHOST_TRAP.get()) || since > 60, "released despite the gap");
+            } else {
+                check(helper, released[0], "not released yet (%d ticks)", since);
+                check(helper, since >= ReleaseHold.HOLD_TICKS && since <= ReleaseHold.HOLD_TICKS + 4, "released after %d ticks", since);
+                helper.assertBlockPresent(ModBlocks.GHOST_TRAP.get(), TRAP);
+            }
+            player.level().getServer().getPlayerList().remove(player);
         });
     }
 

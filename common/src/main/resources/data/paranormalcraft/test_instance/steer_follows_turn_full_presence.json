@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:steer_follows_turn_full_presence",
+  "environment": "paranormalcraft:capture",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 100,
+  "sky_access": true
+}

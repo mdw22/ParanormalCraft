@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.neoforge.datagen;
 
+import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.world.ModStructures;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.loot.LootTableSubProvider;
@@ -39,7 +40,8 @@ public class ModChestLoot implements LootTableSubProvider {
                 .withPool(item(Items.TINTED_GLASS, 1, 1, 0.15F))
                 .withPool(item(Items.BREAD, 1, 3, 1.0F))
                 .withPool(item(Items.STRING, 1, 4, 1.0F))
-                .withPool(item(Items.ROTTEN_FLESH, 0, 2, 1.0F)));
+                .withPool(item(Items.ROTTEN_FLESH, 0, 2, 1.0F))
+                .withPool(item(ModItems.FIELD_JOURNAL.get(), 1, 1, 1.0F)));
     }
 
     private static LootPool.Builder item(Item item, int min, int max, float chance) {

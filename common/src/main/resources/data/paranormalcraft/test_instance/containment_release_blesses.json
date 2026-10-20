@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:containment_release_blesses",
+  "environment": "paranormalcraft:containment",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 120,
+  "sky_access": true
+}

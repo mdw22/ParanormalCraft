@@ -4,12 +4,15 @@ import com.mojang.serialization.MapCodec;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.platform.services.IRegistrationHelper;
+import net.minecraft.advancements.triggers.CriterionTrigger;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -125,6 +128,30 @@ public final class RegistrationHelper {
     public static <T> RegistryEntry<DataComponentType<T>> dataComponent(String name, UnaryOperator<DataComponentType.Builder<T>> builder) {
 
         return PLATFORM.register(BuiltInRegistries.DATA_COMPONENT_TYPE, name, () -> builder.apply(DataComponentType.builder()).build());
+    }
+
+    /**
+     * Registers a mob effect. Use {@link #holder} to get the {@code Holder} that effect instances need.
+     */
+    public static <T extends MobEffect> RegistryEntry<T> mobEffect(String name, Supplier<T> effect) {
+
+        return PLATFORM.register(BuiltInRegistries.MOB_EFFECT, name, effect);
+    }
+
+    /**
+     * The registry holder for a registered mob effect (valid once registration has run).
+     */
+    public static Holder<MobEffect> holder(RegistryEntry<? extends MobEffect> effect) {
+
+        return BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect.get());
+    }
+
+    /**
+     * Registers an advancement criterion trigger, referenced from advancement JSON as {@code "trigger": "<mod id>:<name>"}.
+     */
+    public static <T extends CriterionTrigger<?>> RegistryEntry<T> criterionTrigger(String name, Supplier<T> trigger) {
+
+        return PLATFORM.register(BuiltInRegistries.TRIGGER_TYPES, name, trigger);
     }
 
     public static RegistryEntry<SoundEvent> sound(String name) {

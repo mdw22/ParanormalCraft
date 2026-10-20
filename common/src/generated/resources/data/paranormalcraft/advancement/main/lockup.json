@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/gotcha",
+  "criteria": {
+    "contained": {
+      "conditions": {
+        "event": "contained"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.lockup.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:containment_unit"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.lockup.title"
+    }
+  },
+  "requirements": [
+    [
+      "contained"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

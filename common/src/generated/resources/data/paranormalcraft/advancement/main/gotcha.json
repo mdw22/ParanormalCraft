@@ -1,0 +1,29 @@
+{
+  "parent": "paranormalcraft:main/seeing_things",
+  "criteria": {
+    "captured": {
+      "conditions": {
+        "event": "captured"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.gotcha.description"
+    },
+    "frame": "goal",
+    "icon": {
+      "id": "paranormalcraft:ghost_trap"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.gotcha.title"
+    }
+  },
+  "requirements": [
+    [
+      "captured"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

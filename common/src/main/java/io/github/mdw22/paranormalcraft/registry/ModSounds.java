@@ -26,6 +26,11 @@ public final class ModSounds {
     public static final RegistryEntry<SoundEvent> TRAP_BREAK_FREE = RegistrationHelper.sound("block.ghost_trap.break_free");
     public static final RegistryEntry<SoundEvent> TRAP_RATTLE = RegistrationHelper.sound("block.ghost_trap.rattle");
     public static final RegistryEntry<SoundEvent> TRAP_RELEASE = RegistrationHelper.sound("block.ghost_trap.release");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_HUM = RegistrationHelper.sound("block.containment_unit.hum");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_LOAD = RegistrationHelper.sound("block.containment_unit.load");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_BUBBLE = RegistrationHelper.sound("block.containment_unit.bubble");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_ALARM = RegistrationHelper.sound("block.containment_unit.alarm");
+    public static final RegistryEntry<SoundEvent> GHOST_ASCEND = RegistrationHelper.sound("entity.lingering_spirit.ascend");
 
     private ModSounds() {
     }

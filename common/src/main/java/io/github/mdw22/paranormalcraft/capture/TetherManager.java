@@ -8,7 +8,9 @@ import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.item.TetherWandItem;
 import io.github.mdw22.paranormalcraft.network.BeamStatePayload;
 import io.github.mdw22.paranormalcraft.platform.Services;
+import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
+import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -23,6 +25,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -44,8 +47,9 @@ import java.util.UUID;
  *     <li>While a player holds use with a wand, {@link #fire} runs each tick: the wand heats (and wears) and the beam
  *     reaches {@link #RANGE} blocks toward the crosshair, latching onto the first ghost the player can see within
  *     {@link #LATCH_DISTANCE} of the beam line.</li>
- *     <li>A latched tether drains 2 Presence a second, the ghost pulls away (with jerks, unless two or more tethers
- *     hold it), and a player more than {@link #PULL_DISTANCE} away is drawn toward it.</li>
+ *     <li>A latched tether drains 2 Presence a second and steers the ghost: it follows a point
+ *     {@code holdDistance} in front of the holder's eyes ({@link Steering}). Sneaking reels it in, moving backward
+ *     reels it out. Attack (left-click) while latched drops a Ghost Trap under it ({@link #deployTrap}).</li>
  *     <li>It breaks on release, beyond {@link #BREAK_RANGE}, after {@link #LOS_GRACE_TICKS} without line of sight
  *     ({@code ghost_passable} blocks don't block it), when the player can no longer see the ghost, or on overheat.</li>
  *     <li>Two beams that cross (outside their last 1.5 blocks) backfire: both wands overheat and both players are
@@ -59,8 +63,6 @@ public final class TetherManager {
     public static final double LATCH_DISTANCE = Balance.Tether.LATCH_DISTANCE;
     public static final double BREAK_RANGE = Balance.Tether.BREAK_RANGE;
     public static final int LOS_GRACE_TICKS = Balance.Tether.LOS_GRACE_TICKS;
-    public static final double PULL_DISTANCE = Balance.Tether.PULL_DISTANCE;
-    public static final double PULL_PER_TICK = Balance.Tether.PULL_PER_TICK;
     public static final float BACKFIRE_DAMAGE = Balance.Tether.BACKFIRE_DAMAGE;
     private static final double BACKFIRE_KNOCKBACK = Balance.Tether.BACKFIRE_KNOCKBACK;
 
@@ -73,6 +75,8 @@ public final class TetherManager {
         private long lastFireTick;
         private Vec3 start = Vec3.ZERO;
         private Vec3 end = Vec3.ZERO;
+        private double holdDistance = Balance.Tether.HOLD_MIN;
+        private long lastDeployTick = Long.MIN_VALUE;
 
         private Tether(UUID player) {
 
@@ -92,6 +96,12 @@ public final class TetherManager {
         public Vec3 end() {
 
             return this.end;
+        }
+
+        /** How far in front of the holder's eyes the ghost is held. */
+        public double holdDistance() {
+
+            return this.holdDistance;
         }
     }
 
@@ -142,6 +152,8 @@ public final class TetherManager {
             if (target != null) {
                 tether.ghost = target.getUUID();
                 tether.losLostTicks = 0;
+                tether.holdDistance = Math.clamp(player.getEyePosition().distanceTo(target.getBoundingBox().getCenter()),
+                        Balance.Tether.HOLD_MIN, Balance.Tether.HOLD_MAX);
                 level.playSound(null, target.getX(), target.getY() + 0.6, target.getZ(), ModSounds.TETHER_LATCH.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
                 ServerTrace.ghost("tether_start", target, line -> {
                     line.addProperty("player", player.getGameProfile().name());
@@ -165,12 +177,63 @@ public final class TetherManager {
         }
         tether.end = ghost.getBoundingBox().getCenter();
         ghost.drainByTether(PresenceRules.TETHER_DRAIN_PER_TICK);
-        double distance = player.distanceTo(ghost);
-        if (distance > PULL_DISTANCE) {
-            Vec3 pull = ghost.position().subtract(player.position()).normalize().scale(PULL_PER_TICK);
-            player.push(pull.x, pull.y * 0.5, pull.z);
-            player.hurtMarked = true;
+        reel(player, tether);
+    }
+
+    /**
+     * Sneaking reels the ghost in; moving backward (without sneaking) lets it out. Read from the input the client
+     * already sends every tick ({@code ServerPlayer.getLastClientInput()}), so no extra payload is needed.
+     */
+    private static void reel(ServerPlayer player, Tether tether) {
+
+        if (player.isShiftKeyDown()) {
+            tether.holdDistance = Math.max(Balance.Tether.REEL_MIN, tether.holdDistance - Balance.Tether.REEL_PER_TICK);
+        } else if (player.getLastClientInput().backward()) {
+            tether.holdDistance = Math.min(Balance.Tether.HOLD_MAX, tether.holdDistance + Balance.Tether.REEL_PER_TICK);
         }
+    }
+
+    /**
+     * Where this tether wants the ghost's centre: {@code holdDistance} along the holder's view from their eyes.
+     */
+    public static Vec3 anchor(Player player, Tether tether) {
+
+        return player.getEyePosition().add(player.getViewVector(1.0F).scale(tether.holdDistance));
+    }
+
+    /**
+     * Attack while latched: takes one Ghost Trap from the player's inventory (off-hand, then hotbar, then the rest),
+     * drops it on the floor under the ghost and arms it. The tether stays on. Does nothing without a latched tether,
+     * a trap, a floor within reach, or within {@link Balance.Tether#DEPLOY_COOLDOWN_TICKS} of the last deploy.
+     *
+     * @return whether a trap was deployed
+     */
+    public static boolean deployTrap(ServerPlayer player) {
+
+        ServerLevel level = player.level();
+        Tether tether = TETHERS.get(player.getUUID());
+        GhostEntity ghost = tether == null ? null : latched(level, tether);
+        long now = level.getGameTime();
+        if (ghost == null || tether.lastDeployTick != Long.MIN_VALUE && now - tether.lastDeployTick < Balance.Tether.DEPLOY_COOLDOWN_TICKS) {
+            return false;
+        }
+        int slot = TrapDeploy.findTrapSlot(player.getInventory(), ModItems.GHOST_TRAP.get());
+        if (slot < 0) {
+            return false;
+        }
+        BlockPos floor = TrapDeploy.floorUnder(level, ghost.blockPosition(), Balance.Tether.DEPLOY_FLOOR_SEARCH);
+        if (floor == null) {
+            return false;
+        }
+        tether.lastDeployTick = now;
+        player.getInventory().removeItem(slot, 1);
+        level.setBlock(floor, ModBlocks.GHOST_TRAP.get().defaultBlockState(), Block.UPDATE_ALL);
+        ServerTrace.ghost("trap_deploy", ghost, line -> {
+            line.addProperty("player", player.getGameProfile().name());
+            line.addProperty("trap", floor.toShortString());
+            line.addProperty("slot", slot);
+        });
+        return true;
     }
 
     /**
@@ -289,7 +352,7 @@ public final class TetherManager {
         GhostEntity best = null;
         double bestAlong = Double.MAX_VALUE;
         for (GhostEntity ghost : player.level().getEntitiesOfClass(GhostEntity.class, new AABB(eye, end).inflate(LATCH_DISTANCE + 1.0))) {
-            if (!ghost.isAlive() || !GhostVisibility.canSee(player, ghost) || ghost.capturingTrap() != null) {
+            if (!ghost.isAlive() || ghost.isAscending() || !GhostVisibility.canSee(player, ghost) || ghost.capturingTrap() != null) {
                 continue;
             }
             Vec3 centre = ghost.getBoundingBox().getCenter();
@@ -408,7 +471,7 @@ public final class TetherManager {
             ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             GhostEntity ghost = player == null ? null : latched(player.level(), entry.getValue());
             if (ghost != null) {
-                held.computeIfAbsent(ghost, key -> new ArrayList<>()).add(player.position());
+                held.computeIfAbsent(ghost, key -> new ArrayList<>()).add(anchor(player, entry.getValue()));
             }
         }
         for (GhostEntity ghost : TETHERED) {

@@ -12,7 +12,9 @@ import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
+import io.github.mdw22.paranormalcraft.journal.JournalEvents;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
+import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -44,6 +46,7 @@ public class CommonEvents {
 
         ToolTracker.tick(player);
         HallucinationScheduler.tick(player);
+        JournalEvents.tick(player);
     }
 
     /**
@@ -78,6 +81,7 @@ public class CommonEvents {
         ScriptRunner.clear();
         TetherManager.clear();
         FilledTraps.clear();
+        LoadedPositions.clearAll();
         ServerTrace.clear();
         ModConfigs.resetSession();
     }

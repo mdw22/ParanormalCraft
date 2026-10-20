@@ -1,4 +1,6 @@
-// 26.2	2026-10-18T17:11:34.896753	Loot Tables
+// 26.2	2026-10-18T22:24:43.205587	Loot Tables
+a430a10733164327326f6aaa37d0ade361dc0e15 data/paranormalcraft/loot_table/blocks/containment_unit.json
 67d0e9d5876df4f342bee9d482d2f6b954b1cefa data/paranormalcraft/loot_table/blocks/filled_ghost_trap.json
 128417983a6154fb4b6617d95f3c77bcb6a5a94b data/paranormalcraft/loot_table/blocks/ghost_trap.json
-0f5cda44284db3a203271e6a7aa92b5270d59be3 data/paranormalcraft/loot_table/chests/abandoned_cabin.json
+4267221641760c52fbfe9a9118717345ca384828 data/paranormalcraft/loot_table/blocks/ward_lantern.json
+401187cfbff8ab4b116b7c6462687981cba83e77 data/paranormalcraft/loot_table/chests/abandoned_cabin.json

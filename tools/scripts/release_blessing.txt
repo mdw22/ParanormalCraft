@@ -1,0 +1,12 @@
+# Release: a stored ghost is set free from containment_lab's unit. It rises and fades for everyone, and the player who
+# released it gets Restful (3 in-game days without phantoms).
+# Run with: /paranormalcraft debug run release_blessing
+paranormalcraft debug scene containment_lab
+wait 20
+paranormalcraft debug containment 100000 202 100000 fill 1
+paranormalcraft debug containment 100000 202 100000 release 0
+expect trace containment_release blessing=paranormalcraft:restful within 2
+wait 10
+paranormalcraft debug screenshot ghost_ascending
+expect dump players[0].effects.paranormalcraft:restful>=71900 containmentUnits[0].stored.length=0
+expect trace ghost_ascended within 80

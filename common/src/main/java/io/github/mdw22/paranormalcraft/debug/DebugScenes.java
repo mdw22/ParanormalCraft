@@ -1,7 +1,11 @@
 package io.github.mdw22.paranormalcraft.debug;
 
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
+import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
+import io.github.mdw22.paranormalcraft.capture.CapturedGhosts;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlock;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
@@ -15,16 +19,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CandleBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.HopperBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.WallTorchBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
@@ -65,6 +73,8 @@ public final class DebugScenes {
     private static final long NOON = 6000;
     private static final long MIDNIGHT = 18000;
     /** {@code capture_arena}: one Presence above Weakened. */
+    /** Where {@code containment_lab} puts its Containment Unit. */
+    public static final BlockPos CONTAINMENT_LAB_UNIT = CENTRE.offset(0, 2, 0);
     public static final float CAPTURE_ARENA_PRESENCE = 6.0F;
     /** Every entity a scene creates carries this tag. */
     public static final String SCENE_TAG = "paranormalcraft_scene";
@@ -112,6 +122,7 @@ public final class DebugScenes {
         SCENES.put("two_player", DebugScenes::twoPlayer);
         SCENES.put("figure_indoor", level -> cabin(level, "oak", false));
         SCENES.put("capture_arena", DebugScenes::captureArena);
+        SCENES.put("containment_lab", DebugScenes::containmentLab);
     }
 
     private DebugScenes() {
@@ -235,6 +246,10 @@ public final class DebugScenes {
                 }
             }
         }
+        // Clearing a container (chest, Containment Unit) drops its contents as new items: remove those too.
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, area())) {
+            item.discard();
+        }
     }
 
     private static void set(ServerLevel level, BlockPos pos, BlockState state) {
@@ -345,6 +360,34 @@ public final class DebugScenes {
      * and a second one 3 blocks east. The player stands 6 blocks south facing it, wearing goggles and holding the Tether
      * Wand; Dev2, if online, stands 6 blocks west facing east, for co-op.
      */
+    /**
+     * Noon. A Containment Unit two blocks up in the middle, facing the player (4 blocks south). Automation: a chest of
+     * 8 soul sand on a hopper feeding the unit's east side, and a hopper under the unit emptying into a chest in the
+     * floor. Two Filled Ghost Traps (fresh Lingering Spirits) stand on the platform to the west.
+     */
+    private static Placement containmentLab(ServerLevel level) {
+
+        time(level, NOON);
+        BlockPos unit = CONTAINMENT_LAB_UNIT;
+        set(level, unit.below(2), Blocks.CHEST.defaultBlockState());
+        set(level, unit.below(), Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.DOWN));
+        set(level, unit, ModBlocks.CONTAINMENT_UNIT.get().defaultBlockState().setValue(ContainmentUnitBlock.FACING, Direction.SOUTH));
+        set(level, unit.east(), Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.WEST));
+        set(level, unit.east().above(), Blocks.CHEST.defaultBlockState());
+        if (level.getBlockEntity(unit.east().above()) instanceof ChestBlockEntity chest) {
+            chest.setItem(0, new ItemStack(Items.SOUL_SAND, 8));
+        }
+        for (int i = 0; i < 2; i++) {
+            BlockPos trapPos = CENTRE.offset(-3 - i, 1, 2);
+            set(level, trapPos, ModBlocks.FILLED_GHOST_TRAP.get().defaultBlockState());
+            CapturedGhost ghost = CapturedGhosts.fresh(level, trapPos.above(), "scene");
+            if (ghost != null && level.getBlockEntity(trapPos) instanceof FilledGhostTrapBlockEntity filled) {
+                filled.setContents(ghost);
+            }
+        }
+        return new Placement(at(0, 4), 180.0F, 15.0F, new Vec3(2, 0, 0), Float.NaN, List.of(), false);
+    }
+
     private static Placement captureArena(ServerLevel level) {
 
         time(level, NOON);

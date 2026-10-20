@@ -1,0 +1,29 @@
+{
+  "parent": "paranormalcraft:main/lockup",
+  "criteria": {
+    "released": {
+      "conditions": {
+        "event": "released"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.rest_easy.description"
+    },
+    "frame": "goal",
+    "icon": {
+      "id": "paranormalcraft:filled_ghost_trap"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.rest_easy.title"
+    }
+  },
+  "requirements": [
+    [
+      "released"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

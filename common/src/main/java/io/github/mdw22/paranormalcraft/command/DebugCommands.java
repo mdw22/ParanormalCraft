@@ -6,8 +6,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
+import io.github.mdw22.paranormalcraft.containment.ContainmentCharge;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
 import io.github.mdw22.paranormalcraft.debug.DebugKit;
 import io.github.mdw22.paranormalcraft.debug.DebugScenes;
 import io.github.mdw22.paranormalcraft.debug.ScriptRunner;
@@ -15,6 +18,10 @@ import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
+import io.github.mdw22.paranormalcraft.item.FieldJournalItem;
+import io.github.mdw22.paranormalcraft.journal.CaptureLog;
+import io.github.mdw22.paranormalcraft.journal.JournalEvent;
+import io.github.mdw22.paranormalcraft.journal.JournalStages;
 import io.github.mdw22.paranormalcraft.network.DebugClientPayload;
 import io.github.mdw22.paranormalcraft.platform.Services;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
@@ -23,9 +30,11 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -44,7 +53,7 @@ import java.util.Set;
 
 /**
  * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, tether,
- * timers, pace, config and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
+ * timers, pace, config, journal, containment and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
  * development). See the README's "How to test" section.
  */
 public final class DebugCommands {
@@ -78,13 +87,106 @@ public final class DebugCommands {
                 .then(Commands.literal("tether")
                         .then(Commands.argument("players", EntityArgument.players())
                                 .then(Commands.literal("on").executes(context -> tether(context, true)))
-                                .then(Commands.literal("off").executes(context -> tether(context, false)))))
+                                .then(Commands.literal("off").executes(context -> tether(context, false)))
+                                .then(Commands.literal("deploy").executes(DebugCommands::deployTrap))))
                 .then(Commands.literal("pace")
                         .then(Commands.literal("fast").executes(context -> pace(context, ModConfigs.FAST_PACE)))
                         .then(Commands.literal("normal").executes(context -> pace(context, 1.0))))
                 .then(config())
+                .then(journal())
+                .then(containment())
                 .then(Commands.literal("run")
                         .then(Commands.argument("file", StringArgumentType.greedyString()).executes(DebugCommands::run)));
+    }
+
+    // ---- journal ----
+
+    private static LiteralArgumentBuilder<CommandSourceStack> journal() {
+
+        return Commands.literal("journal")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.literal("reset").executes(DebugCommands::journalReset))
+                        .then(Commands.literal("open").executes(context -> {
+                            FieldJournalItem.open(EntityArgument.getPlayer(context, "player"));
+                            return ok(context, "Opened the journal");
+                        }))
+                        .then(Commands.argument("ghostType", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                        JournalStages.GHOST_TYPES.stream().map(type -> Identifier.parse(type).getPath()), builder))
+                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, JournalEvent.STAGES.length))
+                                        .executes(DebugCommands::journalStage))));
+    }
+
+    private static int journalStage(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+
+        ServerPlayer player = EntityArgument.getPlayer(context, "player");
+        String type = StringArgumentType.getString(context, "ghostType");
+        String id = type.contains(":") ? type : Constants.MOD_ID + ":" + type;
+        if (!JournalStages.GHOST_TYPES.contains(id)) {
+            context.getSource().sendFailure(Component.literal("No journal page for " + id));
+            return 0;
+        }
+        int stage = IntegerArgumentType.getInteger(context, "stage");
+        JournalStages.setStage(player, id, stage);
+        return ok(context, "Journal: " + id + " at stage " + JournalStages.stage(player, id) + " for " + player.getGameProfile().name());
+    }
+
+    private static int journalReset(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+
+        ServerPlayer player = EntityArgument.getPlayer(context, "player");
+        for (String type : JournalStages.GHOST_TYPES) {
+            JournalStages.setStage(player, type, 0);
+        }
+        CaptureLog.get(player.level().getServer()).reset(player.getUUID());
+        return ok(context, "Journal reset for " + player.getGameProfile().name());
+    }
+
+    // ---- containment ----
+
+    private static LiteralArgumentBuilder<CommandSourceStack> containment() {
+
+        return Commands.literal("containment")
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .then(Commands.literal("charge").then(Commands.argument("value", IntegerArgumentType.integer(0, ContainmentCharge.MAX_CHARGE))
+                                .executes(context -> containment(context, unit -> {
+                                    unit.setCharge(IntegerArgumentType.getInteger(context, "value"));
+                                    return "charge " + unit.charge();
+                                }))))
+                        .then(Commands.literal("fill").then(Commands.argument("count", IntegerArgumentType.integer(1, ContainmentUnitBlockEntity.CAPACITY))
+                                .executes(context -> containment(context, unit -> "added "
+                                        + unit.fillForDebug(context.getSource().getLevel(), IntegerArgumentType.getInteger(context, "count")) + " ghost(s)"))))
+                        .then(Commands.literal("unstable").executes(context -> containment(context, unit -> {
+                            if (unit.stored().isEmpty()) {
+                                unit.fillForDebug(context.getSource().getLevel(), 1);
+                            }
+                            unit.setCharge(0);
+                            return "charge 0 with " + unit.stored().size() + " ghost(s): Unstable next tick";
+                        })))
+                        .then(Commands.literal("process").then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
+                                .executes(context -> containment(context, unit -> unit.queueProcess(IntegerArgumentType.getInteger(context, "index"),
+                                        context.getSource().getPlayerOrException()) ? "queued for processing" : "can't queue that ghost"))))
+                        .then(Commands.literal("advance").then(Commands.argument("ticks", IntegerArgumentType.integer(1, ContainmentUnitBlockEntity.PROCESS_TICKS))
+                                .executes(context -> containment(context, unit -> "processing at "
+                                        + unit.debugAdvanceProcessing(IntegerArgumentType.getInteger(context, "ticks")) + " ticks"))))
+                        .then(Commands.literal("release").then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
+                                .executes(context -> containment(context, unit -> unit.release(IntegerArgumentType.getInteger(context, "index"),
+                                        context.getSource().getPlayerOrException()) ? "released" : "can't release that ghost")))));
+    }
+
+    @FunctionalInterface
+    private interface UnitAction {
+
+        String apply(ContainmentUnitBlockEntity unit) throws CommandSyntaxException;
+    }
+
+    private static int containment(CommandContext<CommandSourceStack> context, UnitAction action) throws CommandSyntaxException {
+
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, "pos");
+        if (!(context.getSource().getLevel().getBlockEntity(pos) instanceof ContainmentUnitBlockEntity unit)) {
+            context.getSource().sendFailure(Component.literal("No Containment Unit at " + pos.toShortString()));
+            return 0;
+        }
+        return ok(context, "Containment Unit at " + pos.toShortString() + ": " + action.apply(unit));
     }
 
     private static int ok(CommandContext<CommandSourceStack> context, String message) {
@@ -303,6 +405,20 @@ public final class DebugCommands {
     /**
      * Keeps players firing their held Tether Wand without holding use (scripts and tests), or stops them.
      */
+    /**
+     * What attack does while firing: drop a trap under each player's latched ghost.
+     */
+    private static int deployTrap(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+
+        int count = 0;
+        for (ServerPlayer player : EntityArgument.getPlayers(context, "players")) {
+            if (TetherManager.deployTrap(player)) {
+                count++;
+            }
+        }
+        return ok(context, "Deployed " + count + " trap(s)");
+    }
+
     private static int tether(CommandContext<CommandSourceStack> context, boolean on) throws CommandSyntaxException {
 
         int count = 0;

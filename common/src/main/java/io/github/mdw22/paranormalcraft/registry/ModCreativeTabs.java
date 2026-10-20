@@ -17,6 +17,11 @@ public final class ModCreativeTabs {
                 output.accept(new ItemStack(ModItems.SPIRIT_THERMOMETER.get()));
                 output.accept(new ItemStack(ModItems.TETHER_WAND.get()));
                 output.accept(new ItemStack(ModItems.GHOST_TRAP.get()));
+                output.accept(new ItemStack(ModItems.CONTAINMENT_UNIT.get()));
+                output.accept(new ItemStack(ModItems.WARD_LANTERN.get()));
+                output.accept(new ItemStack(ModItems.LINGERING_ECTOPLASM.get()));
+                output.accept(new ItemStack(ModItems.SPECTRAL_RESIDUE.get()));
+                output.accept(new ItemStack(ModItems.FIELD_JOURNAL.get()));
                 output.accept(new ItemStack(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get()));
             },
             builder -> builder

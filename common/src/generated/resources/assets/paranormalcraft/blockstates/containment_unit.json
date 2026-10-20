@@ -1,0 +1,154 @@
+{
+  "variants": {
+    "facing=east,ghosts=0,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit",
+      "y": 90
+    },
+    "facing=east,ghosts=0,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 90
+    },
+    "facing=east,ghosts=1,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 90
+    },
+    "facing=east,ghosts=1,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 90
+    },
+    "facing=east,ghosts=2,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 90
+    },
+    "facing=east,ghosts=2,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 90
+    },
+    "facing=east,ghosts=3,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 90
+    },
+    "facing=east,ghosts=3,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 90
+    },
+    "facing=east,ghosts=4,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 90
+    },
+    "facing=east,ghosts=4,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 90
+    },
+    "facing=north,ghosts=0,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit"
+    },
+    "facing=north,ghosts=0,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable"
+    },
+    "facing=north,ghosts=1,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit"
+    },
+    "facing=north,ghosts=1,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable"
+    },
+    "facing=north,ghosts=2,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit"
+    },
+    "facing=north,ghosts=2,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable"
+    },
+    "facing=north,ghosts=3,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit"
+    },
+    "facing=north,ghosts=3,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable"
+    },
+    "facing=north,ghosts=4,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit"
+    },
+    "facing=north,ghosts=4,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable"
+    },
+    "facing=south,ghosts=0,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit",
+      "y": 180
+    },
+    "facing=south,ghosts=0,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 180
+    },
+    "facing=south,ghosts=1,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 180
+    },
+    "facing=south,ghosts=1,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 180
+    },
+    "facing=south,ghosts=2,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 180
+    },
+    "facing=south,ghosts=2,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 180
+    },
+    "facing=south,ghosts=3,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 180
+    },
+    "facing=south,ghosts=3,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 180
+    },
+    "facing=south,ghosts=4,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 180
+    },
+    "facing=south,ghosts=4,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 180
+    },
+    "facing=west,ghosts=0,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit",
+      "y": 270
+    },
+    "facing=west,ghosts=0,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 270
+    },
+    "facing=west,ghosts=1,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 270
+    },
+    "facing=west,ghosts=1,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 270
+    },
+    "facing=west,ghosts=2,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 270
+    },
+    "facing=west,ghosts=2,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 270
+    },
+    "facing=west,ghosts=3,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 270
+    },
+    "facing=west,ghosts=3,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 270
+    },
+    "facing=west,ghosts=4,unstable=false": {
+      "model": "paranormalcraft:block/containment_unit_lit",
+      "y": 270
+    },
+    "facing=west,ghosts=4,unstable=true": {
+      "model": "paranormalcraft:block/containment_unit_unstable",
+      "y": 270
+    }
+  }
+}

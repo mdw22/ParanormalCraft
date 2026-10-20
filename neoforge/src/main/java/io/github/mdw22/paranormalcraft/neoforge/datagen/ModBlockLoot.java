@@ -32,6 +32,8 @@ public class ModBlockLoot extends BlockLootSubProvider {
     protected void generate() {
 
         dropSelf(ModBlocks.GHOST_TRAP.get());
+        dropSelf(ModBlocks.CONTAINMENT_UNIT.get());
+        dropSelf(ModBlocks.WARD_LANTERN.get());
         add(ModBlocks.FILLED_GHOST_TRAP.get(), LootTable.lootTable().withPool(LootPool.lootPool()
                 .setRolls(ConstantValue.exactly(1))
                 .add(LootItem.lootTableItem(ModItems.FILLED_GHOST_TRAP.get())
@@ -42,6 +44,6 @@ public class ModBlockLoot extends BlockLootSubProvider {
     @Override
     protected Iterable<Block> getKnownBlocks() {
 
-        return List.of(ModBlocks.GHOST_TRAP.get(), ModBlocks.FILLED_GHOST_TRAP.get());
+        return List.of(ModBlocks.GHOST_TRAP.get(), ModBlocks.FILLED_GHOST_TRAP.get(), ModBlocks.CONTAINMENT_UNIT.get(), ModBlocks.WARD_LANTERN.get());
     }
 }

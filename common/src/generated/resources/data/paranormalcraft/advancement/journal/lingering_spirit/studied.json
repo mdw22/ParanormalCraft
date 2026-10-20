@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "studied": {
+      "conditions": {
+        "event": "studied",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "studied"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

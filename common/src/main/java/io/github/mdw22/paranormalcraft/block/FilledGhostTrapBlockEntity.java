@@ -3,15 +3,19 @@ package io.github.mdw22.paranormalcraft.block;
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
+import io.github.mdw22.paranormalcraft.capture.ReleaseHold;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,6 +36,9 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
     private @Nullable CapturedGhost contents;
     private int nextRattle = -1;
     private boolean registered;
+    /** An empty-hand release hold in progress, and whose it is. Not saved. */
+    private @Nullable ReleaseHold hold;
+    private @Nullable UUID holder;
 
     public FilledGhostTrapBlockEntity(BlockPos pos, BlockState state) {
 
@@ -72,6 +79,49 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
             serverLevel.sendParticles(ParticleTypes.SOUL, pos.getX() + 0.5, pos.getY() + 0.35, pos.getZ() + 0.5, 4, 0.2, 0.05, 0.2, 0.01);
             serverLevel.blockEvent(pos, state.getBlock(), FilledGhostTrapBlock.EVENT_RATTLE, 0);
         }
+    }
+
+    /**
+     * One repeat of {@code player} holding use on this trap with an empty hand. The rattle speeds up and rises in
+     * pitch as the hold goes on; once it completes, the ghost is released.
+     *
+     * @return whether this press released the ghost
+     */
+    public boolean pressRelease(ServerLevel level, Player player) {
+
+        long now = level.getGameTime();
+        if (this.holder != null && !this.holder.equals(player.getUUID()) && this.hold != null && !this.hold.lapsed(now)) {
+            return false; // someone else is already holding it
+        }
+        boolean fresh = this.hold == null || this.hold.lapsed(now) || !player.getUUID().equals(this.holder);
+        this.hold = ReleaseHold.press(fresh ? null : this.hold, now);
+        this.holder = player.getUUID();
+        double progress = this.hold.progress();
+        BlockPos pos = this.worldPosition;
+        level.playSound(null, pos, ModSounds.TRAP_RATTLE.get(), SoundSource.BLOCKS, 0.6F + 0.4F * (float) progress, 0.8F + 0.8F * (float) progress);
+        level.sendParticles(ParticleTypes.SOUL, pos.getX() + 0.5, pos.getY() + 0.4, pos.getZ() + 0.5, 1 + (int) (progress * 6), 0.2, 0.1, 0.2, 0.02);
+        level.blockEvent(pos, getBlockState().getBlock(), FilledGhostTrapBlock.EVENT_RATTLE, 0);
+        if (fresh) {
+            ServerTrace.event("trap_release_hold", line -> {
+                line.addProperty("trap", pos.toShortString());
+                line.addProperty("player", player.getGameProfile().name());
+            });
+        }
+        if (this.hold.complete()) {
+            this.hold = null;
+            this.holder = null;
+            FilledGhostTrapBlock.release(level, pos, this);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * The release hold's progress (0 to 1), or -1 with none in progress.
+     */
+    public double releaseProgress(long now) {
+
+        return this.hold == null || this.hold.lapsed(now) ? -1 : this.hold.progress();
     }
 
     @Override

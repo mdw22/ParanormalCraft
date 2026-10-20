@@ -45,21 +45,26 @@ public final class ItemGameTests {
     private static final int COPPER_FOR_BOTH_TOOLS = 8;
     private static final int REDSTONE_FOR_BOTH_TOOLS = 3;
 
-    /** Item -> {min, max, always}: the cabin chest's ranges (always = 1 means it must be in every roll). */
-    private static final Map<Item, int[]> CABIN_LOOT = new LinkedHashMap<>();
+    /**
+     * Item -> {min, max, always}: the cabin chest's ranges (always = 1 means it must be in every roll). Built on first
+     * use: mod items aren't registered yet when this class loads.
+     */
+    private static Map<Item, int[]> cabinLoot() {
 
-    static {
-        CABIN_LOOT.put(Items.COPPER_INGOT, new int[]{8, 10, 1});
-        CABIN_LOOT.put(Items.REDSTONE, new int[]{3, 4, 1});
-        CABIN_LOOT.put(Items.CANDLE, new int[]{1, 3, 1});
-        CABIN_LOOT.put(Items.PAPER, new int[]{1, 4, 1});
-        CABIN_LOOT.put(Items.BREAD, new int[]{1, 3, 1});
-        CABIN_LOOT.put(Items.STRING, new int[]{1, 4, 1});
-        CABIN_LOOT.put(Items.BOOK, new int[]{1, 1, 0});
-        CABIN_LOOT.put(Items.LEATHER, new int[]{1, 3, 0});
-        CABIN_LOOT.put(Items.AMETHYST_SHARD, new int[]{1, 2, 0});
-        CABIN_LOOT.put(Items.TINTED_GLASS, new int[]{1, 1, 0});
-        CABIN_LOOT.put(Items.ROTTEN_FLESH, new int[]{1, 2, 0});
+        Map<Item, int[]> loot = new LinkedHashMap<>();
+        loot.put(Items.COPPER_INGOT, new int[]{8, 10, 1});
+        loot.put(Items.REDSTONE, new int[]{3, 4, 1});
+        loot.put(Items.CANDLE, new int[]{1, 3, 1});
+        loot.put(Items.PAPER, new int[]{1, 4, 1});
+        loot.put(Items.BREAD, new int[]{1, 3, 1});
+        loot.put(Items.STRING, new int[]{1, 4, 1});
+        loot.put(Items.BOOK, new int[]{1, 1, 0});
+        loot.put(Items.LEATHER, new int[]{1, 3, 0});
+        loot.put(Items.AMETHYST_SHARD, new int[]{1, 2, 0});
+        loot.put(Items.TINTED_GLASS, new int[]{1, 1, 0});
+        loot.put(Items.ROTTEN_FLESH, new int[]{1, 2, 0});
+        loot.put(ModItems.FIELD_JOURNAL.get(), new int[]{1, 1, 1});
+        return loot;
     }
 
     private ItemGameTests() {
@@ -112,6 +117,7 @@ public final class ItemGameTests {
      */
     private static void cabinLootRanges(GameTestHelper helper) {
 
+        Map<Item, int[]> loot = cabinLoot();
         LootTable table = helper.getLevel().getServer().reloadableRegistries().getLootTable(ModStructures.ABANDONED_CABIN_CHEST);
         LootParams params = new LootParams.Builder(helper.getLevel())
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)))
@@ -124,14 +130,14 @@ public final class ItemGameTests {
                 if (stack.isEmpty()) {
                     continue; // a count roll of 0, e.g. rotten flesh
                 }
-                check(helper, CABIN_LOOT.containsKey(stack.getItem()), "unexpected item %s", stack);
+                check(helper, loot.containsKey(stack.getItem()), "unexpected item %s", stack);
                 counts.merge(stack.getItem(), stack.getCount(), Integer::sum);
             }
             int copper = counts.getOrDefault(Items.COPPER_INGOT, 0);
             int redstone = counts.getOrDefault(Items.REDSTONE, 0);
             check(helper, copper >= COPPER_FOR_BOTH_TOOLS && redstone >= REDSTONE_FOR_BOTH_TOOLS,
                     "roll %d: %d copper and %d redstone don't cover the EMF Reader and thermometer", roll, copper, redstone);
-            for (Map.Entry<Item, int[]> entry : CABIN_LOOT.entrySet()) {
+            for (Map.Entry<Item, int[]> entry : loot.entrySet()) {
                 int count = counts.getOrDefault(entry.getKey(), 0);
                 int[] range = entry.getValue();
                 String name = entry.getKey().toString();
@@ -146,7 +152,7 @@ public final class ItemGameTests {
             }
         }
         for (Item item : List.of(Items.COPPER_INGOT, Items.REDSTONE)) {
-            int[] range = CABIN_LOOT.get(item);
+            int[] range = loot.get(item);
             int[] minMax = seen.get(item);
             check(helper, minMax[0] == range[0] && minMax[1] == range[1], "%s rolled %d-%d over %d rolls, expected %d-%d",
                     item, minMax[0], minMax[1], LOOT_ROLLS, range[0], range[1]);

@@ -3,6 +3,7 @@ package io.github.mdw22.paranormalcraft.block;
 import com.mojang.serialization.MapCodec;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
+import io.github.mdw22.paranormalcraft.capture.ReleaseHold;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.Presence;
@@ -18,7 +19,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -48,8 +48,9 @@ import org.jspecify.annotations.Nullable;
  * A Ghost Trap with a ghost in it. It glows faintly and rattles now and then.
  * <ul>
  *     <li>Break it, or use it with an empty hand while sneaking, to pick it up as an item (the ghost stays inside).</li>
- *     <li>Use it while sneaking with anything in hand to release the ghost: it reappears above the trap at full
- *     Presence, keeping its UUID, name, home and cold spot, and the trap is an armed empty trap again.</li>
+ *     <li>Hold use on it with an empty hand for 2 s (the rattle speeds up and rises in pitch) to release the ghost: it
+ *     reappears above the trap at full Presence, keeping its UUID, name, home and cold spot, and the trap is an armed
+ *     empty trap again. Letting go early cancels.</li>
  * </ul>
  */
 public class FilledGhostTrapBlock extends BaseEntityBlock {
@@ -99,31 +100,27 @@ public class FilledGhostTrapBlock extends BaseEntityBlock {
         return direction == Direction.DOWN && !canSurvive(state, level, pos) ? Blocks.AIR.defaultBlockState() : state;
     }
 
+    /**
+     * Empty hand only. Sneaking picks the trap up as an item (ghost inside); otherwise holding use for
+     * {@link ReleaseHold#HOLD_TICKS} releases the ghost, with the rattle rising as it goes. Letting go early cancels.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 
-        if (!player.isSecondaryUseActive()) {
+        if (!player.getMainHandItem().isEmpty()) {
             return InteractionResult.PASS;
         }
-        if (level instanceof ServerLevel serverLevel && serverLevel.getBlockEntity(pos) instanceof FilledGhostTrapBlockEntity trap) {
+        if (!(level instanceof ServerLevel serverLevel) || !(serverLevel.getBlockEntity(pos) instanceof FilledGhostTrapBlockEntity trap)) {
+            return InteractionResult.SUCCESS;
+        }
+        if (player.isSecondaryUseActive()) {
             ItemStack item = itemFor(trap);
             level.removeBlock(pos, false);
             if (!player.getInventory().add(item)) {
                 player.drop(item, false);
             }
-        }
-        return InteractionResult.SUCCESS;
-    }
-
-    @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand,
-                                          BlockHitResult hit) {
-
-        if (!player.isSecondaryUseActive() || stack.isEmpty()) {
-            return InteractionResult.TRY_WITH_EMPTY_HAND;
-        }
-        if (level instanceof ServerLevel serverLevel && serverLevel.getBlockEntity(pos) instanceof FilledGhostTrapBlockEntity trap) {
-            release(serverLevel, pos, trap);
+        } else {
+            trap.pressRelease(serverLevel, player);
         }
         return InteractionResult.SUCCESS;
     }

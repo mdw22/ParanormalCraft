@@ -1,18 +1,25 @@
 package io.github.mdw22.paranormalcraft.registry;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlock;
 import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.block.GhostMarkerBlock;
 import io.github.mdw22.paranormalcraft.block.GhostMarkerBlockEntity;
 import io.github.mdw22.paranormalcraft.block.GhostTrapBlock;
 import io.github.mdw22.paranormalcraft.block.GhostTrapBlockEntity;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlock;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
+import io.github.mdw22.paranormalcraft.ward.WardLanternBlock;
+import io.github.mdw22.paranormalcraft.ward.WardLanternBlockEntity;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 
 /**
- * Block and block entity registrations: the ghost marker, the Ghost Trap and the Filled Ghost Trap.
+ * Block and block entity registrations: the ghost marker, the Ghost Trap, the Filled Ghost Trap, the Containment Unit
+ * and the Ward Lantern.
  */
 public final class ModBlocks {
 
@@ -54,6 +61,33 @@ public final class ModBlocks {
 
     public static final RegistryEntry<BlockEntityType<FilledGhostTrapBlockEntity>> FILLED_GHOST_TRAP_ENTITY = RegistrationHelper.blockEntity("filled_ghost_trap",
             FilledGhostTrapBlockEntity::new, FILLED_GHOST_TRAP);
+
+    /** The Containment Unit: stores, fuels, processes and releases ghosts. */
+    public static final RegistryEntry<ContainmentUnitBlock> CONTAINMENT_UNIT = RegistrationHelper.block("containment_unit", ContainmentUnitBlock::new,
+            () -> BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(3.5F, 6.0F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
+                    .noOcclusion()
+                    .lightLevel(ContainmentUnitBlock::lightLevel));
+
+    public static final RegistryEntry<BlockEntityType<ContainmentUnitBlockEntity>> CONTAINMENT_UNIT_ENTITY = RegistrationHelper.blockEntity("containment_unit",
+            ContainmentUnitBlockEntity::new, CONTAINMENT_UNIT);
+
+    /** The Ward Lantern: a lantern that keeps monsters, haunting and shadow figures away. */
+    public static final RegistryEntry<WardLanternBlock> WARD_LANTERN = RegistrationHelper.block("ward_lantern", WardLanternBlock::new,
+            () -> BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .forceSolidOn()
+                    .strength(3.5F)
+                    .sound(SoundType.LANTERN)
+                    .lightLevel(state -> Balance.Ward.LIGHT)
+                    .noOcclusion()
+                    .pushReaction(PushReaction.DESTROY));
+
+    public static final RegistryEntry<BlockEntityType<WardLanternBlockEntity>> WARD_LANTERN_ENTITY = RegistrationHelper.blockEntity("ward_lantern",
+            WardLanternBlockEntity::new, WARD_LANTERN);
 
     private ModBlocks() {
     }

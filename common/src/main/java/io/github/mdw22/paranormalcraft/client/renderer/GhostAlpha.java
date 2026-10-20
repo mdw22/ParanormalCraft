@@ -31,6 +31,9 @@ public final class GhostAlpha {
      */
     public static float alpha(GhostEntity ghost, @Nullable Player viewer, float partialTick) {
 
+        if (ghost.isAscending()) {
+            return OPACITY * (1.0F - ghost.ascendProgress(partialTick));
+        }
         if (ghost.isWeakened()) {
             return weakenedFlicker(ghost.tickCount + partialTick);
         }

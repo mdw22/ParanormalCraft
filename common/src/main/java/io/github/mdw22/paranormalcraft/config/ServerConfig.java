@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.config;
 
 import com.google.gson.JsonObject;
+import io.github.mdw22.paranormalcraft.Balance;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -19,13 +20,15 @@ import java.nio.file.Path;
  * @param hauntingIntervalMaxSeconds longest wait between a ghost's haunting actions
  * @param hallucinationIntervalMinSeconds shortest wait between a player's hallucinations
  * @param hallucinationIntervalMaxSeconds longest wait between a player's hallucinations
+ * @param wardLanternRadius          blocks a Ward Lantern protects (no monster spawns, haunting or shadow figures)
  */
 public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier, int manifestIntervalMinSeconds, int manifestIntervalMaxSeconds,
                            boolean enableDebugCommands, boolean hauntingEnabled, int hauntingIntervalMinSeconds, int hauntingIntervalMaxSeconds,
-                           int hallucinationIntervalMinSeconds, int hallucinationIntervalMaxSeconds) {
+                           int hallucinationIntervalMinSeconds, int hallucinationIntervalMaxSeconds, int wardLanternRadius) {
 
     public static final String FILE_NAME = "paranormalcraft-server.json";
-    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300, false, true, 30, 90, 180, 480);
+    public static final ServerConfig DEFAULTS = new ServerConfig(true, 1.0, 120, 300, false, true, 30, 90, 180, 480,
+            Balance.Ward.DEFAULT_RADIUS);
 
     static final int MIN_INTERVAL_SECONDS = 1;
     static final int MAX_INTERVAL_SECONDS = 86400;
@@ -51,7 +54,7 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
         int[] hauntingInterval = interval(file, "hauntingIntervalSeconds", DEFAULTS.hauntingIntervalMinSeconds, DEFAULTS.hauntingIntervalMaxSeconds);
         int[] hallucination = interval(file, "hallucinationIntervalSeconds", DEFAULTS.hallucinationIntervalMinSeconds, DEFAULTS.hallucinationIntervalMaxSeconds);
         return new ServerConfig(griefing, multiplier, manifest[0], manifest[1], debugCommands, haunting, hauntingInterval[0], hauntingInterval[1],
-                hallucination[0], hallucination[1]);
+                hallucination[0], hallucination[1], file.getInt("wardLanternRadius", DEFAULTS.wardLanternRadius, 1, 256));
     }
 
     /**
@@ -67,6 +70,7 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
         json.addProperty("hauntingEnabled", this.hauntingEnabled);
         json.add("hauntingIntervalSeconds", interval(this.hauntingIntervalMinSeconds, this.hauntingIntervalMaxSeconds));
         json.add("hallucinationIntervalSeconds", interval(this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds));
+        json.addProperty("wardLanternRadius", this.wardLanternRadius);
         return json;
     }
 
@@ -85,7 +89,7 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
 
         return new ServerConfig(griefing, this.ghostSpawnMultiplier, this.manifestIntervalMinSeconds, this.manifestIntervalMaxSeconds,
                 this.enableDebugCommands, this.hauntingEnabled, this.hauntingIntervalMinSeconds, this.hauntingIntervalMaxSeconds,
-                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds);
+                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds, this.wardLanternRadius);
     }
 
     /**
@@ -95,7 +99,7 @@ public record ServerConfig(boolean hauntingGriefing, double ghostSpawnMultiplier
 
         return new ServerConfig(this.hauntingGriefing, this.ghostSpawnMultiplier, this.manifestIntervalMinSeconds, this.manifestIntervalMaxSeconds,
                 this.enableDebugCommands, this.hauntingEnabled, minSeconds, maxSeconds,
-                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds);
+                this.hallucinationIntervalMinSeconds, this.hallucinationIntervalMaxSeconds, this.wardLanternRadius);
     }
 
     /**

@@ -14,14 +14,18 @@ import java.util.function.Supplier;
  */
 public final class DebugKit {
 
-    /** Hotbar slots 1 to 6, in order. */
+    /** Hotbar slots 1 to 9, then the first main-inventory slot, in order. */
     public static final List<Supplier<ItemStack>> TOOLS = List.of(
             () -> new ItemStack(ModItems.SPECTRAL_GOGGLES.get()),
             () -> new ItemStack(ModItems.EMF_READER.get()),
             () -> new ItemStack(ModItems.SPIRIT_THERMOMETER.get()),
             () -> new ItemStack(Items.NETHERITE_SWORD),
             () -> new ItemStack(ModItems.TETHER_WAND.get()),
-            () -> new ItemStack(ModItems.GHOST_TRAP.get(), 3));
+            () -> new ItemStack(ModItems.GHOST_TRAP.get(), 3),
+            () -> new ItemStack(ModItems.WARD_LANTERN.get(), 2),
+            () -> new ItemStack(ModItems.FIELD_JOURNAL.get()),
+            () -> new ItemStack(ModItems.CONTAINMENT_UNIT.get()),
+            () -> new ItemStack(Items.SOUL_SAND, 4));
     /** The hotbar slot the Tether Wand goes in. */
     public static final int WAND_SLOT = 4;
 

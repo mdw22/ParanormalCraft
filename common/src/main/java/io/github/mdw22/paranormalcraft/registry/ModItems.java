@@ -2,15 +2,19 @@ package io.github.mdw22.paranormalcraft.registry;
 
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.item.FieldJournalItem;
 import io.github.mdw22.paranormalcraft.item.FilledGhostTrapItem;
 import io.github.mdw22.paranormalcraft.item.GhostTrapItem;
+import io.github.mdw22.paranormalcraft.item.SpectralResidueItem;
 import io.github.mdw22.paranormalcraft.item.TetherWandItem;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.item.equipment.EquipmentAssets;
@@ -18,7 +22,8 @@ import net.minecraft.world.item.equipment.Equippable;
 
 /**
  * Item registrations: Spectral Goggles (an equippable head item with a camera overlay), the EMF Reader, the Spirit
- * Thermometer, the Tether Wand, the Ghost Trap, the Filled Ghost Trap and the Lingering Spirit spawn egg.
+ * Thermometer, the Tether Wand, the Ghost Trap, the Filled Ghost Trap, the Lingering Spirit spawn egg, the Containment
+ * Unit, the Ward Lantern, Lingering Ectoplasm, Spectral Residue and the Field Journal.
  */
 public final class ModItems {
 
@@ -65,6 +70,22 @@ public final class ModItems {
     public static final RegistryEntry<FilledGhostTrapItem> FILLED_GHOST_TRAP = RegistrationHelper.item("filled_ghost_trap",
             properties -> new FilledGhostTrapItem(ModBlocks.FILLED_GHOST_TRAP.get(), properties),
             () -> new Item.Properties().stacksTo(1).useBlockDescriptionPrefix());
+
+    public static final RegistryEntry<BlockItem> CONTAINMENT_UNIT = RegistrationHelper.item("containment_unit",
+            properties -> new BlockItem(ModBlocks.CONTAINMENT_UNIT.get(), properties), () -> new Item.Properties().useBlockDescriptionPrefix());
+
+    public static final RegistryEntry<BlockItem> WARD_LANTERN = RegistrationHelper.item("ward_lantern",
+            properties -> new BlockItem(ModBlocks.WARD_LANTERN.get(), properties), () -> new Item.Properties().useBlockDescriptionPrefix());
+
+    /** The first typed ectoplasm: what a processed Lingering Spirit leaves. */
+    public static final RegistryEntry<Item> LINGERING_ECTOPLASM = RegistrationHelper.item("lingering_ectoplasm", Item::new);
+
+    /** A rare leftover of processing; no use yet. */
+    public static final RegistryEntry<SpectralResidueItem> SPECTRAL_RESIDUE = RegistrationHelper.item("spectral_residue", SpectralResidueItem::new,
+            () -> new Item.Properties().rarity(Rarity.RARE));
+
+    public static final RegistryEntry<FieldJournalItem> FIELD_JOURNAL = RegistrationHelper.item("field_journal", FieldJournalItem::new,
+            () -> new Item.Properties().stacksTo(1));
 
     private ModItems() {
     }

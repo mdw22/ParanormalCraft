@@ -29,6 +29,7 @@ public class ParanormalCraftNeoForgeClient {
         modBus.addListener(ParanormalCraftNeoForgeClient::registerClientPayloadHandlers);
         modBus.addListener((EntityRenderersEvent.RegisterRenderers event) -> ParanormalCraftClient.registerEntityRenderers(event::registerEntityRenderer));
         modBus.addListener(NeoForgeClientPlatformHelper::registerRangeSelectProperties);
+        modBus.addListener(NeoForgeClientPlatformHelper::registerMenuScreens);
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> ParanormalCraftClient.tick(Minecraft.getInstance()));
     }
 

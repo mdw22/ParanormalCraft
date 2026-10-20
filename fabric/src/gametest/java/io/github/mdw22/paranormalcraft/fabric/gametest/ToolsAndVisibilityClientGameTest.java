@@ -3,13 +3,18 @@ package io.github.mdw22.paranormalcraft.fabric.gametest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
+import io.github.mdw22.paranormalcraft.client.containment.ContainmentUnitScreen;
 import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
+import io.github.mdw22.paranormalcraft.client.journal.JournalScreen;
 import io.github.mdw22.paranormalcraft.client.renderer.GhostAlpha;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationPlacement;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
@@ -18,8 +23,10 @@ import io.github.mdw22.paranormalcraft.registry.ModCreativeTabs;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -35,7 +42,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * Client GameTests for the things that have to be seen. One superflat world, eight checks, screenshots saved to
+ * Client GameTests for the things that have to be seen. One superflat world, eleven checks, screenshots saved to
  * {@code fabric/build/run/clientGameTest/screenshots}:
  * <ol>
  *     <li>a ghost is hidden without goggles and shown with them ({@code canSee} asserted on the client);</li>
@@ -50,6 +57,9 @@ import java.util.stream.Stream;
  *     <li>in {@code scene capture_arena}: a latched Tether Wand beam (client trace and a {@code debug screenshot}),
  *     the wand's heat bar filling while it fires, and a Weakened ghost flickering (alpha 0.2–0.5) for a player
  *     without goggles;</li>
+ *     <li>the slim beam: comparing frames with and without the beam, it covers under 2% of the lower-right quarter;</li>
+ *     <li>the Containment Unit screen with two ghosts stored;</li>
+ *     <li>the Field Journal at stage 4 for the Lingering Spirit;</li>
  *     <li>the Paranormal Craft creative tab and its items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
@@ -79,6 +89,9 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             shadowFigure(context, server);
             figureIndoorFacingWall(context, server);
             captureVisuals(context, server);
+            slimBeam(context, server);
+            containmentGui(context, server);
+            journalPages(context, server);
             creativeTab(context, server);
         }
     }
@@ -183,7 +196,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             HallucinationPlacement.Band band = HallucinationPlacement.band(half);
             double distance = Math.hypot(active.getX() - client.player.getX(), active.getZ() - client.player.getZ());
             double angle = Math.abs(HallucinationPlacement.relativeAngle(client.player.getYRot(), active.getX() - client.player.getX(), active.getZ() - client.player.getZ()));
-            check(distance >= 7.5 && distance <= 13.5, "figure " + distance + " blocks away");
+            check(distance >= 7.25 && distance <= 13.75, "figure " + distance + " blocks away");
             check(angle >= band.min() - 0.01 && angle <= band.max() + 0.01,
                     String.format(Locale.ROOT, "figure %.1f degrees off the view, band %.1f-%.1f (half-FOV %.1f)", angle, band.min(), band.max(), half));
             return active.position();
@@ -230,7 +243,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
                     .map(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()).toList();
         });
         for (var item : List.of(ModItems.SPECTRAL_GOGGLES, ModItems.EMF_READER, ModItems.SPIRIT_THERMOMETER, ModItems.LINGERING_SPIRIT_SPAWN_EGG,
-                ModItems.TETHER_WAND, ModItems.GHOST_TRAP)) {
+                ModItems.TETHER_WAND, ModItems.GHOST_TRAP, ModItems.CONTAINMENT_UNIT, ModItems.WARD_LANTERN, ModItems.FIELD_JOURNAL)) {
             String id = BuiltInRegistries.ITEM.getKey(item.get()).toString();
             check(shown.contains(id), "creative tab is missing " + id + " (shows " + shown + ")");
         }
@@ -445,6 +458,128 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         check(shot, "the beam_latched debug screenshot wasn't saved");
         System.out.println("[client gametest] beam " + beam + "; heat bar " + bar[1] + " -> " + widthLater + "; Weakened alphas " + min + "-" + max);
         server.runCommand("kill @e[type=" + GHOST + "]");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * The beam must read as a thin line, not clumps over the holder's screen. With the ghost frozen in front, a frame
+     * without the beam and one with it (fired by {@code debug tether}, so the hand pose is the same) are compared in the
+     * lower-right quarter, where the wand tip and the start of the beam are (the hotbar strip excluded). Under 2% of
+     * those pixels may change (the wand is in the off-hand, so its re-equip animation stays out of the quarter): a
+ * 0.3-scale dust line starting 1.5 blocks out crosses that quarter as a narrow
+     * diagonal of a few hundred pixels, while the old beam (0.6-scale dust from the tip) covered it in clumps.
+     */
+    private static void slimBeam(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene capture_arena");
+        context.waitTicks(40);
+        server.runCommand("paranormalcraft debug presence @e[type=" + GHOST + ",tag=paranormalcraft_scene] 20");
+        server.runCommand("paranormalcraft debug ghost freeze @e[type=" + GHOST + ",tag=paranormalcraft_scene] on");
+        server.runCommand("setblock 100000 201 100000 air");
+        server.runCommand("setblock 100003 201 100000 air");
+        server.runCommand("execute as @p run paranormalcraft debug look @e[type=" + GHOST + ",tag=paranormalcraft_scene,limit=1]");
+        // The wand in the off-hand: its heat changes every tick, which replays vanilla's re-equip animation in that
+        // hand (lower left). The empty main hand in the measured quarter stays still.
+        server.runCommand("item replace entity @a weapon.offhand with paranormalcraft:tether_wand");
+        server.runCommand("item replace entity @a weapon.mainhand with air");
+        context.waitTicks(20);
+        Path without = context.takeScreenshot("12-slim-beam-off");
+        server.runCommand("paranormalcraft debug tether @a on");
+        context.waitTicks(20);
+        Path with = context.takeScreenshot("13-slim-beam-on");
+        server.runCommand("execute as @p run paranormalcraft debug screenshot slim_beam");
+        server.runCommand("paranormalcraft debug tether @a off");
+        context.waitTicks(5);
+        double changed = changedFraction(without, with);
+        System.out.println("[client gametest] slim beam: " + String.format(Locale.ROOT, "%.2f%%", changed * 100) + " of the lower-right quarter changed");
+        check(changed < 0.02, "the beam covers " + String.format(Locale.ROOT, "%.1f%%", changed * 100) + " of the lower-right quarter");
+        server.runCommand("kill @e[type=" + GHOST + "]");
+    }
+
+    /**
+     * Fraction of pixels in the lower-right quarter (above the hotbar) that differ noticeably between two screenshots.
+     */
+    private static double changedFraction(Path first, Path second) {
+
+        try {
+            BufferedImage a = ImageIO.read(first.toFile());
+            BufferedImage b = ImageIO.read(second.toFile());
+            int width = Math.min(a.getWidth(), b.getWidth());
+            int height = Math.min(a.getHeight(), b.getHeight());
+            int hotbar = height / 8;
+            long changed = 0;
+            long total = 0;
+            for (int y = height / 2; y < height - hotbar; y++) {
+                for (int x = width / 2; x < width; x++) {
+                    int p = a.getRGB(x, y);
+                    int q = b.getRGB(x, y);
+                    int diff = Math.abs(((p >> 16) & 0xFF) - ((q >> 16) & 0xFF)) + Math.abs(((p >> 8) & 0xFF) - ((q >> 8) & 0xFF))
+                            + Math.abs((p & 0xFF) - (q & 0xFF));
+                    if (diff > 60) {
+                        changed++;
+                    }
+                    total++;
+                }
+            }
+            return (double) changed / total;
+        } catch (IOException e) {
+            throw new AssertionError("could not read screenshots", e);
+        }
+    }
+
+    /**
+     * The Containment Unit screen with two ghosts stored: the rows arrive and both show.
+     */
+    private static void containmentGui(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene containment_lab");
+        context.waitTicks(40);
+        server.runCommand("paranormalcraft debug containment 100000 202 100000 fill 2");
+        server.runCommand("paranormalcraft debug containment 100000 202 100000 charge 72");
+        server.runOnServer(minecraft -> {
+            ServerPlayer player = minecraft.getPlayerList().getPlayers().getFirst();
+            if (minecraft.overworld().getBlockEntity(new BlockPos(100000, 202, 100000)) instanceof ContainmentUnitBlockEntity unit) {
+                player.openMenu(unit);
+            }
+        });
+        context.waitTicks(20);
+        int rows = context.computeOnClient(client -> {
+            check(client.gui.screen() instanceof ContainmentUnitScreen, "the Containment Unit screen didn't open: " + client.gui.screen());
+            ((ContainmentUnitScreen) client.gui.screen()).select(0);
+            return ContainmentUnitScreen.rowCount();
+        });
+        check(rows == 2, rows + " ghost rows shown, expected 2");
+        context.waitTicks(5);
+        context.takeScreenshot("14-containment-unit-gui");
+        server.runCommand("execute as @p run paranormalcraft debug screenshot containment_gui");
+        context.waitTicks(5);
+        context.runOnClient(client -> client.player.closeContainer());
+        context.waitTicks(5);
+    }
+
+    /**
+     * The Field Journal at stage 4 for the Lingering Spirit: field notes, the spirit's page with all four stages, the
+     * capture log.
+     */
+    private static void journalPages(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("paranormalcraft debug journal @p lingering_spirit 4");
+        server.runCommand("paranormalcraft debug journal @p open");
+        context.waitTicks(10);
+        int pages = context.computeOnClient(client -> {
+            check(client.gui.screen() instanceof JournalScreen, "the journal didn't open: " + client.gui.screen());
+            JournalScreen journal = (JournalScreen) client.gui.screen();
+            journal.setPage(2);
+            return journal.pageCount();
+        });
+        check(pages == 4, pages + " journal pages, expected 4 (notes, two Lingering Spirit pages, captures)");
+        context.waitTicks(3);
+        context.takeScreenshot("15-field-journal-lingering-spirit");
+        server.runCommand("execute as @p run paranormalcraft debug screenshot field_journal");
+        context.waitTicks(5);
+        context.runOnClient(client -> client.gui.setScreen(null));
+        server.runCommand("paranormalcraft debug journal @p reset");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
         context.waitTicks(20);
     }

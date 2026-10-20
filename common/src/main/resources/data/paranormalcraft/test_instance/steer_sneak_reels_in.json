@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:steer_sneak_reels_in",
+  "environment": "paranormalcraft:capture",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 80,
+  "sky_access": true
+}

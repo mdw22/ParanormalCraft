@@ -1,0 +1,22 @@
+# A full Containment Unit cycle in containment_lab: a Filled Trap goes in through the hopper chain, soul sand fuels the
+# unit, the ghost is processed (fast-forwarded), and the ectoplasm leaves through the bottom hopper into the chest.
+# Run with: /paranormalcraft debug run containment_cycle
+paranormalcraft debug scene containment_lab
+wait 20
+# The lab's first Filled Trap, mined (loot keeps its ghost) straight into the chest above the side hopper.
+loot insert 100001 203 100000 mine 99997 201 100002
+setblock 99997 201 100002 air
+expect trace containment_load ghostType=paranormalcraft:lingering_spirit within 60
+wait 20
+expect dump containmentUnits[0].stored.length=1 containmentUnits[0].charge>=20
+paranormalcraft debug containment 100000 202 100000 process 0
+expect trace containment_queue within 2
+wait 5
+expect trace containment_process_start within 5
+paranormalcraft debug containment 100000 202 100000 advance 6000
+expect trace containment_process_done within 5
+expect dump containmentUnits[0].stored.length=0
+wait 40
+# Ectoplasm reached the chest under the bottom hopper (a failing check stops the script).
+execute if items block 100000 200 100000 container.* paranormalcraft:lingering_ectoplasm
+paranormalcraft debug screenshot containment_cycle_done

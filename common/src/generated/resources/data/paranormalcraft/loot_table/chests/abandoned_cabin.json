@@ -233,6 +233,25 @@
         }
       ],
       "rolls": 1.0
+    },
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "count": {
+                "type": "minecraft:uniform",
+                "max": 1.0,
+                "min": 1.0
+              },
+              "function": "minecraft:set_count"
+            }
+          ],
+          "name": "paranormalcraft:field_journal"
+        }
+      ],
+      "rolls": 1.0
     }
   ],
   "random_sequence": "paranormalcraft:chests/abandoned_cabin"

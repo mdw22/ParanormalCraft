@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/somethings_here",
+  "criteria": {
+    "seen": {
+      "conditions": {
+        "event": "seen"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.seeing_things.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:spectral_goggles"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.seeing_things.title"
+    }
+  },
+  "requirements": [
+    [
+      "seen"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

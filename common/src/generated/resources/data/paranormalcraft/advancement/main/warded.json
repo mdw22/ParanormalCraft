@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/ectoplasmic",
+  "criteria": {
+    "ward_placed": {
+      "conditions": {
+        "event": "ward_placed"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.warded.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:ward_lantern"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.warded.title"
+    }
+  },
+  "requirements": [
+    [
+      "ward_placed"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

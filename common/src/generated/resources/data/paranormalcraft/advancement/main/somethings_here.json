@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/root",
+  "criteria": {
+    "detected": {
+      "conditions": {
+        "event": "detected"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.somethings_here.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:emf_reader"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.somethings_here.title"
+    }
+  },
+  "requirements": [
+    [
+      "detected"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

@@ -57,12 +57,6 @@ public final class Balance {
         public static final double SHY_FLEE_DISTANCE = 5.0;
         /** (Used as {@code GhostWanderGoal.COLD_SPOT_RADIUS}.) */
         public static final int WANDER_COLD_SPOT_RADIUS = 4;
-        /** (Used as {@code GhostTetheredGoal.FLEE_DISTANCE}.) */
-        public static final double TETHERED_FLEE_DISTANCE = 4.0;
-        /** (Used as {@code GhostTetheredGoal.JERK_CHANCE}.) */
-        public static final int TETHERED_JERK_CHANCE = 8;
-        /** (Used as {@code GhostTetheredGoal.JERK_STRENGTH}.) */
-        public static final double TETHERED_JERK_STRENGTH = 0.35;
 
         private Ghost() {
         }
@@ -113,10 +107,6 @@ public final class Balance {
         public static final double BREAK_RANGE = 14.0;
         /** (Used as {@code TetherManager.LOS_GRACE_TICKS}.) */
         public static final int LOS_GRACE_TICKS = 20;
-        /** (Used as {@code TetherManager.PULL_DISTANCE}.) */
-        public static final double PULL_DISTANCE = 8.0;
-        /** (Used as {@code TetherManager.PULL_PER_TICK}.) */
-        public static final double PULL_PER_TICK = 0.04;
         /** (Used as {@code TetherManager.BACKFIRE_DAMAGE}.) */
         public static final float BACKFIRE_DAMAGE = 4.0F;
         /** (Used as {@code TetherManager.BACKFIRE_KNOCKBACK}.) */
@@ -136,6 +126,38 @@ public final class Balance {
         /** Tether Wand durability: seconds of beam at one point per {@code TICKS_PER_DURABILITY}. (Used in {@code ModItems.TETHER_WAND}.) */
         public static final int DURABILITY = 300;
 
+        // Steering (Update 9): the ghost follows a point in front of the holder, like a leash with a handle.
+        /** On latching, the hold distance is the current distance clamped to this range. (Used in {@code TetherManager}.) */
+        public static final double HOLD_MIN = 4.0;
+        /** Upper limit of the hold distance, both on latching and when reeling out. (Used in {@code TetherManager}.) */
+        public static final double HOLD_MAX = 10.0;
+        /** Sneaking reels the hold distance in down to this. (Used in {@code TetherManager}.) */
+        public static final double REEL_MIN = 3.0;
+        /** Reeling in (sneak) or out (moving backward) changes the hold distance by this much a tick: 2 blocks a second. (Used in {@code TetherManager}.) */
+        public static final double REEL_PER_TICK = 0.1;
+        /** Fraction of the gap to the anchor the ghost closes each tick, with no fight in it. (Used in {@code Steering}.) */
+        public static final double FOLLOW_RATE = 0.35;
+        /** Top steering speed, blocks a tick (18 blocks a second): fast enough for a 90° sweep in about half a second. (Used in {@code Steering}.) */
+        public static final double MAX_STEER_SPEED = 0.9;
+        /** At full fight strength the follow rate is cut by this fraction. (Used in {@code Steering}.) */
+        public static final double FIGHT_SLOWDOWN = 0.5;
+        /** The ghost's jerks pull it up to this far off the beam line, at full fight strength. (Used in {@code Steering}.) */
+        public static final double FIGHT_OFFSET_MAX = 1.5;
+        /** Chance per tick of a new jerk (1 in this). (Used in {@code GhostEntity}.) */
+        public static final int FIGHT_JERK_CHANCE = 8;
+        /** Each tick a jerk's offset shrinks to this fraction, so it snaps back toward the line. (Used in {@code GhostEntity}.) */
+        public static final double FIGHT_DECAY = 0.85;
+        /** Fight strength of a Weakened ghost (full Presence fights at 1.0). (Used in {@code Steering}.) */
+        public static final double WEAKENED_FIGHT = 0.25;
+        /** Fight strength is multiplied by this when two or more tethers hold the ghost. (Used in {@code Steering}.) */
+        public static final double COOP_FIGHT_FACTOR = 0.5;
+
+        // Trap deploy (Update 9): attack while latched drops a trap under the ghost.
+        /** Minimum ticks between two trap deploys by one player. (Used in {@code TetherManager}.) */
+        public static final int DEPLOY_COOLDOWN_TICKS = 20;
+        /** How far below the ghost a floor for the dropped trap is searched for. (Used in {@code TetherManager}.) */
+        public static final int DEPLOY_FLOOR_SEARCH = 8;
+
         private Tether() {
         }
     }
@@ -149,6 +171,10 @@ public final class Balance {
         public static final int CAPTURE_TICKS = 30;
         /** Without a tether held for the whole pull, a capture succeeds this often. (Used as {@code CaptureRules.UNTETHERED_CHANCE}.) */
         public static final double UNTETHERED_CHANCE = 0.5;
+        /** Holding use on a Filled Trap with an empty hand this long releases its ghost (Update 9). (Used in {@code ReleaseHold}.) */
+        public static final int RELEASE_HOLD_TICKS = 40;
+        /** A gap longer than this between use presses cancels the hold (the client repeats use every 4 ticks). (Used in {@code ReleaseHold}.) */
+        public static final int RELEASE_GAP_TICKS = 6;
         /** The capture zone: this far above the trap's floor, and this far out horizontally from its centre. (Used as {@code CaptureRules.ZONE_HEIGHT}.) */
         public static final double ZONE_HEIGHT = 3.0;
         /** (Used as {@code CaptureRules.ZONE_HALF_WIDTH}.) */
@@ -281,6 +307,79 @@ public final class Balance {
         public static final double WARM_ABOVE = 25.0;
 
         private Tools() {
+        }
+    }
+
+    /**
+     * The Containment Unit: storage, charge, processing and release (per-type outputs are in ContainmentTables).
+     */
+    public static final class Containment {
+
+        /** Ghosts one unit holds. Upgrades may raise it later. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int CAPACITY = 4;
+        /** The charge meter's top. (Used in {@code ContainmentCharge}.) */
+        public static final int MAX_CHARGE = 100;
+        /** Charge one soul sand or soul soil adds. (Used in {@code ContainmentCharge}.) */
+        public static final int FUEL_CHARGE = 20;
+        /** Fuel is consumed automatically while the charge is at or below this. (Used in {@code ContainmentCharge}.) */
+        public static final int REFUEL_AT_OR_BELOW = 80;
+        /** Each stored ghost drains 1 charge per this many ticks (30 s): 4 ghosts drain 100 in 12.5 minutes. (Used in {@code ContainmentCharge}.) */
+        public static final int DRAIN_TICKS_PER_GHOST = 600;
+        /** Processing one ghost takes this many ticks (5 in-game minutes). (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int PROCESS_TICKS = 6000;
+        /** Processing drains 1 extra charge per this many ticks (1 a minute). (Used in {@code ContainmentCharge}.) */
+        public static final int PROCESS_DRAIN_TICKS = 1200;
+        /** Chance a processed ghost also leaves a Spectral Residue. (Used in {@code ContainmentTables}.) */
+        public static final double RESIDUE_CHANCE = 0.1;
+        /** Lingering Spirit: Lingering Ectoplasm per processed ghost, inclusive range. (Used in {@code ContainmentTables}.) */
+        public static final int LINGERING_YIELD_MIN = 3;
+        public static final int LINGERING_YIELD_MAX = 5;
+        /** Lingering Spirit's blessing, Restful: 3 in-game days. (Used in {@code ContainmentTables}.) */
+        public static final int RESTFUL_TICKS = 72_000;
+        /** A released ghost rises and fades for this long. (Used in {@code GhostEntity}.) */
+        public static final int ASCEND_TICKS = 60;
+        /** Blocks per tick a released ghost rises. (Used in {@code GhostEntity}.) */
+        public static final double ASCEND_SPEED = 0.05;
+        /** The Unstable alarm repeats this often. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int ALARM_INTERVAL_TICKS = 60;
+        /** The ambient hum repeats this often while ghosts are stored. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int HUM_INTERVAL_TICKS = 80;
+        /** Processing bubbles repeat this often. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BUBBLE_INTERVAL_TICKS = 40;
+
+        private Containment() {
+        }
+    }
+
+    /**
+     * The Ward Lantern (Update 9). The radius is the server config {@code wardLanternRadius}; this is its default.
+     */
+    public static final class Ward {
+
+        /** Default ward radius, blocks. (Used in {@code ServerConfig.DEFAULTS}.) */
+        public static final int DEFAULT_RADIUS = 32;
+        /** Light level of the lantern. (Used in {@code ModBlocks.WARD_LANTERN}.) */
+        public static final int LIGHT = 12;
+
+        private Ward() {
+        }
+    }
+
+    /**
+     * The Field Journal (Update 9).
+     */
+    public static final class Journal {
+
+        /** Most capture log entries kept per player; the oldest go first. (Used in {@code CaptureLog}.) */
+        public static final int CAPTURE_LOG_MAX = 100;
+        /** A ghost counts as "seen" by a goggle wearer within this range who is looking at it. (Used in {@code JournalEvents}.) */
+        public static final double SEEN_RANGE = 16.0;
+        /** "Detected" needs EMF level 5 with the nearest ghost within this range. (Used in {@code JournalEvents}.) */
+        public static final double DETECTED_RANGE = 5.0;
+        /** Cold Feet: a thermometer reading below this at a cold spot. (Used in {@code JournalEvents}.) */
+        public static final double COLD_FEET_BELOW = 5.0;
+
+        private Journal() {
         }
     }
 

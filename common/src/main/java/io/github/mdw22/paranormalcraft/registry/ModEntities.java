@@ -4,6 +4,7 @@ import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
 import io.github.mdw22.paranormalcraft.entity.ThrownGhostTrap;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.familiar.WispFamiliarEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 
@@ -27,6 +28,17 @@ public final class ModEntities {
                     .noSummon()
                     .noLootTable()
                     .clientTrackingRange(0));
+
+    /** A bound Lingering Spirit following its owner; never saved (recalled into its vessel instead). */
+    public static final RegistryEntry<EntityType<WispFamiliarEntity>> WISP_FAMILIAR = RegistrationHelper.entityType("wisp_familiar",
+            () -> EntityType.Builder.<WispFamiliarEntity>of(WispFamiliarEntity::new, MobCategory.MISC)
+                    .sized(0.4F, 0.4F)
+                    .noSave()
+                    .noSummon()
+                    .noLootTable()
+                    .fireImmune()
+                    .clientTrackingRange(8)
+                    .updateInterval(1));
 
     /** A thrown Ghost Trap, arming where it lands. */
     public static final RegistryEntry<EntityType<ThrownGhostTrap>> THROWN_GHOST_TRAP = RegistrationHelper.entityType("thrown_ghost_trap",

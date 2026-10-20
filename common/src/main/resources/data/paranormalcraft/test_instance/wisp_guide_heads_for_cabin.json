@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:wisp_guide_heads_for_cabin",
+  "environment": "paranormalcraft:familiar",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 100,
+  "sky_access": true
+}

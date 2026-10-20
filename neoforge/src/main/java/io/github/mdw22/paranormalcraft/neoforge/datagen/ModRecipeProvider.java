@@ -95,6 +95,22 @@ public class ModRecipeProvider extends RecipeProvider {
                 .requires(Items.AMETHYST_SHARD)
                 .unlockedBy("has_lingering_ectoplasm", has(ModItems.LINGERING_ECTOPLASM.get()))
                 .save(this.output);
+        // The vessel needs ectoplasm, so binding needs a processed ghost first: a deliberate gate.
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.MISC, ModItems.SPIRIT_VESSEL.get())
+                .pattern(" C ")
+                .pattern("GEG")
+                .pattern("GGG")
+                .define('C', Items.COPPER_INGOT)
+                .define('G', Items.GLASS)
+                .define('E', ModItems.LINGERING_ECTOPLASM.get())
+                .unlockedBy("has_lingering_ectoplasm", has(ModItems.LINGERING_ECTOPLASM.get()))
+                .save(this.output);
+        ShapelessRecipeBuilder.shapeless(this.items, RecipeCategory.TOOLS, ModItems.SPECTRAL_STEP.get())
+                .requires(ModItems.LINGERING_ECTOPLASM.get(), 3)
+                .requires(Items.PHANTOM_MEMBRANE)
+                .requires(Items.AMETHYST_SHARD)
+                .unlockedBy("has_lingering_ectoplasm", has(ModItems.LINGERING_ECTOPLASM.get()))
+                .save(this.output);
         ShapelessRecipeBuilder.shapeless(this.items, RecipeCategory.MISC, ModItems.FIELD_JOURNAL.get())
                 .requires(Items.BOOK)
                 .requires(Items.COPPER_INGOT)

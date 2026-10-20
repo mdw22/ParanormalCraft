@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.containment;
 
+import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
 import io.github.mdw22.paranormalcraft.registry.ModMenus;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -14,23 +15,29 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The Containment Unit's menu: the trap input, fuel and six output slots, the player's inventory, and the unit's data
+ * The Containment Unit's menu: the trap input, fuel, six output slots and the Vessel slot, the player's inventory, and the unit's data
  * (charge, processing progress, Unstable, ghost count). Buttons are {@link #clickMenuButton} ids:
- * {@code action × 8 + ghost index}, with {@link #ACTION_PROCESS} and {@link #ACTION_RELEASE}. The ghost list itself
+ * {@code action × 8 + ghost index}, with {@link #ACTION_PROCESS}, {@link #ACTION_RELEASE}, {@link #ACTION_BIND} and
+ * {@link #ACTION_UNBIND}. The ghost list itself
  * comes in a {@code ContainmentStatePayload}, sent from {@link #broadcastChanges}.
  */
 public class ContainmentUnitMenu extends AbstractContainerMenu {
 
     public static final int ACTION_PROCESS = 0;
     public static final int ACTION_RELEASE = 1;
+    public static final int ACTION_BIND = 2;
+    /** Unbind ignores the ghost index: it acts on the vessel in the slot. */
+    public static final int ACTION_UNBIND = 3;
     /** Layout, relative to the screen's top-left corner. */
     public static final int INPUT_X = 8;
-    public static final int INPUT_Y = 96;
+    public static final int INPUT_Y = 104;
     public static final int FUEL_X = 44;
-    public static final int FUEL_Y = 96;
+    public static final int FUEL_Y = 104;
     public static final int OUTPUT_X = 116;
-    public static final int OUTPUT_Y = 96;
-    public static final int INVENTORY_Y = 140;
+    public static final int OUTPUT_Y = 104;
+    public static final int VESSEL_X = 80;
+    public static final int VESSEL_Y = 104;
+    public static final int INVENTORY_Y = 148;
     private static final int STATE_INTERVAL = 10;
 
     private final Container container;
@@ -65,6 +72,7 @@ public class ContainmentUnitMenu extends AbstractContainerMenu {
         for (int i = 0; i < 6; i++) {
             this.addSlot(new OutputSlot(container, ContainmentUnitBlockEntity.OUTPUT_START + i, OUTPUT_X + (i % 3) * 18, OUTPUT_Y + (i / 3) * 18));
         }
+        this.addSlot(new FilteredSlot(container, ContainmentUnitBlockEntity.VESSEL_SLOT, VESSEL_X, VESSEL_Y));
         this.addStandardInventorySlots(inventory, 8, INVENTORY_Y);
         this.addDataSlots(data);
     }
@@ -95,6 +103,18 @@ public class ContainmentUnitMenu extends AbstractContainerMenu {
         return this.data.get(ContainmentUnitBlockEntity.DATA_PROCESSING_INDEX);
     }
 
+    /** Bind progress, 0 (not binding) to 1000. */
+    public int bindProgress() {
+
+        return this.data.get(ContainmentUnitBlockEntity.DATA_BIND);
+    }
+
+    /** The stack in the Vessel slot (synced like any slot). */
+    public ItemStack vessel() {
+
+        return this.container.getItem(ContainmentUnitBlockEntity.VESSEL_SLOT);
+    }
+
     @Override
     public boolean clickMenuButton(Player player, int id) {
 
@@ -106,6 +126,8 @@ public class ContainmentUnitMenu extends AbstractContainerMenu {
         boolean done = switch (action) {
             case ACTION_PROCESS -> this.unit.queueProcess(index, serverPlayer);
             case ACTION_RELEASE -> this.unit.release(index, serverPlayer);
+            case ACTION_BIND -> this.unit.bind(index, serverPlayer);
+            case ACTION_UNBIND -> this.unit.unbind(serverPlayer);
             default -> false;
         };
         if (done) {
@@ -139,6 +161,11 @@ public class ContainmentUnitMenu extends AbstractContainerMenu {
             }
         } else if (ContainmentUnitBlockEntity.isLoadable(stack)) {
             if (!this.moveItemStackTo(stack, ContainmentUnitBlockEntity.INPUT_SLOT, ContainmentUnitBlockEntity.INPUT_SLOT + 1, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (stack.getItem() instanceof SpiritVesselItem) {
+            int vessel = ContainmentUnitBlockEntity.VESSEL_SLOT;
+            if (!this.moveItemStackTo(stack, vessel, vessel + 1, false)) {
                 return ItemStack.EMPTY;
             }
         } else if (ContainmentUnitBlockEntity.isFuel(stack)) {

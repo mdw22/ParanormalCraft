@@ -1,0 +1,29 @@
+{
+  "parent": "paranormalcraft:main/ectoplasmic",
+  "criteria": {
+    "bound": {
+      "conditions": {
+        "event": "bound"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.bound.description"
+    },
+    "frame": "goal",
+    "icon": {
+      "id": "paranormalcraft:spirit_vessel"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.bound.title"
+    }
+  },
+  "requirements": [
+    [
+      "bound"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

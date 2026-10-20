@@ -15,6 +15,12 @@ public final class ModTags {
      */
     public static final TagKey<Block> GHOST_PASSABLE = TagKey.create(Registries.BLOCK, Constants.id("ghost_passable"));
 
+    /**
+     * What a player phased by the Spectral Step walks through: {@link #GHOST_PASSABLE} plus every glass block (listed
+     * by hand: {@code #minecraft:impermeable} also holds barriers).
+     */
+    public static final TagKey<Block> PHASE_PASSABLE = TagKey.create(Registries.BLOCK, Constants.id("phase_passable"));
+
     /** Plain torches a ghost can knock off. Soul and redstone torches are deliberately absent. */
     public static final TagKey<Block> SNUFFABLE_TORCHES = TagKey.create(Registries.BLOCK, Constants.id("haunting/snuffable_torches"));
     /** Lit candles and campfires a ghost can put out (not soul campfires). */

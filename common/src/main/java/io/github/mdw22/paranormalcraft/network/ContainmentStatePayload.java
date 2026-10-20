@@ -18,14 +18,16 @@ public record ContainmentStatePayload(int containerId, List<Row> rows) implement
 
     /**
      * @param queuePosition 0 while processing, 1+ while waiting, -1 if not queued
+     * @param binding       whether it is being bound into the vessel
      */
-    public record Row(String name, String type, long storedTicks, int queuePosition) {
+    public record Row(String name, String type, long storedTicks, int queuePosition, boolean binding) {
 
         public static final StreamCodec<RegistryFriendlyByteBuf, Row> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, Row::name,
                 ByteBufCodecs.STRING_UTF8, Row::type,
                 ByteBufCodecs.VAR_LONG, Row::storedTicks,
                 ByteBufCodecs.VAR_INT, Row::queuePosition,
+                ByteBufCodecs.BOOL, Row::binding,
                 Row::new);
     }
 

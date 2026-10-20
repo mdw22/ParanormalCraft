@@ -7,7 +7,9 @@ import io.github.mdw22.paranormalcraft.config.ServerConfig;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
+import io.github.mdw22.paranormalcraft.ward.WardEffects;
 import io.github.mdw22.paranormalcraft.ward.Wards;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.gamerules.GameRules;
 
@@ -92,8 +94,10 @@ public final class HauntingController {
     private Optional<Record> attempt(ServerLevel level, HauntingAction only, boolean ignoreCooldowns) {
 
         long now = level.getGameTime();
-        if (Wards.covers(level, this.ghost.position())) {
+        BlockPos ward = Wards.coveringLantern(level, this.ghost.position());
+        if (ward != null) {
             ServerTrace.ghost("haunt_none", this.ghost, line -> line.addProperty("reason", "warded"));
+            WardEffects.flare(level, ward, this.ghost);
             return Optional.empty();
         }
         HauntingTargets targets = HauntingTargets.find(level, this.ghost);

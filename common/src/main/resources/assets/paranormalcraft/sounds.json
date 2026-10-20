@@ -354,5 +354,117 @@
       }
     ],
     "subtitle": "subtitles.paranormalcraft.lingering_spirit.ascend"
+  },
+  "block.ward_lantern.flare": {
+    "sounds": [
+      {
+        "name": "minecraft:block/amethyst/resonate1",
+        "pitch": 1.4
+      },
+      {
+        "name": "minecraft:block/amethyst/resonate2",
+        "pitch": 1.4
+      }
+    ],
+    "subtitle": "subtitles.paranormalcraft.ward_lantern.flare"
+  },
+  "block.containment_unit.bind_tone": {
+    "subtitle": "subtitles.paranormalcraft.containment_unit.bind_tone",
+    "sounds": [
+      {
+        "name": "minecraft:block.note_block.chime",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.7
+      }
+    ]
+  },
+  "block.containment_unit.bind_done": {
+    "subtitle": "subtitles.paranormalcraft.containment_unit.bind_done",
+    "sounds": [
+      {
+        "name": "minecraft:block.amethyst_block.resonate",
+        "type": "event",
+        "pitch": 1.2,
+        "volume": 1.0
+      }
+    ]
+  },
+  "entity.wisp_familiar.summon": {
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.summon",
+    "sounds": [
+      {
+        "name": "minecraft:entity.allay.item_given",
+        "type": "event",
+        "pitch": 1.2,
+        "volume": 0.8
+      }
+    ]
+  },
+  "entity.wisp_familiar.recall": {
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.recall",
+    "sounds": [
+      {
+        "name": "minecraft:entity.allay.item_taken",
+        "type": "event",
+        "pitch": 1.0,
+        "volume": 0.8
+      }
+    ]
+  },
+  "entity.wisp_familiar.warn": {
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.warn",
+    "sounds": [
+      {
+        "name": "minecraft:entity.allay.ambient_without_item",
+        "type": "event",
+        "pitch": 1.6,
+        "volume": 1.0
+      }
+    ]
+  },
+  "entity.wisp_familiar.warn_sharp": {
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.warn",
+    "sounds": [
+      {
+        "name": "minecraft:block.note_block.bit",
+        "type": "event",
+        "pitch": 2.0,
+        "volume": 1.0
+      }
+    ]
+  },
+  "entity.wisp_familiar.no": {
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.no",
+    "sounds": [
+      {
+        "name": "minecraft:entity.allay.hurt",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.6
+      }
+    ]
+  },
+  "item.spectral_step.phase_in": {
+    "subtitle": "subtitles.paranormalcraft.spectral_step.phase_in",
+    "sounds": [
+      {
+        "name": "minecraft:entity.illusioner.mirror_move",
+        "type": "event",
+        "pitch": 1.3,
+        "volume": 0.7
+      }
+    ]
+  },
+  "item.spectral_step.phase_out": {
+    "subtitle": "subtitles.paranormalcraft.spectral_step.phase_out",
+    "sounds": [
+      {
+        "name": "minecraft:entity.illusioner.mirror_move",
+        "type": "event",
+        "pitch": 0.8,
+        "volume": 0.6
+      }
+    ]
   }
 }

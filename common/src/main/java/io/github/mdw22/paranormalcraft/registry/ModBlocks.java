@@ -82,7 +82,7 @@ public final class ModBlocks {
                     .forceSolidOn()
                     .strength(3.5F)
                     .sound(SoundType.LANTERN)
-                    .lightLevel(state -> Balance.Ward.LIGHT)
+                    .lightLevel(WardLanternBlock::lightLevel)
                     .noOcclusion()
                     .pushReaction(PushReaction.DESTROY));
 

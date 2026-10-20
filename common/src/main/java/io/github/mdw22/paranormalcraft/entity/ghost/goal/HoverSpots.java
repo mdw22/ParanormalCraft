@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostMovement;
+import io.github.mdw22.paranormalcraft.ward.Wards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
@@ -42,7 +43,7 @@ final class HoverSpots {
             int dy = random.nextInt(7) - 3;
             Vec3 spot = aboveFloor(ghost, centre.getX() + dx, centre.getY() + dy, centre.getZ() + dz);
             if (spot != null && spot.distanceToSqr(Vec3.atCenterOf(centre)) <= (radius + 1.0) * (radius + 1.0)
-                    && withinLeash(ghost, spot, GhostEntity.WANDER_RADIUS)) {
+                    && withinLeash(ghost, spot, GhostEntity.WANDER_RADIUS) && !Wards.tooClose(ghost.level(), spot)) {
                 return spot;
             }
         }

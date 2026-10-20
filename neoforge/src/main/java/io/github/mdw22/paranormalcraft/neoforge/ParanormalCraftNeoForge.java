@@ -15,7 +15,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -49,6 +52,13 @@ public class ParanormalCraftNeoForge {
             }
         });
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> CommonEvents.onRegisterCommands(event.getDispatcher()));
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> CommonEvents.onServerStarted(event.getServer()));
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> CommonEvents.onServerStopping(event.getServer()));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                CommonEvents.onPlayerLogout(player);
+            }
+        });
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> CommonEvents.onServerStopped(event.getServer()));
     }
 

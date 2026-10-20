@@ -1,9 +1,15 @@
 {
   "variants": {
-    "hanging=false": {
+    "flare=false,hanging=false": {
       "model": "paranormalcraft:block/ward_lantern"
     },
-    "hanging=true": {
+    "flare=false,hanging=true": {
+      "model": "paranormalcraft:block/ward_lantern_hanging"
+    },
+    "flare=true,hanging=false": {
+      "model": "paranormalcraft:block/ward_lantern"
+    },
+    "flare=true,hanging=true": {
       "model": "paranormalcraft:block/ward_lantern_hanging"
     }
   }

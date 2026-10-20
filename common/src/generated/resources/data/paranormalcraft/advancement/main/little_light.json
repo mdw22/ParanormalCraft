@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/bound",
+  "criteria": {
+    "familiar_summoned": {
+      "conditions": {
+        "event": "familiar_summoned"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.little_light.description"
+    },
+    "icon": {
+      "id": "paranormalcraft:spirit_vessel"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.little_light.title"
+    }
+  },
+  "requirements": [
+    [
+      "familiar_summoned"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

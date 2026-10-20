@@ -64,6 +64,7 @@ public final class ModGameTests {
         CabinGameTests.init();
         CaptureGameTests.init();
         ContainmentGameTests.init();
+        FamiliarGameTests.init();
     }
 
     private static LingeringSpiritEntity frozenGhost(GameTestHelper helper) {

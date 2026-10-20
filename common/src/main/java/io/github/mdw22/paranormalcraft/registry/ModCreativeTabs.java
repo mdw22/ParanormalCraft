@@ -22,6 +22,8 @@ public final class ModCreativeTabs {
                 output.accept(new ItemStack(ModItems.LINGERING_ECTOPLASM.get()));
                 output.accept(new ItemStack(ModItems.SPECTRAL_RESIDUE.get()));
                 output.accept(new ItemStack(ModItems.FIELD_JOURNAL.get()));
+                output.accept(new ItemStack(ModItems.SPIRIT_VESSEL.get()));
+                output.accept(new ItemStack(ModItems.SPECTRAL_STEP.get()));
                 output.accept(new ItemStack(ModItems.LINGERING_SPIRIT_SPAWN_EGG.get()));
             },
             builder -> builder

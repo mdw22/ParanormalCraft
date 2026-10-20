@@ -3,6 +3,7 @@ package io.github.mdw22.paranormalcraft.client.renderer;
 import com.geckolib.renderer.GeoEntityRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
+import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -24,6 +25,9 @@ public class LingeringSpiritRenderer extends GeoEntityRenderer<LingeringSpiritEn
 
     private static final int PLAIN_TINT = 0xFFFFFF;
     private static final int GOGGLES_TINT = 0x9CF2F2;
+    /** Field Journal dummies: a near-black shape before the player has seen the type, a firmer portrait after. */
+    private static final int SILHOUETTE = 0xE8101014;
+    private static final float PORTRAIT_ALPHA = 0.85F;
 
     public LingeringSpiritRenderer(EntityRendererProvider.Context context) {
 
@@ -41,6 +45,12 @@ public class LingeringSpiritRenderer extends GeoEntityRenderer<LingeringSpiritEn
     @Override
     public int getRenderColor(LingeringSpiritEntity animatable, @Nullable Void relatedObject, float partialTick) {
 
+        if (animatable.portrait() == GhostEntity.PORTRAIT_SILHOUETTE) {
+            return SILHOUETTE;
+        }
+        if (animatable.portrait() == GhostEntity.PORTRAIT_SEEN) {
+            return ARGB.color(PORTRAIT_ALPHA, GOGGLES_TINT);
+        }
         Player viewer = GhostVisibility.clientViewer();
         boolean goggles = viewer != null && GhostVisibility.wearsGoggles(viewer);
         return ARGB.color(GhostAlpha.alpha(animatable, viewer, partialTick), goggles ? GOGGLES_TINT : PLAIN_TINT);

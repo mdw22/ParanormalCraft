@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -37,6 +38,9 @@ public class ParanormalCraftFabric implements ModInitializer {
         });
         ServerEntityEvents.ENTITY_LOAD.register(CommonEvents::onEntityJoinLevel);
         CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> CommonEvents.onRegisterCommands(dispatcher));
+        ServerLifecycleEvents.SERVER_STARTED.register(CommonEvents::onServerStarted);
+        ServerLifecycleEvents.SERVER_STOPPING.register(CommonEvents::onServerStopping);
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> CommonEvents.onPlayerLogout(handler.player));
         ServerLifecycleEvents.SERVER_STOPPED.register(CommonEvents::onServerStopped);
     }
 }

@@ -29,7 +29,7 @@ public record StoredGhost(CapturedGhost ghost, long storedAt, Optional<UUID> que
      */
     public UUID id() {
 
-        return this.ghost.entity().read("UUID", UUIDUtil.CODEC).orElseGet(() -> UUID.nameUUIDFromBytes(this.ghost.name().getBytes()));
+        return this.ghost.id();
     }
 
     public StoredGhost queued(UUID player) {

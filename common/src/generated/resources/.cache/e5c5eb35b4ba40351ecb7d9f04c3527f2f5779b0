@@ -1,11 +1,14 @@
-// 26.2	2026-10-18T22:24:43.205864	Advancements
+// 26.2	2026-10-19T20:17:10.276429	Advancements
+2ccd3f2ff6c30cd8796398f8d41f2dbdacca4e39 data/paranormalcraft/advancement/journal/lingering_spirit/bound.json
 b84b5a4d6eb94a933c2f2c14e791d1d065f2e7d4 data/paranormalcraft/advancement/journal/lingering_spirit/captured.json
 7d844ace9dcb2d5ff11c5dd293130ddca0e03e30 data/paranormalcraft/advancement/journal/lingering_spirit/detected.json
 2c8b51ad892935ca012e60163f014a07da929863 data/paranormalcraft/advancement/journal/lingering_spirit/seen.json
 2e199a428fc0b3d5fa24407b495bb8e0d6e614cd data/paranormalcraft/advancement/journal/lingering_spirit/studied.json
+0d6cec22c0c3d483ced29ccc2602e34c9f96c060 data/paranormalcraft/advancement/main/bound.json
 a878363e1a6af5fa282efaf86f1c7e9fad56a911 data/paranormalcraft/advancement/main/cold_feet.json
 7baeecb4b849a3eeb7597fe01c1624a3a2de4731 data/paranormalcraft/advancement/main/ectoplasmic.json
 5e62dd447e105a40aaa37c2624296adff41ff450 data/paranormalcraft/advancement/main/gotcha.json
+f2c19efeaeaa296c4c6b0c52e9bff601d5acff54 data/paranormalcraft/advancement/main/little_light.json
 f9872a2e93d2b2a72ab19e7a7ddc15c5b678f56e data/paranormalcraft/advancement/main/lockup.json
 2de4f6c7ef00ba8bde19af6b23fef35fa36d0d1f data/paranormalcraft/advancement/main/rest_easy.json
 efeb1c5bf943a1baa687287f3ae7244a59a55fd9 data/paranormalcraft/advancement/main/root.json

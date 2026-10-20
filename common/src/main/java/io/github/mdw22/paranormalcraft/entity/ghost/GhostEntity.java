@@ -784,9 +784,31 @@ public abstract class GhostEntity extends PathfinderMob {
 
     // ---- Visibility (client answers for the local player) ----
 
+    /** Client-only journal dummies: 0 for a real ghost, otherwise always drawn, as a silhouette or a portrait. */
+    private int portrait;
+    public static final int PORTRAIT_SILHOUETTE = 1;
+    public static final int PORTRAIT_SEEN = 2;
+
+    /**
+     * Marks a client-only dummy as a Field Journal portrait ({@link #PORTRAIT_SILHOUETTE} or {@link #PORTRAIT_SEEN}),
+     * so it is drawn whatever the local player wears.
+     */
+    public void setPortrait(int mode) {
+
+        this.portrait = mode;
+    }
+
+    public int portrait() {
+
+        return this.portrait;
+    }
+
     @Override
     public boolean isInvisible() {
 
+        if (this.portrait != 0) {
+            return false;
+        }
         if (this.level().isClientSide()) {
             // Still drawn while the manifest fades out; picking and hits follow canClientSee only.
             return !GhostVisibility.canClientSee(this) && !isFadingOut();

@@ -157,13 +157,16 @@ png(os.path.join(ROOT, "block", "containment_unit_front.png"), cabinet_front(GLA
 png(os.path.join(ROOT, "block", "containment_unit_front_lit.png"), cabinet_front(CYAN_DIM, CYAN))
 png(os.path.join(ROOT, "block", "containment_unit_front_unstable.png"), cabinet_front((90, 20, 16, 255), RED))
 
+# The Ward Lantern icon: an amethyst frame round pale cyan glass (the block texture is make_ward_lantern.py).
+WARD_FRAME = (150, 104, 190, 255)
+WARD_FRAME_DARK = (100, 68, 130, 255)
 ward = canvas()
-rect(ward, 7, 0, 8, 2, IRON_DARK)
-rect(ward, 4, 3, 11, 4, IRON_DARK)
-rect(ward, 4, 5, 11, 12, IRON_DARK)
-rect(ward, 5, 6, 10, 11, CYAN)
-rect(ward, 6, 7, 9, 10, (200, 250, 255, 255))
-rect(ward, 4, 13, 11, 13, AMETHYST)
+rect(ward, 7, 0, 8, 2, WARD_FRAME_DARK)
+rect(ward, 4, 3, 11, 4, WARD_FRAME)
+rect(ward, 4, 5, 11, 12, WARD_FRAME_DARK)
+rect(ward, 5, 6, 10, 11, (150, 235, 245, 255))
+rect(ward, 6, 7, 9, 10, (220, 252, 255, 255))
+rect(ward, 4, 13, 11, 13, WARD_FRAME)
 png(os.path.join(ROOT, "item", "ward_lantern.png"), ward)
 
 ecto = canvas()
@@ -197,3 +200,49 @@ for y in range(18):
             restful[y][x] = (200, 230, 255, 255)
 png(os.path.join(os.path.dirname(ROOT), "textures", "mob_effect", "restful.png"), restful)
 print("wrote placeholder textures under", os.path.normpath(ROOT))
+
+# ---- Update 10: Spirit Vessel (empty and bound), Spectral Step, the Wisp Familiar's glow ----
+GLASS = (200, 230, 236, 150)
+GLASS_EDGE = (150, 190, 200, 220)
+
+
+def vessel(bound):
+    img = canvas()
+    rect(img, 6, 1, 9, 2, COPPER)            # copper cap
+    rect(img, 6, 3, 9, 3, COPPER_DARK)
+    rect(img, 7, 4, 8, 5, GLASS_EDGE)        # neck
+    rect(img, 4, 6, 11, 14, GLASS_EDGE)      # body
+    rect(img, 5, 7, 10, 13, GLASS)
+    rect(img, 5, 14, 10, 14, COPPER_DARK)    # base band
+    if bound:
+        rect(img, 6, 8, 9, 12, CYAN_DIM)
+        rect(img, 7, 9, 8, 11, CYAN)
+        img[9][7] = (230, 255, 255, 255)
+    return img
+
+
+png(os.path.join(ROOT, "item", "spirit_vessel.png"), vessel(False))
+png(os.path.join(ROOT, "item", "spirit_vessel_bound.png"), vessel(True))
+
+# Spectral Step: an amethyst charm on a thread, with a cyan swirl through it.
+step = canvas()
+for x, y in [(7, 0), (8, 1), (8, 2), (7, 3)]:
+    step[y][x] = (200, 200, 210, 255)
+rect(step, 5, 4, 10, 12, (120, 80, 170, 255))
+rect(step, 6, 5, 9, 11, AMETHYST)
+rect(step, 7, 13, 8, 14, (120, 80, 170, 255))
+for x, y in [(6, 10), (7, 9), (8, 8), (9, 7), (8, 6), (7, 7)]:
+    step[y][x] = CYAN
+png(os.path.join(ROOT, "item", "spectral_step.png"), step)
+
+# The Wisp Familiar's billboard: a soft white glow, 32x32, tinted by the renderer.
+glow = canvas(size=32)
+for y in range(32):
+    for x in range(32):
+        d = ((x - 15.5) ** 2 + (y - 15.5) ** 2) ** 0.5 / 16.0
+        if d < 1.0:
+            core = max(0.0, 1.0 - d / 0.35)
+            alpha = (1.0 - d) ** 2.2
+            value = int(200 + 55 * core)
+            glow[y][x] = (value, value, value, int(255 * min(1.0, alpha + core)))
+png(os.path.join(ROOT, "entity", "wisp_familiar.png"), glow)

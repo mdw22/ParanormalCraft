@@ -10,6 +10,7 @@ import io.github.mdw22.paranormalcraft.client.renderer.GhostAlpha;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
 import io.github.mdw22.paranormalcraft.entity.ShadowFigureEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.familiar.WispFamiliarEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostVisibility;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationPlacement;
 import io.github.mdw22.paranormalcraft.tool.ThermometerReadings;
@@ -59,7 +60,10 @@ import java.util.stream.Stream;
  *     without goggles;</li>
  *     <li>the slim beam: comparing frames with and without the beam, it covers under 2% of the lower-right quarter;</li>
  *     <li>the Containment Unit screen with two ghosts stored;</li>
- *     <li>the Field Journal at stage 4 for the Lingering Spirit;</li>
+ *     <li>the Field Journal spreads at stage 1 and stage 4, and the Field Notes diagram;</li>
+ *     <li>the Ward Lantern's placement ring;</li>
+ *     <li>the Wisp Familiar: visible without goggles, its warning tint, its light in a dark tunnel;</li>
+ *     <li>the Spectral Step: walking through a closed door with client and server in agreement;</li>
  *     <li>the Paranormal Craft creative tab and its items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
@@ -92,6 +96,9 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             slimBeam(context, server);
             containmentGui(context, server);
             journalPages(context, server);
+            wardRing(context, server);
+            wispFamiliar(context, server);
+            phaseThroughDoor(context, server);
             creativeTab(context, server);
         }
     }
@@ -559,29 +566,163 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
     }
 
     /**
-     * The Field Journal at stage 4 for the Lingering Spirit: field notes, the spirit's page with all four stages, the
-     * capture log.
+     * The Field Journal spreads: stage 1 (silhouette, "?" rows and stages), the Field Notes diagram, and stage 4 with
+     * the bound line (portrait, every icon).
      */
     private static void journalPages(ClientGameTestContext context, TestServerContext server) {
 
-        server.runCommand("paranormalcraft debug journal @p lingering_spirit 4");
+        server.runCommand("paranormalcraft debug journal @p lingering_spirit 1");
         server.runCommand("paranormalcraft debug journal @p open");
         context.waitTicks(10);
-        int pages = context.computeOnClient(client -> {
+        int spreads = context.computeOnClient(client -> {
             check(client.gui.screen() instanceof JournalScreen, "the journal didn't open: " + client.gui.screen());
             JournalScreen journal = (JournalScreen) client.gui.screen();
-            journal.setPage(2);
+            check(journal.spreadOf(GHOST) == 1, "the Lingering Spirit spread isn't second");
+            journal.setPage(1);
             return journal.pageCount();
         });
-        check(pages == 4, pages + " journal pages, expected 4 (notes, two Lingering Spirit pages, captures)");
+        check(spreads == 3, spreads + " journal spreads, expected 3 (notes, Lingering Spirit, captures)");
+        context.waitTicks(5);
+        context.takeScreenshot("15-journal-stage-1");
+        context.runOnClient(client -> ((JournalScreen) client.gui.screen()).setPage(0));
         context.waitTicks(3);
-        context.takeScreenshot("15-field-journal-lingering-spirit");
+        context.takeScreenshot("16-journal-field-notes");
+        context.runOnClient(client -> client.gui.setScreen(null));
+        // Stage 5 in the debug command: all four stages plus the bound line.
+        server.runCommand("paranormalcraft debug journal @p lingering_spirit 5");
+        server.runCommand("paranormalcraft debug journal @p open");
+        context.waitTicks(10);
+        context.runOnClient(client -> ((JournalScreen) client.gui.screen()).setPage(1));
+        // Half a turn later the portrait faces a different way: it's live.
+        context.waitTicks(5);
+        context.takeScreenshot("17-journal-stage-4");
         server.runCommand("execute as @p run paranormalcraft debug screenshot field_journal");
         context.waitTicks(5);
         context.runOnClient(client -> client.gui.setScreen(null));
         server.runCommand("paranormalcraft debug journal @p reset");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
         context.waitTicks(20);
+    }
+
+    /**
+     * The Ward Lantern's placement ring (radius set to 8 so it fits the frame), seen from above at night, with the
+     * lantern held for the boundary preview.
+     */
+    private static void wardRing(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene arena_night");
+        context.waitTicks(30);
+        server.runCommand("paranormalcraft debug config set wardLanternRadius 8");
+        server.runCommand("setblock 100000 201 100000 paranormalcraft:ward_lantern");
+        server.runOnServer(minecraft -> io.github.mdw22.paranormalcraft.ward.WardEffects.placementRing(minecraft.overworld(),
+                new BlockPos(100000, 201, 100000), 8));
+        // A glass block to stand on, high above the ring (survival players fall).
+        server.runCommand("setblock 100000 213 100006 minecraft:glass");
+        server.runCommand("tp @p 100000.5 214 100006.5 180 65");
+        server.runCommand("item replace entity @p weapon.mainhand with paranormalcraft:ward_lantern");
+        context.runOnClient(client -> hideHud(client, true));
+        context.waitTicks(35);
+        context.takeScreenshot("18-ward-placement-ring");
+        context.runOnClient(client -> hideHud(client, false));
+        server.runCommand("execute as @p run paranormalcraft debug screenshot ward_ring");
+        context.waitTicks(5);
+        server.runCommand("paranormalcraft debug config set wardLanternRadius 32");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * The Wisp Familiar in familiar_cave: visible without goggles, red while the zombie round the corner is unseen,
+     * pale again once it's gone, and carrying a light block in the dark tunnel. Third-person front view for the shots.
+     */
+    private static void wispFamiliar(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene familiar_cave");
+        context.waitTicks(40);
+        server.runCommand("paranormalcraft debug familiar @p summon");
+        context.waitTicks(40);
+        boolean[] state = context.computeOnClient(client -> {
+            List<WispFamiliarEntity> wisps = client.level.getEntitiesOfClass(WispFamiliarEntity.class, client.player.getBoundingBox().inflate(8));
+            check(wisps.size() == 1, wisps.size() + " wisps reached the client, expected 1");
+            WispFamiliarEntity wisp = wisps.getFirst();
+            check(!wisp.isInvisible(), "the wisp is invisible without goggles");
+            boolean lit = BlockPos.betweenClosedStream(wisp.blockPosition().offset(-2, -2, -2), wisp.blockPosition().offset(2, 2, 2))
+                    .anyMatch(pos -> client.level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.LIGHT));
+            return new boolean[] {wisp.isWarning(), lit};
+        });
+        check(state[0], "no warning for the zombie behind the corner");
+        check(state[1], "no light block near the wisp in the dark tunnel");
+        context.runOnClient(client -> {
+            client.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+            hideHud(client, true);
+        });
+        context.waitTicks(5);
+        context.takeScreenshot("19-wisp-warning-red");
+        server.runCommand("kill @e[type=minecraft:zombie,tag=paranormalcraft_scene]");
+        context.waitTicks(20);
+        boolean warning = context.computeOnClient(client -> client.level.getEntitiesOfClass(WispFamiliarEntity.class,
+                client.player.getBoundingBox().inflate(8)).getFirst().isWarning());
+        check(!warning, "still warning with the zombie gone");
+        context.takeScreenshot("20-wisp-light-in-tunnel");
+        context.runOnClient(client -> {
+            client.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+            hideHud(client, false);
+        });
+        server.runCommand("paranormalcraft debug familiar @p recall");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * Phased, the player walks forward through a closed oak door. The client's position, logged every tick, never
+     * jumps back (no rubber-banding), and ends where the server has it.
+     */
+    private static void phaseThroughDoor(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(30);
+        // The arena puts the player at z +8 facing north; a row of closed doors at z +5.
+        for (int dx = -2; dx <= 2; dx++) {
+            server.runCommand("setblock " + (100000 + dx) + " 201 100005 minecraft:oak_door[facing=south,half=lower]");
+            server.runCommand("setblock " + (100000 + dx) + " 202 100005 minecraft:oak_door[facing=south,half=upper]");
+        }
+        server.runCommand("tp @p 100000.5 201 100008.5 180 0");
+        context.waitTicks(10);
+        server.runCommand("paranormalcraft debug phase @p start");
+        context.waitTicks(5);
+        check(context.computeOnClient(client -> io.github.mdw22.paranormalcraft.phase.Phasing.isPhased(client.player)), "the client wasn't told it's phased");
+        List<Double> zs = new java.util.ArrayList<>();
+        context.getInput().holdKey(options -> options.keyUp);
+        for (int tick = 0; tick < 25; tick++) {
+            context.waitTick();
+            zs.add(context.computeOnClient(client -> client.player.getZ()));
+        }
+        context.getInput().releaseKey(options -> options.keyUp);
+        context.waitTicks(10);
+        double clientZ = context.computeOnClient(client -> client.player.getZ());
+        double serverZ = server.computeOnServer(minecraft -> minecraft.getPlayerList().getPlayers().getFirst().getZ());
+        for (int i = 1; i < zs.size(); i++) {
+            check(zs.get(i) <= zs.get(i - 1) + 0.05, "rubber-banded at tick " + i + ": z " + zs.get(i - 1) + " -> " + zs.get(i));
+        }
+        check(clientZ < 100004.5, "didn't get through the door (client z " + clientZ + ")");
+        check(Math.abs(clientZ - serverZ) < 0.1, "client z " + clientZ + " and server z " + serverZ + " disagree");
+        // Look back at the doors just walked through.
+        server.runCommand("execute as @p at @s run tp @s ~ ~ ~ 0 10");
+        context.runOnClient(client -> hideHud(client, true));
+        context.waitTicks(5);
+        context.takeScreenshot("21-phased-through-door");
+        context.runOnClient(client -> hideHud(client, false));
+        server.runCommand("paranormalcraft debug phase @p end");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /** Hides or shows the HUD (vanilla's F1) for in-world screenshots. */
+    private static void hideHud(Minecraft client, boolean hidden) {
+
+        if (client.gui.hud.isHidden() != hidden) {
+            client.gui.hud.toggle();
+        }
     }
 
     /**

@@ -5,14 +5,16 @@ import io.github.mdw22.paranormalcraft.block.GhostTrapBlock;
 import io.github.mdw22.paranormalcraft.client.EmfLevelProperty;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlock;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
+import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.tool.EmfLevels;
+import io.github.mdw22.paranormalcraft.ward.WardLanternBlock;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.ModelProvider;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
 import net.minecraft.client.data.models.blockstates.PropertyDispatch;
-import net.minecraft.client.data.models.ModelProvider;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
@@ -24,12 +26,11 @@ import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /**
  * Generates item models, item definitions and blockstates. The trap blocks point at hand-written cuboid models in
@@ -61,16 +62,24 @@ public class ModModelProvider extends ModelProvider {
         blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(ModBlocks.FILLED_GHOST_TRAP.get(),
                 BlockModelGenerators.plainVariant(Constants.id("block/filled_ghost_trap"))));
         generateContainmentUnit(blockModels);
-        // Placeholder: vanilla's lantern shapes with the soul lantern texture; its own flat item icon.
+        // Vanilla's lantern shapes with its own texture (tools/textures/make_ward_lantern.py); its own flat item icon.
         Block ward = ModBlocks.WARD_LANTERN.get();
-        MultiVariant standing = BlockModelGenerators.plainVariant(TexturedModel.LANTERN.get(Blocks.SOUL_LANTERN).create(ward, blockModels.modelOutput));
-        MultiVariant hanging = BlockModelGenerators.plainVariant(TexturedModel.HANGING_LANTERN.get(Blocks.SOUL_LANTERN).create(ward, blockModels.modelOutput));
+        MultiVariant standing = BlockModelGenerators.plainVariant(TexturedModel.LANTERN.create(ward, blockModels.modelOutput));
+        MultiVariant hanging = BlockModelGenerators.plainVariant(TexturedModel.HANGING_LANTERN.create(ward, blockModels.modelOutput));
+        // FLARE only changes the light level, so both values share the model.
         blockModels.blockStateOutput.accept(MultiVariantGenerator.dispatch(ward)
-                .with(BlockModelGenerators.createBooleanModelDispatch(BlockStateProperties.HANGING, hanging, standing)));
+                .with(PropertyDispatch.initial(BlockStateProperties.HANGING, WardLanternBlock.FLARE)
+                        .generate((isHanging, flare) -> isHanging ? hanging : standing)));
         itemModels.generateFlatItem(ModItems.WARD_LANTERN.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(ModItems.LINGERING_ECTOPLASM.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(ModItems.SPECTRAL_RESIDUE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(ModItems.FIELD_JOURNAL.get(), ModelTemplates.FLAT_ITEM);
+        // The vessel shows its wisp once it holds a ghost.
+        Item vessel = ModItems.SPIRIT_VESSEL.get();
+        itemModels.itemModelOutput.accept(vessel, ItemModelUtils.conditional(ItemModelUtils.hasComponent(ModDataComponents.CAPTURED_GHOST.get()),
+                ItemModelUtils.plainModel(itemModels.createFlatItemModel(vessel, "_bound", ModelTemplates.FLAT_ITEM)),
+                ItemModelUtils.plainModel(itemModels.createFlatItemModel(vessel, ModelTemplates.FLAT_ITEM))));
+        itemModels.generateFlatItem(ModItems.SPECTRAL_STEP.get(), ModelTemplates.FLAT_ITEM);
     }
 
     /**

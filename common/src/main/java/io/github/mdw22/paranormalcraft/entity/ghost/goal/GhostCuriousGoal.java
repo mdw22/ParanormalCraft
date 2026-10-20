@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.entity.ghost.goal;
 
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.ward.Wards;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -158,7 +159,7 @@ public class GhostCuriousGoal extends Goal {
         }
         double distance = MIN_DISTANCE + this.ghost.getRandom().nextDouble() * (MAX_DISTANCE - MIN_DISTANCE);
         Vec3 spot = player.position().add(fromPlayer.normalize().scale(distance)).add(0, 0.5 + this.ghost.getRandom().nextDouble(), 0);
-        if (!HoverSpots.withinLeash(this.ghost, spot, GhostEntity.LEASH_RADIUS)) {
+        if (!HoverSpots.withinLeash(this.ghost, spot, GhostEntity.LEASH_RADIUS) || Wards.tooClose(this.ghost.level(), spot)) {
             return null;
         }
         return this.ghost.level().noCollision(this.ghost, this.ghost.getDimensions(this.ghost.getPose()).makeBoundingBox(spot)) ? spot : null;

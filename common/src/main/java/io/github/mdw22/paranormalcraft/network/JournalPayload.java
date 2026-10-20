@@ -17,12 +17,14 @@ public record JournalPayload(List<TypeStage> stages, List<CaptureLog.Entry> capt
 
     /**
      * @param stage 0 (never met) to 4 (studied)
+     * @param bound whether the player has bound one (adds the bound-job line)
      */
-    public record TypeStage(String type, int stage) {
+    public record TypeStage(String type, int stage, boolean bound) {
 
         public static final StreamCodec<RegistryFriendlyByteBuf, TypeStage> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, TypeStage::type,
                 ByteBufCodecs.VAR_INT, TypeStage::stage,
+                ByteBufCodecs.BOOL, TypeStage::bound,
                 TypeStage::new);
     }
 

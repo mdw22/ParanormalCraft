@@ -1,0 +1,18 @@
+# The Wisp Familiar in familiar_cave: the tunnel is pitch dark, so it carries a light; the zombie waiting round the
+# corner behind the player is out of sight, so it warns (red, chirp). With the zombie gone the warning ends, and a
+# recall takes the light with it.
+# Run with: /execute as Dev at Dev run paranormalcraft debug run wisp_warns
+paranormalcraft debug scene familiar_cave
+wait 30
+paranormalcraft debug familiar @p summon
+expect trace familiar_summon within 5
+expect trace wisp_light_place within 40
+expect trace wisp_warn mob=minecraft:zombie los=false within 40
+expect dump familiars[0].warning=true
+paranormalcraft debug screenshot wisp_warns
+kill @e[type=minecraft:zombie,tag=paranormalcraft_scene]
+wait 15
+expect dump familiars[0].warning=false
+paranormalcraft debug familiar @p recall
+expect trace wisp_light_remove reason=recall within 5
+expect dump familiars.length=0 wispLights.count=0

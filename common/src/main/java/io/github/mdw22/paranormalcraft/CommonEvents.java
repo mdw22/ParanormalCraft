@@ -10,10 +10,13 @@ import io.github.mdw22.paranormalcraft.debug.RevealDebug;
 import io.github.mdw22.paranormalcraft.debug.ScriptRunner;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
+import io.github.mdw22.paranormalcraft.familiar.Familiars;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.journal.JournalEvents;
+import io.github.mdw22.paranormalcraft.phase.Phasing;
 import io.github.mdw22.paranormalcraft.tool.ToolTracker;
+import io.github.mdw22.paranormalcraft.ward.WardEffects;
 import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
@@ -37,6 +40,7 @@ public class CommonEvents {
         HauntingScheduler.tick(server);
         TetherManager.tick(server);
         ScriptRunner.tick(server);
+        Familiars.tick(server);
     }
 
     /**
@@ -47,6 +51,7 @@ public class CommonEvents {
         ToolTracker.tick(player);
         HallucinationScheduler.tick(player);
         JournalEvents.tick(player);
+        Phasing.tick(player);
     }
 
     /**
@@ -68,6 +73,31 @@ public class CommonEvents {
     }
 
     /**
+     * Called once the server has started and its levels are loaded.
+     */
+    public static void onServerStarted(MinecraftServer server) {
+
+        Familiars.onServerStarted(server);
+    }
+
+    /**
+     * Called when the server starts stopping, while levels are still loaded (before the final save).
+     */
+    public static void onServerStopping(MinecraftServer server) {
+
+        Familiars.onServerStopping(server);
+    }
+
+    /**
+     * Called when a player leaves the server.
+     */
+    public static void onPlayerLogout(ServerPlayer player) {
+
+        Familiars.onLogout(player);
+        Phasing.end(player, "logout");
+    }
+
+    /**
      * Called after the server has stopped, so per-server state doesn't leak into the next world.
      */
     public static void onServerStopped(MinecraftServer server) {
@@ -82,6 +112,9 @@ public class CommonEvents {
         TetherManager.clear();
         FilledTraps.clear();
         LoadedPositions.clearAll();
+        WardEffects.clear();
+        Familiars.clear();
+        Phasing.clear();
         ServerTrace.clear();
         ModConfigs.resetSession();
     }

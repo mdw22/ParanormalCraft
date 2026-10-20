@@ -2,6 +2,8 @@ package io.github.mdw22.paranormalcraft.containment;
 
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.binding.BoundJobs;
+import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhosts;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
@@ -72,6 +74,8 @@ import java.util.stream.IntStream;
  *     <li><b>Process</b> consumes the selected ghost over {@link #PROCESS_TICKS} for typed ectoplasm
  *     ({@link ContainmentTables}); one at a time, the rest queue in the order chosen.</li>
  *     <li><b>Release</b> sets the ghost free (it rises and fades for everyone) and blesses the releasing player.</li>
+ *     <li><b>Bind</b> moves the selected ghost into the empty Spirit Vessel in {@link #VESSEL_SLOT} over
+ *     {@link #BIND_TICKS} for {@link #BIND_CHARGE}; <b>Unbind</b> puts a bound vessel's ghost back into storage.</li>
  * </ul>
  * Breaking the unit drops every stored ghost as a Filled Ghost Trap (never a loose ghost) and its slot contents.
  */
@@ -83,7 +87,10 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
     public static final int FUEL_SLOT = 1;
     public static final int OUTPUT_START = 2;
     public static final int OUTPUT_END = 7;
-    public static final int SLOTS = OUTPUT_END + 1;
+    public static final int VESSEL_SLOT = 8;
+    public static final int SLOTS = VESSEL_SLOT + 1;
+    public static final int BIND_TICKS = Balance.Binding.BIND_TICKS;
+    public static final int BIND_CHARGE = Balance.Binding.BIND_CHARGE;
     private static final int[] TOP_SLOTS = {FUEL_SLOT};
     private static final int[] SIDE_SLOTS = {INPUT_SLOT, FUEL_SLOT};
     private static final int[] BOTTOM_SLOTS = IntStream.rangeClosed(OUTPUT_START, OUTPUT_END).toArray();
@@ -94,7 +101,9 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
     public static final int DATA_UNSTABLE = 2;
     public static final int DATA_COUNT = 3;
     public static final int DATA_PROCESSING_INDEX = 4;
-    public static final int DATA_SIZE = 5;
+    /** Bind progress, 0 to 1000. */
+    public static final int DATA_BIND = 5;
+    public static final int DATA_SIZE = 6;
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOTS, ItemStack.EMPTY);
     private final List<StoredGhost> stored = new ArrayList<>();
@@ -106,6 +115,10 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
     /** The last player to open the menu, credited with loads made by automation. */
     private @Nullable UUID lastUser;
     private int lastChargeBand = -1;
+    /** The ghost being bound into the vessel, and how far along. */
+    private @Nullable UUID binding;
+    private int bindTicks;
+    private @Nullable UUID bindBy;
 
     private final ContainerData data = new ContainerData() {
 
@@ -118,6 +131,8 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
                 case DATA_UNSTABLE -> ContainmentUnitBlockEntity.this.unstable ? 1 : 0;
                 case DATA_COUNT -> ContainmentUnitBlockEntity.this.stored.size();
                 case DATA_PROCESSING_INDEX -> processingIndex();
+                case DATA_BIND -> ContainmentUnitBlockEntity.this.binding == null ? 0
+                        : ContainmentUnitBlockEntity.this.bindTicks * 1000 / BIND_TICKS;
                 default -> 0;
             };
         }
@@ -235,6 +250,9 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         }
         if (processing) {
             tickProcessing(level, pos);
+        }
+        if (this.binding != null && !this.unstable) {
+            tickBinding(level, pos);
         }
         sounds(level, pos);
         updateBlockState(level, pos, state);
@@ -396,6 +414,166 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         return nearest instanceof ServerPlayer player ? player : null;
     }
 
+    // ---- binding ----
+
+    public @Nullable UUID binding() {
+
+        return this.binding;
+    }
+
+    public int bindTicks() {
+
+        return this.bindTicks;
+    }
+
+    private int indexOf(UUID id) {
+
+        for (int i = 0; i < this.stored.size(); i++) {
+            if (this.stored.get(i).id().equals(id)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Starts binding the ghost at {@code index} into the empty Spirit Vessel in {@link #VESSEL_SLOT}: takes
+     * {@link #BIND_CHARGE} now and {@link #BIND_TICKS} to finish. The ghost can't be queued, processed or bound
+     * already, its type needs a job ({@link BoundJobs}), and the unit can't be Unstable.
+     */
+    public boolean bind(int index, ServerPlayer player) {
+
+        if (index < 0 || index >= this.stored.size() || this.binding != null || this.unstable
+                || !SpiritVesselItem.isEmptyVessel(this.items.get(VESSEL_SLOT)) || this.charge.charge() < BIND_CHARGE) {
+            return false;
+        }
+        StoredGhost ghost = this.stored.get(index);
+        if (this.queue.contains(ghost.id()) || !BoundJobs.canBind(ghost.ghost().entityType())) {
+            return false;
+        }
+        this.charge = this.charge.withCharge(this.charge.charge() - BIND_CHARGE);
+        this.binding = ghost.id();
+        this.bindTicks = 0;
+        this.bindBy = player.getUUID();
+        ServerTrace.event("bind_start", line -> {
+            line.addProperty("pos", this.worldPosition.toShortString());
+            line.addProperty("name", ghost.ghost().name());
+            line.addProperty("player", player.getGameProfile().name());
+            line.addProperty("charge", this.charge.charge());
+        });
+        setChanged();
+        return true;
+    }
+
+    private void tickBinding(ServerLevel level, BlockPos pos) {
+
+        int index = this.binding == null ? -1 : indexOf(this.binding);
+        if (index < 0 || !SpiritVesselItem.isEmptyVessel(this.items.get(VESSEL_SLOT))) {
+            String name = index < 0 ? "?" : this.stored.get(index).ghost().name();
+            ServerTrace.event("bind_cancel", line -> {
+                line.addProperty("pos", pos.toShortString());
+                line.addProperty("name", name);
+            });
+            this.binding = null;
+            this.bindTicks = 0;
+            setChanged();
+            return;
+        }
+        this.bindTicks++;
+        if (this.bindTicks % Balance.Binding.TONE_INTERVAL_TICKS == 0) {
+            float progress = (float) this.bindTicks / BIND_TICKS;
+            float pitch = Balance.Binding.TONE_PITCH_START + (Balance.Binding.TONE_PITCH_END - Balance.Binding.TONE_PITCH_START) * progress;
+            level.playSound(null, pos, ModSounds.CONTAINMENT_BIND_TONE.get(), SoundSource.BLOCKS, 0.6F, pitch);
+            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 2, 0.15, 0.1, 0.15, 0.005);
+        }
+        if (this.bindTicks >= BIND_TICKS) {
+            finishBinding(level, pos, index);
+        }
+        setChanged();
+    }
+
+    private void finishBinding(ServerLevel level, BlockPos pos, int index) {
+
+        StoredGhost ghost = this.stored.remove(index);
+        this.queue.remove(ghost.id());
+        ItemStack vessel = this.items.get(VESSEL_SLOT);
+        vessel.set(ModDataComponents.CAPTURED_GHOST.get(), ghost.ghost());
+        this.binding = null;
+        this.bindTicks = 0;
+        level.playSound(null, pos, ModSounds.CONTAINMENT_BIND_DONE.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
+        BoundJobs.Job job = BoundJobs.jobFor(ghost.ghost().entityType());
+        ServerTrace.event("bind_done", line -> {
+            line.addProperty("pos", pos.toShortString());
+            line.addProperty("name", ghost.ghost().name());
+            line.addProperty("job", job == null ? "none" : job.id());
+        });
+        CaptureLog.get(level.getServer()).setOutcome(ghost.id(), "bound");
+        UUID by = this.bindBy;
+        this.bindBy = null;
+        ServerPlayer player = by == null ? null : level.getServer().getPlayerList().getPlayer(by);
+        if (player != null) {
+            JournalEvents.fire(player, JournalEvent.BOUND, ghost.ghost().entityType());
+        }
+        setChanged();
+    }
+
+    /**
+     * Tests: moves a bind this many ticks closer to done, stopping one tick short so it finishes normally.
+     */
+    public int debugAdvanceBinding(int ticks) {
+
+        if (this.binding == null) {
+            return 0;
+        }
+        this.bindTicks = Math.min(BIND_TICKS - 1, this.bindTicks + ticks);
+        setChanged();
+        return this.bindTicks;
+    }
+
+    /**
+     * Debug and scripts: binds the ghost at {@code index} at once. Puts an empty vessel in the slot if it is empty;
+     * charge is not needed.
+     */
+    public boolean debugBind(ServerLevel level, int index, ServerPlayer player) {
+
+        if (this.items.get(VESSEL_SLOT).isEmpty()) {
+            this.items.set(VESSEL_SLOT, new ItemStack(ModItems.SPIRIT_VESSEL.get()));
+        }
+        if (this.charge.charge() < BIND_CHARGE) {
+            this.charge = this.charge.withCharge(BIND_CHARGE);
+        }
+        if (!bind(index, player)) {
+            return false;
+        }
+        finishBinding(level, this.worldPosition, indexOf(this.binding));
+        return true;
+    }
+
+    /**
+     * Puts the ghost in the bound vessel in {@link #VESSEL_SLOT} back into storage (if there is room) and empties the
+     * vessel.
+     */
+    public boolean unbind(ServerPlayer player) {
+
+        ItemStack vessel = this.items.get(VESSEL_SLOT);
+        CapturedGhost ghost = SpiritVesselItem.isBound(vessel) ? vessel.get(ModDataComponents.CAPTURED_GHOST.get()) : null;
+        if (ghost == null || this.stored.size() >= CAPACITY || !(this.level instanceof ServerLevel level)) {
+            return false;
+        }
+        vessel.remove(ModDataComponents.CAPTURED_GHOST.get());
+        this.stored.add(new StoredGhost(ghost, level.getGameTime(), Optional.empty()));
+        level.playSound(null, this.worldPosition, ModSounds.CONTAINMENT_LOAD.get(), SoundSource.BLOCKS, 1.0F, 0.8F);
+        CaptureLog.get(level.getServer()).setOutcome(ghost.id(), "stored");
+        ServerTrace.event("unbind", line -> {
+            line.addProperty("pos", this.worldPosition.toShortString());
+            line.addProperty("name", ghost.name());
+            line.addProperty("player", player.getGameProfile().name());
+            line.addProperty("stored", this.stored.size());
+        });
+        setChanged();
+        return true;
+    }
+
     // ---- actions from the menu ----
 
     /**
@@ -407,7 +585,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
             return false;
         }
         StoredGhost ghost = this.stored.get(index);
-        if (this.queue.contains(ghost.id())) {
+        if (this.queue.contains(ghost.id()) || ghost.id().equals(this.binding)) {
             return false;
         }
         this.stored.set(index, ghost.queued(player.getUUID()));
@@ -426,7 +604,8 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
      */
     public boolean release(int index, ServerPlayer player) {
 
-        if (index < 0 || index >= this.stored.size() || index == processingIndex() && this.processTicks > 0 || !(this.level instanceof ServerLevel level)) {
+        if (index < 0 || index >= this.stored.size() || index == processingIndex() && this.processTicks > 0 || !(this.level instanceof ServerLevel level)
+                || this.stored.get(index).id().equals(this.binding)) {
             return false;
         }
         StoredGhost ghost = this.stored.remove(index);
@@ -498,7 +677,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         List<ContainmentStatePayload.Row> rows = new ArrayList<>();
         for (StoredGhost ghost : this.stored) {
             rows.add(new ContainmentStatePayload.Row(ghost.ghost().name(), ghost.ghost().entityType(), now - ghost.storedAt(),
-                    this.queue.indexOf(ghost.id())));
+                    this.queue.indexOf(ghost.id()), ghost.id().equals(this.binding)));
         }
         return new ContainmentStatePayload(containerId, rows);
     }
@@ -583,6 +762,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         return switch (slot) {
             case INPUT_SLOT -> isLoadable(stack);
             case FUEL_SLOT -> isFuel(stack);
+            case VESSEL_SLOT -> stack.getItem() instanceof SpiritVesselItem;
             default -> false;
         };
     }
@@ -672,6 +852,9 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         this.processTicks = input.getIntOr("ProcessTicks", 0);
         this.unstable = input.getBooleanOr("Unstable", false);
         this.lastUser = input.read("LastUser", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
+        this.binding = input.read("Binding", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
+        this.bindTicks = input.getIntOr("BindTicks", 0);
+        this.bindBy = input.read("BindBy", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
     }
 
     @Override
@@ -686,6 +869,13 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         output.putBoolean("Unstable", this.unstable);
         if (this.lastUser != null) {
             output.store("LastUser", net.minecraft.core.UUIDUtil.CODEC, this.lastUser);
+        }
+        if (this.binding != null) {
+            output.store("Binding", net.minecraft.core.UUIDUtil.CODEC, this.binding);
+            output.putInt("BindTicks", this.bindTicks);
+        }
+        if (this.bindBy != null) {
+            output.store("BindBy", net.minecraft.core.UUIDUtil.CODEC, this.bindBy);
         }
     }
 

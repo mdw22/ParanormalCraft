@@ -9,6 +9,7 @@ import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlock;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
+import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -18,8 +19,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -50,6 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * {@code /paranormalcraft debug scene <name>}: fixed, repeatable test setups, all defined here.
@@ -101,11 +105,16 @@ public final class DebugScenes {
      * {@code goggles} both players wear Spectral Goggles and hold the Tether Wand.
      */
     public record Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, float secondYaw, List<LingeringSpiritEntity> ghosts,
-                            boolean goggles) {
+                            boolean goggles, @Nullable Consumer<ServerPlayer> afterKit) {
+
+        Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, float secondYaw, List<LingeringSpiritEntity> ghosts, boolean goggles) {
+
+            this(position, yaw, pitch, secondOffset, secondYaw, ghosts, goggles, null);
+        }
 
         Placement(Vec3 position, float yaw, float pitch, Vec3 secondOffset, List<LingeringSpiritEntity> ghosts) {
 
-            this(position, yaw, pitch, secondOffset, Float.NaN, ghosts, false);
+            this(position, yaw, pitch, secondOffset, Float.NaN, ghosts, false, null);
         }
     }
 
@@ -123,6 +132,7 @@ public final class DebugScenes {
         SCENES.put("figure_indoor", level -> cabin(level, "oak", false));
         SCENES.put("capture_arena", DebugScenes::captureArena);
         SCENES.put("containment_lab", DebugScenes::containmentLab);
+        SCENES.put("familiar_cave", DebugScenes::familiarCave);
     }
 
     private DebugScenes() {
@@ -184,6 +194,10 @@ public final class DebugScenes {
             if (placement.goggles()) {
                 target.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));
                 DebugKit.select(target, DebugKit.WAND_SLOT);
+            }
+            if (placement.afterKit() != null) {
+                placement.afterKit().accept(target);
+                target.inventoryMenu.broadcastChanges();
             }
         }
         Constants.LOG.info("Built debug scene {} at {} ({} ghost(s))", name, CENTRE.toShortString(), placement.ghosts().size());
@@ -386,6 +400,46 @@ public final class DebugScenes {
             }
         }
         return new Placement(at(0, 4), 180.0F, 15.0F, new Vec3(2, 0, 0), Float.NaN, List.of(), false);
+    }
+
+    /** {@code familiar_cave}: the zombie waiting round the corner, and the hotbar slot the bound vessel goes in. */
+    public static final BlockPos FAMILIAR_CAVE_ZOMBIE = CENTRE.offset(6, 1, -7);
+    public static final int FAMILIAR_CAVE_VESSEL_SLOT = 3;
+
+    /**
+     * Midnight. A sealed stone tunnel (3 wide, 3 high) running north–south through the middle, with a side passage
+     * turning east at its north end. A zombie (no AI, so it stays put) stands in the side passage: behind the player
+     * and out of sight. The player stands in the tunnel facing south, holding a Bound Spirit Vessel (a fresh Lingering
+     * Spirit) in place of the sword. Pitch dark inside, for the wisp's light.
+     */
+    private static Placement familiarCave(ServerLevel level) {
+
+        time(level, MIDNIGHT);
+        for (int x = -2; x <= 9; x++) {
+            for (int z = -9; z <= 9; z++) {
+                for (int y = 1; y <= 4; y++) {
+                    boolean mainTunnel = x >= -1 && x <= 1 && z >= -8 && z <= 8 && y <= 3;
+                    boolean sidePassage = x >= 2 && x <= 8 && z >= -8 && z <= -6 && y <= 3;
+                    set(level, CENTRE.offset(x, y, z), mainTunnel || sidePassage ? Blocks.AIR.defaultBlockState() : Blocks.STONE.defaultBlockState());
+                }
+            }
+        }
+        Zombie zombie = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+        if (zombie != null) {
+            zombie.snapTo(FAMILIAR_CAVE_ZOMBIE.getX() + 0.5, FAMILIAR_CAVE_ZOMBIE.getY(), FAMILIAR_CAVE_ZOMBIE.getZ() + 0.5, 90.0F, 0.0F);
+            zombie.setNoAi(true);
+            zombie.setPersistenceRequired();
+            level.addFreshEntity(zombie);
+        }
+        return new Placement(at(0, -3), 0.0F, 0.0F, new Vec3(0, 0, 2), Float.NaN, List.of(), false, player -> {
+            ItemStack vessel = new ItemStack(ModItems.SPIRIT_VESSEL.get());
+            CapturedGhost ghost = CapturedGhosts.fresh(level, CENTRE.above(), "scene");
+            if (ghost != null) {
+                vessel.set(ModDataComponents.CAPTURED_GHOST.get(), ghost);
+            }
+            player.getInventory().setItem(FAMILIAR_CAVE_VESSEL_SLOT, vessel);
+            DebugKit.select(player, FAMILIAR_CAVE_VESSEL_SLOT);
+        });
     }
 
     private static Placement captureArena(ServerLevel level) {

@@ -22,6 +22,8 @@ public final class LoadedPositions {
     public static final LoadedPositions CONTAINMENT_UNITS = new LoadedPositions();
     /** Ward Lanterns. */
     public static final LoadedPositions WARD_LANTERNS = new LoadedPositions();
+    /** Ward Lanterns the client has loaded (the boundary preview); cleared when the client leaves a level. */
+    public static final LoadedPositions WARD_LANTERNS_CLIENT = new LoadedPositions();
 
     private final Map<ResourceKey<Level>, Set<BlockPos>> loaded = new HashMap<>();
 

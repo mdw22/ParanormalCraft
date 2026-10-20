@@ -1,0 +1,16 @@
+# Spectral Step against a row of closed oak doors in the arena. The player is put halfway into a door and phased; when
+# the 5 s phase runs out inside it, the phase is extended instead of trapping them, and ends as soon as they step out.
+# (Walking through with movement prediction is the client GameTest's job; a script can't hold keys.)
+# Run with: /execute as Dev at Dev run paranormalcraft debug run phase_through_door
+paranormalcraft debug scene arena
+wait 20
+fill 99998 201 100005 100002 201 100005 minecraft:oak_door[facing=south,half=lower]
+fill 99998 202 100005 100002 202 100005 minecraft:oak_door[facing=south,half=upper]
+paranormalcraft debug phase @p start
+expect trace phase_start within 2
+tp @p 100000.5 201 100005.2 180 0
+wait 110
+expect dump players[0].isPhased=true players[0].phased.extended>0
+tp @p 100000.5 201 100003.5 180 0
+expect trace phase_end reason=extended within 5
+expect dump players[0].isPhased=false

@@ -2,12 +2,14 @@ package io.github.mdw22.paranormalcraft.capture;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * What a Filled Ghost Trap holds: the ghost's type and its full saved entity data (so home, cold spot, Presence, name
@@ -35,4 +37,12 @@ public record CapturedGhost(String entityType, CompoundTag entity, String name, 
             Codec.STRING.optionalFieldOf("structure").forGetter(CapturedGhost::structure)
     ).apply(instance, CapturedGhost::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, CapturedGhost> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC);
+
+    /**
+     * The ghost's entity UUID, from its saved data (one derived from the name if missing).
+     */
+    public UUID id() {
+
+        return this.entity.read("UUID", UUIDUtil.CODEC).orElseGet(() -> UUID.nameUUIDFromBytes(this.name.getBytes()));
+    }
 }

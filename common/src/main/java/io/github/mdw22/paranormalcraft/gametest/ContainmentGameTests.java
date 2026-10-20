@@ -488,7 +488,6 @@ public final class ContainmentGameTests {
         helper.succeedWhen(() -> {
             check(helper, ghost.isRemoved(), "not captured yet");
             check(helper, advancementDone(player, "main/gotcha"), "Gotcha! not awarded");
-            check(helper, JournalStages.stage(player, "paranormalcraft:lingering_spirit") >= 0, "stage");
             check(helper, player.getAdvancements().getOrStartProgress(player.level().getServer().getAdvancements()
                     .get(JournalStages.advancementId("paranormalcraft:lingering_spirit", 3))).isDone(), "\"captured\" stage not done");
             List<CaptureLog.Entry> log = CaptureLog.get(helper.getLevel().getServer()).entriesOf(player.getUUID());
@@ -518,9 +517,8 @@ public final class ContainmentGameTests {
         });
         helper.runAfterDelay(6, () -> {
             check(helper, advancementDone(player, "main/ectoplasmic"), "Ectoplasmic not awarded");
-            check(helper, JournalStages.stage(player, "paranormalcraft:lingering_spirit") == 0
-                    || player.getAdvancements().getOrStartProgress(player.level().getServer().getAdvancements()
-                    .get(JournalStages.advancementId("paranormalcraft:lingering_spirit", 4))).isDone(), "\"studied\" not done");
+            check(helper, player.getAdvancements().getOrStartProgress(player.level().getServer().getAdvancements()
+                    .get(JournalStages.advancementId("paranormalcraft:lingering_spirit", 4))).isDone(), "\"studied\" not done after processing");
             check(helper, unit.release(0, player), "release refused");
             check(helper, advancementDone(player, "main/rest_easy"), "Rest Easy not awarded");
             remove(player);

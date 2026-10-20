@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "bound": {
+      "conditions": {
+        "event": "bound",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "bound"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

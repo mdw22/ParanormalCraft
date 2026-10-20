@@ -21,9 +21,9 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * The "Paranormal Craft" advancement tab (root plus eight, all fired by {@code paranormalcraft:ghost_event}) and the
+ * The "Paranormal Craft" advancement tab (root plus ten, all fired by {@code paranormalcraft:ghost_event}) and the
  * hidden Field Journal stage advancements: {@code journal/<ghost type>/<stage>} for every type in
- * {@link JournalStages#GHOST_TYPES}, with no display, so they never show or toast.
+ * {@link JournalStages#GHOST_TYPES}, plus {@code journal/<ghost type>/bound}, with no display, so they never show or toast.
  */
 public class ModAdvancements implements AdvancementSubProvider {
 
@@ -47,6 +47,8 @@ public class ModAdvancements implements AdvancementSubProvider {
         AdvancementHolder ectoplasmic = child(output, trigger, lockup, "ectoplasmic", ModItems.LINGERING_ECTOPLASM.get(), JournalEvent.PROCESSED, AdvancementType.TASK);
         child(output, trigger, lockup, "rest_easy", ModItems.FILLED_GHOST_TRAP.get(), JournalEvent.RELEASED, AdvancementType.GOAL);
         child(output, trigger, ectoplasmic, "warded", ModItems.WARD_LANTERN.get(), JournalEvent.WARD_PLACED, AdvancementType.TASK);
+        AdvancementHolder bound = child(output, trigger, ectoplasmic, "bound", ModItems.SPIRIT_VESSEL.get(), JournalEvent.BOUND, AdvancementType.GOAL);
+        child(output, trigger, bound, "little_light", ModItems.SPIRIT_VESSEL.get(), JournalEvent.FAMILIAR_SUMMONED, AdvancementType.TASK);
 
         for (String type : JournalStages.GHOST_TYPES) {
             for (int stage = 1; stage <= JournalEvent.STAGES.length; stage++) {
@@ -55,6 +57,9 @@ public class ModAdvancements implements AdvancementSubProvider {
                                 GhostEventTrigger.TriggerInstance.of(trigger, JournalEvent.STAGES[stage - 1], Optional.of(type)))
                         .save(output, JournalStages.advancementId(type, stage).toString());
             }
+            Advancement.Builder.advancement()
+                    .addCriterion(JournalEvent.BOUND.serialName(), GhostEventTrigger.TriggerInstance.of(trigger, JournalEvent.BOUND, Optional.of(type)))
+                    .save(output, JournalStages.boundAdvancementId(type).toString());
         }
     }
 

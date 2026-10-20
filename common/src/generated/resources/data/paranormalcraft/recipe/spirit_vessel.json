@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "minecraft:copper_ingot",
+    "E": "paranormalcraft:lingering_ectoplasm",
+    "G": "minecraft:glass"
+  },
+  "pattern": [
+    " C ",
+    "GEG",
+    "GGG"
+  ],
+  "result": {
+    "id": "paranormalcraft:spirit_vessel"
+  }
+}

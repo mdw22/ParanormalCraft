@@ -2,11 +2,13 @@ package io.github.mdw22.paranormalcraft.registry;
 
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
 import io.github.mdw22.paranormalcraft.item.FieldJournalItem;
 import io.github.mdw22.paranormalcraft.item.FilledGhostTrapItem;
 import io.github.mdw22.paranormalcraft.item.GhostTrapItem;
 import io.github.mdw22.paranormalcraft.item.SpectralResidueItem;
 import io.github.mdw22.paranormalcraft.item.TetherWandItem;
+import io.github.mdw22.paranormalcraft.phase.SpectralStepItem;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
@@ -23,7 +25,8 @@ import net.minecraft.world.item.equipment.Equippable;
 /**
  * Item registrations: Spectral Goggles (an equippable head item with a camera overlay), the EMF Reader, the Spirit
  * Thermometer, the Tether Wand, the Ghost Trap, the Filled Ghost Trap, the Lingering Spirit spawn egg, the Containment
- * Unit, the Ward Lantern, Lingering Ectoplasm, Spectral Residue and the Field Journal.
+ * Unit, the Ward Lantern, Lingering Ectoplasm, Spectral Residue, the Field Journal, the Spirit Vessel and the Spectral
+ * Step.
  */
 public final class ModItems {
 
@@ -86,6 +89,13 @@ public final class ModItems {
 
     public static final RegistryEntry<FieldJournalItem> FIELD_JOURNAL = RegistrationHelper.item("field_journal", FieldJournalItem::new,
             () -> new Item.Properties().stacksTo(1));
+
+    /** Empty, or bound with a ghost (the {@code captured_ghost} component); see {@link SpiritVesselItem}. */
+    public static final RegistryEntry<SpiritVesselItem> SPIRIT_VESSEL = RegistrationHelper.item("spirit_vessel", SpiritVesselItem::new,
+            () -> new Item.Properties().stacksTo(1));
+
+    public static final RegistryEntry<SpectralStepItem> SPECTRAL_STEP = RegistrationHelper.item("spectral_step", SpectralStepItem::new,
+            () -> new Item.Properties().durability(Balance.Phase.USES).repairable(LINGERING_ECTOPLASM.get()));
 
     private ModItems() {
     }

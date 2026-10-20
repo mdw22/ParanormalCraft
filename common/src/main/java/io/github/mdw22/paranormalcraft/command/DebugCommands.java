@@ -7,6 +7,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.mdw22.paranormalcraft.Constants;
+import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
+import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.containment.ContainmentCharge;
@@ -17,13 +19,17 @@ import io.github.mdw22.paranormalcraft.debug.ScriptRunner;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.familiar.Familiars;
+import io.github.mdw22.paranormalcraft.familiar.WispFamiliarEntity;
 import io.github.mdw22.paranormalcraft.hallucination.HallucinationScheduler;
 import io.github.mdw22.paranormalcraft.item.FieldJournalItem;
 import io.github.mdw22.paranormalcraft.journal.CaptureLog;
 import io.github.mdw22.paranormalcraft.journal.JournalEvent;
 import io.github.mdw22.paranormalcraft.journal.JournalStages;
 import io.github.mdw22.paranormalcraft.network.DebugClientPayload;
+import io.github.mdw22.paranormalcraft.phase.Phasing;
 import io.github.mdw22.paranormalcraft.platform.Services;
+import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -40,6 +46,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -53,7 +60,7 @@ import java.util.Set;
 
 /**
  * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, tether,
- * timers, pace, config, journal, containment and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
+ * timers, pace, config, journal, containment, bind, familiar, phase and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
  * development). See the README's "How to test" section.
  */
 public final class DebugCommands {
@@ -95,6 +102,23 @@ public final class DebugCommands {
                 .then(config())
                 .then(journal())
                 .then(containment())
+                .then(Commands.literal("bind")
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
+                                        .executes(context -> containment(context, unit -> unit.debugBind(context.getSource().getLevel(),
+                                                IntegerArgumentType.getInteger(context, "index"), context.getSource().getPlayerOrException())
+                                                ? "bound into the vessel" : "can't bind that ghost")))))
+                .then(familiar())
+                .then(Commands.literal("phase")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.literal("start").executes(context -> {
+                                    Phasing.start(EntityArgument.getPlayer(context, "player"));
+                                    return ok(context, "Phased for " + Phasing.PHASE_TICKS + " ticks");
+                                }))
+                                .then(Commands.literal("end").executes(context -> {
+                                    Phasing.end(EntityArgument.getPlayer(context, "player"), "command");
+                                    return ok(context, "Phase ended");
+                                }))))
                 .then(Commands.literal("run")
                         .then(Commands.argument("file", StringArgumentType.greedyString()).executes(DebugCommands::run)));
     }
@@ -113,7 +137,7 @@ public final class DebugCommands {
                         .then(Commands.argument("ghostType", StringArgumentType.word())
                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                         JournalStages.GHOST_TYPES.stream().map(type -> Identifier.parse(type).getPath()), builder))
-                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, JournalEvent.STAGES.length))
+                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, JournalEvent.STAGES.length + 1))
                                         .executes(DebugCommands::journalStage))));
     }
 
@@ -128,7 +152,8 @@ public final class DebugCommands {
         }
         int stage = IntegerArgumentType.getInteger(context, "stage");
         JournalStages.setStage(player, id, stage);
-        return ok(context, "Journal: " + id + " at stage " + JournalStages.stage(player, id) + " for " + player.getGameProfile().name());
+        return ok(context, "Journal: " + id + " at stage " + JournalStages.stage(player, id) + (JournalStages.bound(player, id) ? " (bound)" : "")
+                + " for " + player.getGameProfile().name());
     }
 
     private static int journalReset(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -170,7 +195,62 @@ public final class DebugCommands {
                                         + unit.debugAdvanceProcessing(IntegerArgumentType.getInteger(context, "ticks")) + " ticks"))))
                         .then(Commands.literal("release").then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
                                 .executes(context -> containment(context, unit -> unit.release(IntegerArgumentType.getInteger(context, "index"),
-                                        context.getSource().getPlayerOrException()) ? "released" : "can't release that ghost")))));
+                                        context.getSource().getPlayerOrException()) ? "released" : "can't release that ghost"))))
+                        .then(Commands.literal("bindstart").then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
+                                .executes(context -> containment(context, unit -> unit.bind(IntegerArgumentType.getInteger(context, "index"),
+                                        context.getSource().getPlayerOrException()) ? "binding started" : "can't bind that ghost"))))
+                        .then(Commands.literal("unbind").executes(context -> containment(context, unit ->
+                                unit.unbind(context.getSource().getPlayerOrException()) ? "unbound into storage" : "nothing to unbind, or no room"))));
+    }
+
+    // ---- familiar ----
+
+    private static LiteralArgumentBuilder<CommandSourceStack> familiar() {
+
+        return Commands.literal("familiar")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.literal("summon").executes(context -> {
+                            ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                            ItemStack vessel = boundVessel(player);
+                            if (vessel.isEmpty()) {
+                                return fail(context, "No Bound Spirit Vessel in " + player.getGameProfile().name() + "'s inventory");
+                            }
+                            WispFamiliarEntity out = Familiars.of(player);
+                            CapturedGhost ghost = vessel.get(ModDataComponents.CAPTURED_GHOST.get());
+                            if (out != null && ghost != null && ghost.id().equals(out.ghost())) {
+                                return ok(context, "Already out");
+                            }
+                            return ghost != null && Familiars.summon(player, ghost) != null ? ok(context, "Summoned " + ghost.name())
+                                    : fail(context, "That vessel's ghost has no familiar job");
+                        }))
+                        .then(Commands.literal("recall").executes(context -> {
+                            WispFamiliarEntity out = Familiars.of(EntityArgument.getPlayer(context, "player"));
+                            if (out == null) {
+                                return fail(context, "No familiar out");
+                            }
+                            Familiars.recall(out, "command");
+                            return ok(context, "Recalled");
+                        }))
+                        .then(Commands.literal("guide").executes(context -> {
+                            ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                            if (Familiars.of(player) == null) {
+                                return fail(context, "No familiar out");
+                            }
+                            Familiars.resetGuideCooldown(player);
+                            BlockPos cabin = Familiars.guide(player);
+                            return ok(context, cabin == null ? "No cabin within range: the wisp shakes no" : "Guiding toward the cabin at " + cabin.toShortString());
+                        })));
+    }
+
+    private static ItemStack boundVessel(ServerPlayer player) {
+
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (SpiritVesselItem.isBound(stack)) {
+                return stack;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     @FunctionalInterface

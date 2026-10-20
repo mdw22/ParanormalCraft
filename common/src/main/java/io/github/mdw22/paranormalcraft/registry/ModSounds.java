@@ -30,6 +30,16 @@ public final class ModSounds {
     public static final RegistryEntry<SoundEvent> CONTAINMENT_LOAD = RegistrationHelper.sound("block.containment_unit.load");
     public static final RegistryEntry<SoundEvent> CONTAINMENT_BUBBLE = RegistrationHelper.sound("block.containment_unit.bubble");
     public static final RegistryEntry<SoundEvent> CONTAINMENT_ALARM = RegistrationHelper.sound("block.containment_unit.alarm");
+    public static final RegistryEntry<SoundEvent> WARD_FLARE = RegistrationHelper.sound("block.ward_lantern.flare");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_BIND_TONE = RegistrationHelper.sound("block.containment_unit.bind_tone");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_BIND_DONE = RegistrationHelper.sound("block.containment_unit.bind_done");
+    public static final RegistryEntry<SoundEvent> WISP_SUMMON = RegistrationHelper.sound("entity.wisp_familiar.summon");
+    public static final RegistryEntry<SoundEvent> WISP_RECALL = RegistrationHelper.sound("entity.wisp_familiar.recall");
+    public static final RegistryEntry<SoundEvent> WISP_WARN = RegistrationHelper.sound("entity.wisp_familiar.warn");
+    public static final RegistryEntry<SoundEvent> WISP_WARN_SHARP = RegistrationHelper.sound("entity.wisp_familiar.warn_sharp");
+    public static final RegistryEntry<SoundEvent> WISP_NO = RegistrationHelper.sound("entity.wisp_familiar.no");
+    public static final RegistryEntry<SoundEvent> PHASE_IN = RegistrationHelper.sound("item.spectral_step.phase_in");
+    public static final RegistryEntry<SoundEvent> PHASE_OUT = RegistrationHelper.sound("item.spectral_step.phase_out");
     public static final RegistryEntry<SoundEvent> GHOST_ASCEND = RegistrationHelper.sound("entity.lingering_spirit.ascend");
 
     private ModSounds() {

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "paranormalcraft:lingering_ectoplasm",
+    "paranormalcraft:lingering_ectoplasm",
+    "paranormalcraft:lingering_ectoplasm",
+    "minecraft:phantom_membrane",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "paranormalcraft:spectral_step"
+  }
+}

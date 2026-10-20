@@ -24,7 +24,11 @@ public enum JournalEvent {
     /** Released a ghost. */
     RELEASED,
     /** Placed a Ward Lantern. */
-    WARD_PLACED;
+    WARD_PLACED,
+    /** Bound a ghost into a Spirit Vessel. */
+    BOUND,
+    /** Summoned a Wisp Familiar. */
+    FAMILIAR_SUMMONED;
 
     /** The stages, in order (stage n is {@code STAGES[n - 1]}). */
     public static final JournalEvent[] STAGES = {DETECTED, SEEN, CAPTURED, STUDIED};

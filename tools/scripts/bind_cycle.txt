@@ -1,0 +1,24 @@
+# Binding round trip in containment_lab: bind a stored spirit into a vessel (instantly), take the Bound Spirit Vessel,
+# summon its Wisp Familiar, recall it, put the vessel back and unbind: the spirit is in storage again.
+# Run with: /execute as Dev at Dev run paranormalcraft debug run bind_cycle
+paranormalcraft debug scene containment_lab
+wait 20
+paranormalcraft debug containment 100000 202 100000 fill 1
+paranormalcraft debug containment 100000 202 100000 charge 50
+paranormalcraft debug bind 100000 202 100000 0
+expect trace bind_done job=paranormalcraft:wisp_familiar within 5
+expect dump containmentUnits[0].stored.length=0 containmentUnits[0].vessel!=empty containmentUnits[0].vessel!=none
+# The bound vessel goes from the Vessel slot (container.8) to the hotbar.
+item replace entity @p hotbar.3 from block 100000 202 100000 container.8
+item replace block 100000 202 100000 container.8 with air
+paranormalcraft debug familiar @p summon
+expect trace familiar_summon within 5
+wait 40
+expect dump familiars.length=1 familiars[0].distanceToOwner<4
+paranormalcraft debug familiar @p recall
+expect trace familiar_recall reason=command within 5
+item replace block 100000 202 100000 container.8 from entity @p hotbar.3
+item replace entity @p hotbar.3 with air
+paranormalcraft debug containment 100000 202 100000 unbind
+expect trace unbind within 5
+expect dump containmentUnits[0].stored.length=1 containmentUnits[0].vessel=empty familiars.length=0

@@ -360,8 +360,126 @@ public final class Balance {
         public static final int DEFAULT_RADIUS = 32;
         /** Light level of the lantern. (Used in {@code ModBlocks.WARD_LANTERN}.) */
         public static final int LIGHT = 12;
+        /** Light level while flaring. (Used in {@code ModBlocks.WARD_LANTERN}.) */
+        public static final int FLARE_LIGHT = 15;
+        /** How long a flare lasts. (Used in {@code WardEffects}.) */
+        public static final int FLARE_TICKS = 10;
+        /** At most one flare per lantern per this many ticks. (Used in {@code WardEffects}.) */
+        public static final int FLARE_COOLDOWN_TICKS = 60;
+        /** A ghost the ward caught recoils about this far from the lantern. (Used in {@code WardEffects}.) */
+        public static final double RECOIL_DISTANCE = 2.0;
+        /** The placement ring is traced over this many ticks. (Used in {@code WardEffects}.) */
+        public static final int RING_TICKS = 60;
+        /** At most one denied-spawn puff per lantern per this many ticks. (Used in {@code WardEffects}.) */
+        public static final int PUFF_COOLDOWN_TICKS = 40;
+        /** Denied-spawn puffs only show within this distance of a player. (Used in {@code WardEffects}.) */
+        public static final double PUFF_PLAYER_RANGE = 32.0;
+        /** Ghosts don't pick wander or curious targets this close to a lantern. (Used in {@code HoverSpots, GhostCuriousGoal}.) */
+        public static final double KEEP_AWAY = 4.0;
+        /** Holding a Ward Lantern shows the boundaries of wards within this range. (Used in {@code ClientWardPreview}.) */
+        public static final double PREVIEW_RANGE = 48.0;
+        /** Preview motes are drawn on the edge stretch within this distance of the player. (Used in {@code ClientWardPreview}.) */
+        public static final double PREVIEW_EDGE_RANGE = 24.0;
+        /** Preview motes per ward per round. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_MOTES = 6;
+        /** A preview round every this many ticks. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_INTERVAL_TICKS = 4;
 
         private Ward() {
+        }
+    }
+
+    /**
+     * Binding a stored ghost into a Spirit Vessel (Update 10). Which job each ghost type gets is in {@code BoundJobs}.
+     */
+    public static final class Binding {
+
+        /** Binding takes this long (60 s). (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BIND_TICKS = 1200;
+        /** Charge one bind costs, taken when it starts. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BIND_CHARGE = 5;
+        /** The rising bind tone plays this often. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int TONE_INTERVAL_TICKS = 20;
+        /** The tone's pitch at the start of a bind. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final float TONE_PITCH_START = 0.5F;
+        /** The tone's pitch at the end of a bind. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final float TONE_PITCH_END = 2.0F;
+
+        private Binding() {
+        }
+    }
+
+    /**
+     * The Wisp Familiar, a bound Lingering Spirit (Update 10).
+     */
+    public static final class Familiar {
+
+        /** Nearest follow distance from the owner, blocks; it sits midway. (Used in {@code WispFamiliarEntity}.) */
+        public static final double FOLLOW_MIN = 2.0;
+        /** Farthest follow distance from the owner, blocks. (Used in {@code WispFamiliarEntity}.) */
+        public static final double FOLLOW_MAX = 3.0;
+        /** Height above the owner's feet the wisp keeps (about shoulder height). (Used in {@code WispFamiliarEntity}.) */
+        public static final double SHOULDER_HEIGHT = 1.5;
+        /** Past this distance it teleports to its owner, like a tamed pet. (Used in {@code WispFamiliarEntity}.) */
+        public static final double TELEPORT_DISTANCE = 16.0;
+        /** Fraction of the way to its target it moves each tick. (Used in {@code WispFamiliarEntity}.) */
+        public static final double FOLLOW_RATE = 0.12;
+        /** Render scale against the Lingering Spirit. (Used in {@code WispFamiliarRenderer}.) */
+        public static final float SCALE = 0.4F;
+        /** Level of the light block it carries. (Used in {@code WispLight}.) */
+        public static final int LIGHT_LEVEL = 11;
+        /** It carries a light only where the light around it, without its own, is at or below this. (Used in {@code WispLight}.) */
+        public static final int DARK_AT_OR_BELOW = 7;
+        /** Hostiles within this range of the owner can be warned about. (Used in {@code WispWarnings}.) */
+        public static final double WARN_RANGE = 12.0;
+        /** A mob more than this many degrees from the owner's view counts as unseen. (Used in {@code WispWarnings}.) */
+        public static final double WARN_ANGLE = 100.0;
+        /** At most one chirp per mob per this many ticks. (Used in {@code WispFamiliarEntity}.) */
+        public static final int WARN_COOLDOWN_TICKS = 200;
+        /** Threats are re-checked this often. (Used in {@code WispFamiliarEntity}.) */
+        public static final int WARN_SCAN_TICKS = 5;
+        /** While warning, it drifts this far toward the threat's side of the owner. (Used in {@code WispFamiliarEntity}.) */
+        public static final double WARN_DRIFT = 2.5;
+        /** Guide: search radius for an Abandoned Cabin, chunks. (Used in {@code Familiars}.) */
+        public static final int GUIDE_RADIUS_CHUNKS = 64;
+        /** Guide: how far ahead of the owner it goes and waits. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_AHEAD = 8.0;
+        /** Guide: how long it waits there. (Used in {@code WispFamiliarEntity}.) */
+        public static final int GUIDE_WAIT_TICKS = 400;
+        /** Guide cooldown after a successful guide (2 minutes). (Used in {@code Familiars}.) */
+        public static final int GUIDE_COOLDOWN_TICKS = 2400;
+        /** Guide cooldown after "no cabin in range", so a player can't spam the search. (Used in {@code Familiars}.) */
+        public static final int GUIDE_FAIL_COOLDOWN_TICKS = 200;
+        /** Listed light blocks no wisp owns are swept this often, in loaded chunks. (Used in {@code Familiars}.) */
+        public static final int LIGHT_SWEEP_TICKS = 100;
+        /** How long the "no" shake lasts. (Used in {@code WispFamiliarEntity}.) */
+        public static final int SHAKE_TICKS = 30;
+
+        private Familiar() {
+        }
+    }
+
+    /**
+     * The Spectral Step charm (Update 10).
+     */
+    public static final class Phase {
+
+        /** A phase lasts this long (5 s). (Used in {@code Phasing}.) */
+        public static final int PHASE_TICKS = 100;
+        /** Cooldown after use (60 s). (Used in {@code SpectralStepItem}.) */
+        public static final int COOLDOWN_TICKS = 1200;
+        /** Uses before it breaks; repairable with Lingering Ectoplasm. (Used in {@code ModItems.SPECTRAL_STEP}.) */
+        public static final int USES = 20;
+        /** A phase that ends inside a block is extended by up to this much. (Used in {@code Phasing}.) */
+        public static final int MAX_EXTEND_TICKS = 60;
+        /** If still stuck, the player is nudged to a free spot within this many blocks. (Used in {@code Phasing}.) */
+        public static final int NUDGE_RADIUS = 3;
+        /** The phased state goes to players within this many blocks. (Used in {@code Phasing}.) */
+        public static final double SYNC_RANGE = 128.0;
+        /** The phased state is re-sent to nearby players this often, for anyone who came into range. (Used in {@code Phasing}.) */
+        public static final int RESYNC_TICKS = 10;
+
+        private Phase() {
         }
     }
 

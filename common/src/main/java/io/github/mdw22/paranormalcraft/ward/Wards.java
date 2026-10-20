@@ -1,11 +1,14 @@
 package io.github.mdw22.paranormalcraft.ward;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Ward Lantern coverage. A loaded lantern protects everything within {@code wardLanternRadius} (server config) of
@@ -16,6 +19,31 @@ import net.minecraft.world.phys.Vec3;
 public final class Wards {
 
     private Wards() {
+    }
+
+    /**
+     * The nearest loaded lantern whose ward covers {@code pos}, or null.
+     */
+    public static @Nullable BlockPos coveringLantern(Level level, Vec3 pos) {
+
+        BlockPos best = null;
+        double bestSqr = Double.MAX_VALUE;
+        for (BlockPos lantern : LoadedPositions.WARD_LANTERNS.near(level, pos, ModConfigs.server().wardLanternRadius())) {
+            double distance = Vec3.atCenterOf(lantern).distanceToSqr(pos);
+            if (distance < bestSqr) {
+                best = lantern;
+                bestSqr = distance;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Whether {@code pos} is within {@link Balance.Ward#KEEP_AWAY} of a lantern: ghosts don't choose to go there.
+     */
+    public static boolean tooClose(Level level, Vec3 pos) {
+
+        return LoadedPositions.WARD_LANTERNS.anyWithin(level, pos, Balance.Ward.KEEP_AWAY);
     }
 
     public static boolean covers(Level level, Vec3 pos) {
@@ -29,6 +57,16 @@ public final class Wards {
      */
     public static boolean blocksNaturalSpawn(Level level, MobCategory category, BlockPos pos) {
 
-        return category == MobCategory.MONSTER && covers(level, Vec3.atBottomCenterOf(pos));
+        if (category != MobCategory.MONSTER) {
+            return false;
+        }
+        BlockPos lantern = coveringLantern(level, Vec3.atBottomCenterOf(pos));
+        if (lantern == null) {
+            return false;
+        }
+        if (level instanceof ServerLevel serverLevel) {
+            WardEffects.deniedSpawnPuff(serverLevel, lantern, pos.immutable());
+        }
+        return true;
     }
 }

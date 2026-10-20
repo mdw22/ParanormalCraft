@@ -45,7 +45,7 @@ public class FieldJournalItem extends Item {
 
         List<JournalPayload.TypeStage> stages = new ArrayList<>();
         for (String type : JournalStages.GHOST_TYPES) {
-            stages.add(new JournalPayload.TypeStage(type, JournalStages.stage(player, type)));
+            stages.add(new JournalPayload.TypeStage(type, JournalStages.stage(player, type), JournalStages.bound(player, type)));
         }
         JournalPayload payload = new JournalPayload(stages, CaptureLog.get(player.level().getServer()).entriesOf(player.getUUID()));
         Services.NETWORK.sendToPlayer(player, payload);

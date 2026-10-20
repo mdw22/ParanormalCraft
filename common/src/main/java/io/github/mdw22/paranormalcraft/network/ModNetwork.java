@@ -12,6 +12,7 @@ import io.github.mdw22.paranormalcraft.client.journal.JournalScreen;
 import io.github.mdw22.paranormalcraft.client.tether.ClientBeams;
 import io.github.mdw22.paranormalcraft.debug.RevealDebug;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
+import io.github.mdw22.paranormalcraft.phase.Phasing;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -41,6 +42,7 @@ public final class ModNetwork {
         registrar.playToClient(BeamStatePayload.TYPE, BeamStatePayload.STREAM_CODEC);
         registrar.playToClient(ContainmentStatePayload.TYPE, ContainmentStatePayload.STREAM_CODEC);
         registrar.playToClient(JournalPayload.TYPE, JournalPayload.STREAM_CODEC);
+        registrar.playToClient(PhaseStatePayload.TYPE, PhaseStatePayload.STREAM_CODEC);
         registrar.playToServer(FigureResultPayload.TYPE, FigureResultPayload.STREAM_CODEC, (payload, player) -> {
             Constants.LOG.info("Shadow figure for {}: {}", player.getGameProfile().name(), payload.result());
             ServerTrace.event("figure_result", line -> {
@@ -86,6 +88,7 @@ public final class ModNetwork {
         traced.playToClient(HallucinationPayload.TYPE, (payload, player) -> ClientHallucinations.handle(payload));
         traced.playToClient(DebugClientPayload.TYPE, (payload, player) -> ClientDebugTools.handle(payload));
         traced.playToClient(JournalPayload.TYPE, (payload, player) -> JournalScreen.open(payload));
+        traced.playToClient(PhaseStatePayload.TYPE, (payload, player) -> Phasing.handleClient(payload));
         // Containment rows arrive twice a second while the menu is open: not traced as payloads.
         registrar.playToClient(ContainmentStatePayload.TYPE, (payload, player) -> ContainmentUnitScreen.handle(payload));
         // Beams arrive every tick while active: not traced as payloads (beam_render records the changes).

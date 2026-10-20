@@ -32,6 +32,23 @@ public final class JournalStages {
     }
 
     /**
+     * The hidden advancement for having bound a ghost of {@code ghostType}: it adds the bound-job line to the page.
+     */
+    public static Identifier boundAdvancementId(String ghostType) {
+
+        return Constants.id("journal/" + Identifier.parse(ghostType).getPath() + "/" + JournalEvent.BOUND.serialName());
+    }
+
+    /**
+     * Whether the player has bound a ghost of {@code ghostType}.
+     */
+    public static boolean bound(ServerPlayer player, String ghostType) {
+
+        AdvancementHolder holder = player.level().getServer().getAdvancements().get(boundAdvancementId(ghostType));
+        return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone();
+    }
+
+    /**
      * The player's highest completed stage for {@code ghostType}, 0 to 4.
      */
     public static int stage(ServerPlayer player, String ghostType) {
@@ -47,12 +64,14 @@ public final class JournalStages {
     }
 
     /**
-     * Debug: completes stages 1..{@code stage} and clears the rest.
+     * Debug: completes stages 1..{@code stage} and clears the rest; stage 5 is all four plus the bound line.
      */
     public static void setStage(ServerPlayer player, String ghostType, int stage) {
 
-        for (int n = 1; n <= JournalEvent.STAGES.length; n++) {
-            AdvancementHolder holder = holder(player, ghostType, n);
+        for (int n = 1; n <= JournalEvent.STAGES.length + 1; n++) {
+            AdvancementHolder holder = n > JournalEvent.STAGES.length
+                    ? player.level().getServer().getAdvancements().get(boundAdvancementId(ghostType))
+                    : holder(player, ghostType, n);
             if (holder == null) {
                 continue;
             }

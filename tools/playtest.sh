@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# One-click playtest: starts the NeoForge dev server, waits until it's ready, then starts the NeoForge client and
-# joins it. When you close the game, the server is stopped (over RCON) and the results are in
-# neoforge/runs/server/paranormalcraft-playtests/latest.md.
+# One-click playtest: starts the NeoForge dev server on its own playtest world, waits until it's ready, then starts
+# the NeoForge client and joins it. When you close the game, the server is stopped (over RCON), the server's usual
+# world is put back, and the results are in neoforge/runs/server/paranormalcraft-playtests/latest.md.
+#
+# World: "playtest" (created on first use), so test scenes never touch your play world. To use another one:
+#   PLAYTEST_WORLD=my-world ./tools/playtest.sh     or     ./tools/playtest.sh my-world
 # Used by the VS Code task "Playtest"; run it from the repo root or anywhere.
 set -u
 cd "$(dirname "$0")/.."
@@ -9,6 +12,7 @@ LOG_DIR=build/playtest
 mkdir -p "$LOG_DIR"
 SERVER_LOG="$LOG_DIR/server.log"
 PROPS=neoforge/runs/server/server.properties
+WORLD="${1:-${PLAYTEST_WORLD:-playtest}}"
 
 stop_server() {
   # RCON "stop" with the dev server's password; falls back to killing the Gradle task.
@@ -30,7 +34,13 @@ SERVER_PID=""
 if lsof -nP -iTCP:25565 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "A server is already running on port 25565: joining it."
 else
-  echo "Starting the NeoForge server (log: $SERVER_LOG)..."
+  # Point the server at the playtest world for this run, and put the usual world back afterwards.
+  if [ -f "$PROPS" ]; then
+    ORIGINAL_WORLD=$(grep -E '^level-name=' "$PROPS" | head -1 | cut -d= -f2-)
+    trap 'sed -i.bak "s/^level-name=.*/level-name=${ORIGINAL_WORLD}/" "$PROPS" && rm -f "$PROPS.bak"' EXIT
+    sed -i.bak "s/^level-name=.*/level-name=${WORLD}/" "$PROPS" && rm -f "$PROPS.bak"
+  fi
+  echo "Starting the NeoForge server on world '$WORLD' (log: $SERVER_LOG)..."
   ./gradlew :neoforge:runServer > "$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
   until grep -qE "Done \(" "$SERVER_LOG" 2>/dev/null; do

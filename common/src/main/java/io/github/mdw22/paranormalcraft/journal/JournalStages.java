@@ -40,6 +40,24 @@ public final class JournalStages {
     }
 
     /**
+     * The hidden advancement for having released a ghost of {@code ghostType}: it unlocks the type's blessing on the
+     * Blessings and Bindings spread.
+     */
+    public static Identifier releasedAdvancementId(String ghostType) {
+
+        return Constants.id("journal/" + Identifier.parse(ghostType).getPath() + "/" + JournalEvent.RELEASED.serialName());
+    }
+
+    /**
+     * Whether the player has released a ghost of {@code ghostType}.
+     */
+    public static boolean released(ServerPlayer player, String ghostType) {
+
+        AdvancementHolder holder = player.level().getServer().getAdvancements().get(releasedAdvancementId(ghostType));
+        return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone();
+    }
+
+    /**
      * Whether the player has bound a ghost of {@code ghostType}.
      */
     public static boolean bound(ServerPlayer player, String ghostType) {
@@ -64,13 +82,15 @@ public final class JournalStages {
     }
 
     /**
-     * Debug: completes stages 1..{@code stage} and clears the rest; stage 5 is all four plus the bound line.
+     * Debug: completes stages 1..{@code stage} and clears the rest; stage 5 adds the bound line, stage 6 the released
+     * blessing too.
      */
     public static void setStage(ServerPlayer player, String ghostType, int stage) {
 
-        for (int n = 1; n <= JournalEvent.STAGES.length + 1; n++) {
+        for (int n = 1; n <= JournalEvent.STAGES.length + 2; n++) {
             AdvancementHolder holder = n > JournalEvent.STAGES.length
-                    ? player.level().getServer().getAdvancements().get(boundAdvancementId(ghostType))
+                    ? player.level().getServer().getAdvancements().get(n == JournalEvent.STAGES.length + 1
+                    ? boundAdvancementId(ghostType) : releasedAdvancementId(ghostType))
                     : holder(player, ghostType, n);
             if (holder == null) {
                 continue;

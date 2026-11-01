@@ -40,6 +40,12 @@ public final class ContainmentTables {
         return YIELDS.get(ghostType);
     }
 
+    /** A blessing's length in whole nights (in-game days), at least 1. */
+    public static int nights(Blessing blessing) {
+
+        return Math.max(1, Math.round(blessing.ticks() / 24000.0F));
+    }
+
     public static @Nullable Blessing blessingFor(String ghostType) {
 
         return BLESSINGS.get(ghostType);

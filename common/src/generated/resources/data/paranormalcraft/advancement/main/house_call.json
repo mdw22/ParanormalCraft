@@ -1,0 +1,29 @@
+{
+  "parent": "paranormalcraft:main/uninvited_guest",
+  "criteria": {
+    "house_call": {
+      "conditions": {
+        "event": "house_call"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.house_call.description"
+    },
+    "frame": "goal",
+    "icon": {
+      "id": "paranormalcraft:ghost_trap"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.house_call.title"
+    }
+  },
+  "requirements": [
+    [
+      "house_call"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

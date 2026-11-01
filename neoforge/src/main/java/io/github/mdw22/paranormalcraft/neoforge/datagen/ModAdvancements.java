@@ -15,15 +15,16 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.data.advancements.AdvancementSubProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 
 import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * The "Paranormal Craft" advancement tab (root plus ten, all fired by {@code paranormalcraft:ghost_event}) and the
+ * The "Paranormal Craft" advancement tab (root plus thirteen (Breach! hidden), all fired by {@code paranormalcraft:ghost_event}) and the
  * hidden Field Journal stage advancements: {@code journal/<ghost type>/<stage>} for every type in
- * {@link JournalStages#GHOST_TYPES}, plus {@code journal/<ghost type>/bound}, with no display, so they never show or toast.
+ * {@link JournalStages#GHOST_TYPES}, plus {@code journal/<ghost type>/bound} and {@code journal/<ghost type>/released}, with no display, so they never show or toast.
  */
 public class ModAdvancements implements AdvancementSubProvider {
 
@@ -49,6 +50,9 @@ public class ModAdvancements implements AdvancementSubProvider {
         child(output, trigger, ectoplasmic, "warded", ModItems.WARD_LANTERN.get(), JournalEvent.WARD_PLACED, AdvancementType.TASK);
         AdvancementHolder bound = child(output, trigger, ectoplasmic, "bound", ModItems.SPIRIT_VESSEL.get(), JournalEvent.BOUND, AdvancementType.GOAL);
         child(output, trigger, bound, "little_light", ModItems.SPIRIT_VESSEL.get(), JournalEvent.FAMILIAR_SUMMONED, AdvancementType.TASK);
+        child(output, trigger, lockup, "breach", ModItems.CONTAINMENT_UNIT.get(), JournalEvent.BREACH_WITNESSED, AdvancementType.CHALLENGE, true);
+        AdvancementHolder guest = child(output, trigger, gotcha, "uninvited_guest", Items.BED.red(), JournalEvent.GHOST_SETTLED, AdvancementType.TASK);
+        child(output, trigger, guest, "house_call", ModItems.GHOST_TRAP.get(), JournalEvent.HOUSE_CALL, AdvancementType.GOAL);
 
         for (String type : JournalStages.GHOST_TYPES) {
             for (int stage = 1; stage <= JournalEvent.STAGES.length; stage++) {
@@ -60,15 +64,24 @@ public class ModAdvancements implements AdvancementSubProvider {
             Advancement.Builder.advancement()
                     .addCriterion(JournalEvent.BOUND.serialName(), GhostEventTrigger.TriggerInstance.of(trigger, JournalEvent.BOUND, Optional.of(type)))
                     .save(output, JournalStages.boundAdvancementId(type).toString());
+            Advancement.Builder.advancement()
+                    .addCriterion(JournalEvent.RELEASED.serialName(), GhostEventTrigger.TriggerInstance.of(trigger, JournalEvent.RELEASED, Optional.of(type)))
+                    .save(output, JournalStages.releasedAdvancementId(type).toString());
         }
     }
 
     private static AdvancementHolder child(Consumer<AdvancementHolder> output, GhostEventTrigger trigger, AdvancementHolder parent, String name,
                                            ItemLike icon, JournalEvent event, AdvancementType frame) {
 
+        return child(output, trigger, parent, name, icon, event, frame, false);
+    }
+
+    private static AdvancementHolder child(Consumer<AdvancementHolder> output, GhostEventTrigger trigger, AdvancementHolder parent, String name,
+                                           ItemLike icon, JournalEvent event, AdvancementType frame, boolean hidden) {
+
         return Advancement.Builder.advancement()
                 .parent(parent)
-                .display(icon, title(name), description(name), null, frame, true, true, false)
+                .display(icon, title(name), description(name), null, frame, true, true, hidden)
                 .addCriterion(event.serialName(), GhostEventTrigger.TriggerInstance.of(trigger, event, Optional.empty()))
                 .save(output, Constants.id("main/" + name).toString());
     }

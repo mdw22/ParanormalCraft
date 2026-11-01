@@ -65,7 +65,8 @@ public final class HauntingController {
     public void tick(ServerLevel level) {
 
         ServerConfig config = ModConfigs.server();
-        if (!config.hauntingEnabled() || !playerNearby(level)) {
+        // A ghost following someone home doesn't haunt on the way.
+        if (!config.hauntingEnabled() || this.ghost.attachment().following() || !playerNearby(level)) {
             return;
         }
         long now = level.getGameTime();
@@ -153,6 +154,7 @@ public final class HauntingController {
 
         int min = config.hauntingIntervalMinSeconds() * 20;
         int max = config.hauntingIntervalMaxSeconds() * 20;
-        return ModConfigs.paced(min + this.ghost.getRandom().nextInt(max - min + 1));
+        long ticks = ModConfigs.paced(min + this.ghost.getRandom().nextInt(max - min + 1));
+        return this.ghost.isAgitated() ? (long) Math.max(1, ticks * Balance.Escape.AGITATED_INTERVAL_FACTOR) : ticks;
     }
 }

@@ -1,7 +1,9 @@
 package io.github.mdw22.paranormalcraft.tool;
 
 import io.github.mdw22.paranormalcraft.Balance;
+import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
+import io.github.mdw22.paranormalcraft.capture.TrapIntegrity;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -36,16 +38,18 @@ public final class EmfReadings {
 
     /**
      * The reading: from the nearest free ghost, or from a Filled Ghost Trap (which reads like a ghost but never above
-     * {@link #TRAPPED_MAX_LEVEL}), whichever is higher.
+     * {@link #TRAPPED_MAX_LEVEL}, or 4 once its integrity is below 25%), whichever is higher.
      */
     public static int levelAt(ServerLevel level, Vec3 pos) {
 
         int ghosts = EmfLevels.levelForDistance(nearestGhostDistance(level, pos));
-        double nearestTrap = Double.POSITIVE_INFINITY;
+        int traps = 0;
         for (BlockPos trap : FilledTraps.near(level, pos, EmfLevels.RANGE)) {
-            nearestTrap = Math.min(nearestTrap, Vec3.atCenterOf(trap).distanceTo(pos));
+            // A decaying trap reads louder: level 3 at most, 4 below 25% integrity.
+            int cap = level.getBlockEntity(trap) instanceof FilledGhostTrapBlockEntity filled
+                    ? TrapIntegrity.emfCap(filled.integrity(level.getGameTime())) : TRAPPED_MAX_LEVEL;
+            traps = Math.max(traps, Math.min(cap, EmfLevels.levelForDistance(Vec3.atCenterOf(trap).distanceTo(pos))));
         }
-        int traps = Math.min(TRAPPED_MAX_LEVEL, EmfLevels.levelForDistance(nearestTrap));
         return Math.max(ghosts, traps);
     }
 }

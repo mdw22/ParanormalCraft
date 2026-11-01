@@ -32,8 +32,8 @@ public final class CaptureLog extends SavedData {
     public static final int MAX_ENTRIES = Balance.Journal.CAPTURE_LOG_MAX;
 
     /**
-     * One capture. {@code outcome} is {@code stored} (in a trap or a Containment Unit), {@code processed} or
-     * {@code released}.
+     * One capture. {@code outcome} is {@code stored} (in a trap or a Containment Unit), {@code processed},
+     * {@code released}, {@code bound}, {@code escaped} or {@code attached} (it got loose and followed this player).
      */
     public record Entry(UUID ghost, String name, String type, long day, String outcome) {
 
@@ -101,6 +101,25 @@ public final class CaptureLog extends SavedData {
                 }
             }
         }
+    }
+
+    /**
+     * Records what became of a ghost in one player's log. Returns whether that log had it.
+     */
+    public boolean setOutcome(UUID player, UUID ghost, String outcome) {
+
+        List<Entry> list = this.entries.get(player);
+        if (list == null) {
+            return false;
+        }
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (list.get(i).ghost().equals(ghost)) {
+                list.set(i, list.get(i).withOutcome(outcome));
+                setDirty();
+                return true;
+            }
+        }
+        return false;
     }
 
     public void reset(UUID player) {

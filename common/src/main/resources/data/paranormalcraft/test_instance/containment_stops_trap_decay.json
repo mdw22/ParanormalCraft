@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:containment_stops_trap_decay",
+  "environment": "paranormalcraft:escape",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 20,
+  "sky_access": true
+}

@@ -29,6 +29,21 @@ public class WardLanternBlockEntity extends BlockEntity {
         super(ModBlocks.WARD_LANTERN_ENTITY.get(), pos, state);
     }
 
+    /** Ticks of flare left (not saved: a flare is 1.5 s). */
+    private int flareTicks;
+
+    public void startFlare(int ticks) {
+
+        this.flareTicks = ticks;
+    }
+
+    /** One pulse step of the flare: returns the ticks left after it. */
+    public int tickFlare(int step) {
+
+        this.flareTicks = Math.max(0, this.flareTicks - step);
+        return this.flareTicks;
+    }
+
     /** The ward's radius (on the client, the server's value). */
     public int radius() {
 

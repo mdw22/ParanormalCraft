@@ -356,17 +356,21 @@
     "subtitle": "subtitles.paranormalcraft.lingering_spirit.ascend"
   },
   "block.ward_lantern.flare": {
+    "subtitle": "subtitles.paranormalcraft.ward_lantern.flare",
     "sounds": [
       {
-        "name": "minecraft:block/amethyst/resonate1",
-        "pitch": 1.4
+        "name": "minecraft:block.bell.use",
+        "type": "event",
+        "pitch": 1.6,
+        "volume": 1.0
       },
       {
-        "name": "minecraft:block/amethyst/resonate2",
-        "pitch": 1.4
+        "name": "minecraft:block.amethyst_block.resonate",
+        "type": "event",
+        "pitch": 1.4,
+        "volume": 1.0
       }
-    ],
-    "subtitle": "subtitles.paranormalcraft.ward_lantern.flare"
+    ]
   },
   "block.containment_unit.bind_tone": {
     "subtitle": "subtitles.paranormalcraft.containment_unit.bind_tone",
@@ -424,12 +428,12 @@
     ]
   },
   "entity.wisp_familiar.warn_sharp": {
-    "subtitle": "subtitles.paranormalcraft.wisp_familiar.warn",
+    "subtitle": "subtitles.paranormalcraft.wisp_familiar.warn_urgent",
     "sounds": [
       {
-        "name": "minecraft:block.note_block.bit",
+        "name": "minecraft:entity.allay.ambient_without_item",
         "type": "event",
-        "pitch": 2.0,
+        "pitch": 1.9,
         "volume": 1.0
       }
     ]
@@ -464,6 +468,56 @@
         "type": "event",
         "pitch": 0.8,
         "volume": 0.6
+      }
+    ]
+  },
+  "entity.lingering_spirit.watching": {
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.watching",
+    "sounds": [
+      {
+        "name": "minecraft:ambient.cave",
+        "type": "event",
+        "pitch": 1.4,
+        "volume": 0.4
+      }
+    ]
+  },
+  "block.ghost_trap.burst": {
+    "subtitle": "subtitles.paranormalcraft.ghost_trap.burst",
+    "sounds": [
+      {
+        "name": "minecraft:block.iron_trapdoor.open",
+        "type": "event",
+        "pitch": 0.6,
+        "volume": 1.0
+      },
+      {
+        "name": "minecraft:entity.zombie_villager.cure",
+        "type": "event",
+        "pitch": 1.8,
+        "volume": 0.5
+      }
+    ]
+  },
+  "block.ghost_trap.creak": {
+    "subtitle": "subtitles.paranormalcraft.ghost_trap.creak",
+    "sounds": [
+      {
+        "name": "minecraft:block.chest.locked",
+        "type": "event",
+        "pitch": 0.7,
+        "volume": 0.7
+      }
+    ]
+  },
+  "block.containment_unit.breach": {
+    "subtitle": "subtitles.paranormalcraft.containment_unit.breach",
+    "sounds": [
+      {
+        "name": "minecraft:block.note_block.didgeridoo",
+        "type": "event",
+        "pitch": 0.6,
+        "volume": 1.0
       }
     ]
   }

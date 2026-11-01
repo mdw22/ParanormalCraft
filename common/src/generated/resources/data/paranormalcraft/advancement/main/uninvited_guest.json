@@ -1,0 +1,28 @@
+{
+  "parent": "paranormalcraft:main/gotcha",
+  "criteria": {
+    "ghost_settled": {
+      "conditions": {
+        "event": "ghost_settled"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.uninvited_guest.description"
+    },
+    "icon": {
+      "id": "minecraft:red_bed"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.uninvited_guest.title"
+    }
+  },
+  "requirements": [
+    [
+      "ghost_settled"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

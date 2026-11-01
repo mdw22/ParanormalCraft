@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:recapture_clears_attachment",
+  "environment": "paranormalcraft:escape",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 100,
+  "sky_access": true
+}

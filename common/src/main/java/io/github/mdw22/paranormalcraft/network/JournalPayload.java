@@ -17,14 +17,16 @@ public record JournalPayload(List<TypeStage> stages, List<CaptureLog.Entry> capt
 
     /**
      * @param stage 0 (never met) to 4 (studied)
-     * @param bound whether the player has bound one (adds the bound-job line)
+     * @param bound    whether the player has bound one (adds the bound-job line, unlocks its binding)
+     * @param released whether the player has released one (unlocks its blessing)
      */
-    public record TypeStage(String type, int stage, boolean bound) {
+    public record TypeStage(String type, int stage, boolean bound, boolean released) {
 
         public static final StreamCodec<RegistryFriendlyByteBuf, TypeStage> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, TypeStage::type,
                 ByteBufCodecs.VAR_INT, TypeStage::stage,
                 ByteBufCodecs.BOOL, TypeStage::bound,
+                ByteBufCodecs.BOOL, TypeStage::released,
                 TypeStage::new);
     }
 

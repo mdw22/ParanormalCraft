@@ -58,6 +58,7 @@ public final class CapturedGhosts {
         CapturedGhost ghost = fresh(level, home, captor);
         if (ghost != null) {
             stack.set(ModDataComponents.CAPTURED_GHOST.get(), ghost);
+            stack.set(ModDataComponents.TRAP_SEAL.get(), TrapDecay.freshSeal(level));
         }
         return stack;
     }

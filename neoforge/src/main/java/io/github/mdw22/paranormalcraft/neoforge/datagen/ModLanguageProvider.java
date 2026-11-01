@@ -110,7 +110,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add("advancements.paranormalcraft.little_light.description", "Summon a Wisp Familiar");
 
         // Update 10: ward feedback, the journal spread, binding, the Wisp Familiar, the Spectral Step
-        add("subtitles.paranormalcraft.ward_lantern.flare", "Ward Lantern flares");
+        add("subtitles.paranormalcraft.ward_lantern.flare", "Ward repels a spirit");
         add("journal.paranormalcraft.lingering_spirit.stage1", "The needle jumps and won't settle. Faint, cold and common: a Lingering Spirit.");
         add("journal.paranormalcraft.lingering_spirit.stage2", "A pale sheet drifting near the floor. Curious, but shy if you stare. It loves the coldest corner.");
         add("journal.paranormalcraft.lingering_spirit.stage3", "Wear it down until it flickers, then hold the beam over a trap. Wards quiet it.");
@@ -158,6 +158,32 @@ public class ModLanguageProvider extends LanguageProvider {
         add("subtitles.paranormalcraft.wisp_familiar.recall", "Wisp returns");
         add("subtitles.paranormalcraft.wisp_familiar.warn", "Wisp warns");
         add("subtitles.paranormalcraft.wisp_familiar.no", "Wisp hesitates");
+        add("subtitles.paranormalcraft.wisp_familiar.warn_urgent", "Wisp warns urgently");
+
+        // Update 12: playtest fixes and Milestone 2 part D
+        add("advancements.paranormalcraft.breach.title", "Breach!");
+        add("advancements.paranormalcraft.breach.description", "Be there when a Containment Unit breaches");
+        add("advancements.paranormalcraft.uninvited_guest.title", "Uninvited Guest");
+        add("advancements.paranormalcraft.uninvited_guest.description", "A ghost follows you home and moves in");
+        add("advancements.paranormalcraft.house_call.title", "House Call");
+        add("advancements.paranormalcraft.house_call.description", "Capture a ghost that settled in your home");
+        add("item.paranormalcraft.filled_ghost_trap.integrity", "Integrity %s%%");
+        add("subtitles.paranormalcraft.ghost_trap.burst", "A trap bursts open");
+        add("subtitles.paranormalcraft.ghost_trap.creak", "Ghost Trap creaks");
+        add("subtitles.paranormalcraft.containment_unit.breach", "Containment breach!");
+        add("subtitles.paranormalcraft.lingering_spirit.watching", "You feel watched");
+        add("effect.paranormalcraft.restful.blessing", "phantoms won't spawn for you for %s nights");
+        add("job.paranormalcraft.wisp_familiar.desc", "a light that follows you, warns of mobs, and guides you to cabins");
+        add("gui.paranormalcraft.containment.release.tooltip", "%s: %s");
+        add("gui.paranormalcraft.containment.bind.tooltip", "%s: %s");
+        add("journal.paranormalcraft.blessings.title", "Blessings");
+        add("journal.paranormalcraft.bindings.title", "Bindings");
+        add("journal.paranormalcraft.blessings.from", "%s. From releasing a %s.");
+        add("journal.paranormalcraft.blessings.locked", "Release a %s to learn this");
+        add("journal.paranormalcraft.bindings.locked", "Bind a %s to learn this");
+        add("journal.paranormalcraft.outcome.escaped", "Escaped");
+        add("journal.paranormalcraft.outcome.attached", "Attached to you");
+        add("journal.paranormalcraft.field_notes.loose", "A ghost that gets loose may follow you home.");
         add("subtitles.paranormalcraft.spectral_step.phase_in", "Spectral Step whooshes");
         add("subtitles.paranormalcraft.spectral_step.phase_out", "Footsteps solidify");
 

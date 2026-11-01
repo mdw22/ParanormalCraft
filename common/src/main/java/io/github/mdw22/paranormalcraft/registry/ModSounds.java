@@ -40,6 +40,10 @@ public final class ModSounds {
     public static final RegistryEntry<SoundEvent> WISP_NO = RegistrationHelper.sound("entity.wisp_familiar.no");
     public static final RegistryEntry<SoundEvent> PHASE_IN = RegistrationHelper.sound("item.spectral_step.phase_in");
     public static final RegistryEntry<SoundEvent> PHASE_OUT = RegistrationHelper.sound("item.spectral_step.phase_out");
+    public static final RegistryEntry<SoundEvent> GHOST_WATCHING = RegistrationHelper.sound("entity.lingering_spirit.watching");
+    public static final RegistryEntry<SoundEvent> TRAP_BURST = RegistrationHelper.sound("block.ghost_trap.burst");
+    public static final RegistryEntry<SoundEvent> TRAP_CREAK = RegistrationHelper.sound("block.ghost_trap.creak");
+    public static final RegistryEntry<SoundEvent> CONTAINMENT_BREACH = RegistrationHelper.sound("block.containment_unit.breach");
     public static final RegistryEntry<SoundEvent> GHOST_ASCEND = RegistrationHelper.sound("entity.lingering_spirit.ascend");
 
     private ModSounds() {

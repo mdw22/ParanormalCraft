@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:wisp_guide_leads_over_obstacles",
+  "environment": "paranormalcraft:familiar",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 600,
+  "sky_access": true
+}

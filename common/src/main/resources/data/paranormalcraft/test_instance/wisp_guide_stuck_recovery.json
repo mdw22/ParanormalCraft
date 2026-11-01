@@ -1,8 +1,8 @@
 {
   "type": "minecraft:function",
-  "function": "paranormalcraft:wisp_guide_heads_for_cabin",
+  "function": "paranormalcraft:wisp_guide_stuck_recovery",
   "environment": "paranormalcraft:familiar",
   "structure": "paranormalcraft:arena",
-  "max_ticks": 100,
+  "max_ticks": 200,
   "sky_access": true
 }

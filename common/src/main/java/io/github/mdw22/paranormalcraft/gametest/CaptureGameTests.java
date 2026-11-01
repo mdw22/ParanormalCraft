@@ -150,6 +150,8 @@ public final class CaptureGameTests {
             throw helper.assertionException(Component.literal("no trap block entity"));
         }
         trap.setRollOverride(() -> roll);
+        // A failed capture never attaches here; attachment has its own test.
+        trap.setAttachRollOverride(() -> 1.0);
         return trap;
     }
 
@@ -651,6 +653,7 @@ public final class CaptureGameTests {
             for (BlockPos candidate : BlockPos.betweenClosed(ghost.blockPosition().offset(-1, -4, -1), ghost.blockPosition().offset(1, 0, 1))) {
                 if (helper.getLevel().getBlockEntity(candidate) instanceof GhostTrapBlockEntity trap) {
                     trap.setRollOverride(() -> 0.99);
+                trap.setAttachRollOverride(() -> 1.0);
                     trapAt[0] = candidate.immutable();
                 }
             }
@@ -752,6 +755,7 @@ public final class CaptureGameTests {
             level.setBlock(trapPos, ModBlocks.GHOST_TRAP.get().defaultBlockState(), Block.UPDATE_ALL);
             if (level.getBlockEntity(trapPos) instanceof GhostTrapBlockEntity trap) {
                 trap.setRollOverride(() -> 0.99);
+                trap.setAttachRollOverride(() -> 1.0);
             }
         });
         helper.succeedWhen(() -> {

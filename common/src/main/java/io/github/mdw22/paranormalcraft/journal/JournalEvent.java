@@ -28,7 +28,13 @@ public enum JournalEvent {
     /** Bound a ghost into a Spirit Vessel. */
     BOUND,
     /** Summoned a Wisp Familiar. */
-    FAMILIAR_SUMMONED;
+    FAMILIAR_SUMMONED,
+    /** A ghost that followed this player settled in their home. */
+    GHOST_SETTLED,
+    /** Captured a ghost that had settled in this player's home. */
+    HOUSE_CALL,
+    /** Was within 16 blocks of a Containment breach. */
+    BREACH_WITNESSED;
 
     /** The stages, in order (stage n is {@code STAGES[n - 1]}). */
     public static final JournalEvent[] STAGES = {DETECTED, SEEN, CAPTURED, STUDIED};

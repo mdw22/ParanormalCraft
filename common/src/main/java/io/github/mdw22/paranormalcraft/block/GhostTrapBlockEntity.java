@@ -1,11 +1,14 @@
 package io.github.mdw22.paranormalcraft.block;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.capture.CaptureRules;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
+import io.github.mdw22.paranormalcraft.capture.TrapDecay;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.journal.JournalEvent;
 import io.github.mdw22.paranormalcraft.journal.JournalEvents;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
@@ -47,6 +50,8 @@ public class GhostTrapBlockEntity extends BlockEntity {
     private static final int SCAN_INTERVAL = 2;
     /** GameTests set this to fix the no-tether roll; null means roll for real. */
     private @Nullable DoubleSupplier rollOverride;
+    /** GameTests set this to fix the failed-capture attach roll; null means roll for real. */
+    private @Nullable DoubleSupplier attachRollOverride;
 
     private @Nullable UUID capturing;
     private int captureTicks;
@@ -63,6 +68,14 @@ public class GhostTrapBlockEntity extends BlockEntity {
     public void setRollOverride(@Nullable DoubleSupplier roll) {
 
         this.rollOverride = roll;
+    }
+
+    /**
+     * Tests only: the value a failed capture rolls against {@code FAILED_CAPTURE_ATTACH_CHANCE}.
+     */
+    public void setAttachRollOverride(@Nullable DoubleSupplier roll) {
+
+        this.attachRollOverride = roll;
     }
 
     public boolean isCapturing() {
@@ -157,10 +170,16 @@ public class GhostTrapBlockEntity extends BlockEntity {
 
         // Released first, so the saved ghost doesn't keep the trap's no-AI hold.
         ghost.setCapturingTrap(null);
+        // Capture ends any following; a ghost that had settled in its captor's home is a House Call.
+        java.util.UUID settledOn = ghost.attachment().settledOn();
+        ghost.attachment().clearForCapture();
         CapturedGhost captured = describe(level, ghost);
         ServerPlayer captor = level.getServer().getPlayerList().getPlayerByName(captured.captor());
         if (captor != null) {
             JournalEvents.captured(captor, ghost);
+            if (captor.getUUID().equals(settledOn)) {
+                JournalEvents.fire(captor, JournalEvent.HOUSE_CALL, captured.entityType());
+            }
         }
         ServerTrace.ghost("trap_capture_success", ghost, line -> {
             line.addProperty("trap", pos.toShortString());
@@ -176,6 +195,7 @@ public class GhostTrapBlockEntity extends BlockEntity {
         level.setBlock(pos, ModBlocks.FILLED_GHOST_TRAP.get().defaultBlockState(), Block.UPDATE_ALL);
         if (level.getBlockEntity(pos) instanceof FilledGhostTrapBlockEntity filled) {
             filled.setContents(captured);
+            filled.setSeal(TrapDecay.freshSeal(level));
         } else {
             Constants.LOG.error("Filled trap at {} has no block entity; {} is lost", pos.toShortString(), captured.name());
         }
@@ -185,6 +205,11 @@ public class GhostTrapBlockEntity extends BlockEntity {
 
         ghost.breakFree(level);
         level.playSound(null, pos, ModSounds.TRAP_BREAK_FREE.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
+        // A ghost that slips a trap may follow someone home.
+        double attachRoll = this.attachRollOverride != null ? this.attachRollOverride.getAsDouble() : level.getRandom().nextDouble();
+        if (attachRoll < Balance.Escape.FAILED_CAPTURE_ATTACH_CHANCE && !ghost.attachment().attached()) {
+            ghost.attachment().attachToNearest(level, "failed_capture");
+        }
         ServerTrace.ghost("trap_capture_fail", ghost, line -> {
             line.addProperty("trap", pos.toShortString());
             line.addProperty("tetheredThroughout", this.tetheredThroughout);

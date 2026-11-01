@@ -1,0 +1,146 @@
+{
+  "title": "Update 12 re-test: playtest fixes, trap decay, breaches, ghosts that follow you home",
+  "steps": [
+    {
+      "id": "quiet_traps",
+      "title": "Quiet traps",
+      "lines": [
+        "Two full traps sit on the platform. Stay near them for a minute: at most a soft rattle now and then.",
+        "Pick one up (sneak + empty hand): it should stay silent in your inventory while it's healthy. Check its tooltip and bar."
+      ],
+      "setup": [
+        "paranormalcraft debug scene containment_lab"
+      ]
+    },
+    {
+      "id": "creeper_chirp",
+      "title": "Creeper warning chirp",
+      "lines": [
+        "A frozen creeper waits round the corner behind you. Listen to the wisp:",
+        "it should be the same wisp chirp as for a zombie, only higher and doubled, with the subtitle \"Wisp warns urgently\"."
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave",
+        "wait 20",
+        "kill @e[type=minecraft:zombie,tag=paranormalcraft_scene]",
+        "summon minecraft:creeper 100006.5 201 99993.5 {NoAI:1b,PersistenceRequired:1b}",
+        "paranormalcraft debug familiar @s summon"
+      ],
+      "auto_check": "trace wisp_warn creeper=true"
+    },
+    {
+      "id": "guide_obstacles",
+      "title": "Wisp guide over hills and trees",
+      "lines": [
+        "You're 64 blocks from a real cabin, facing away, with your wisp. Sneak + use the vessel and follow it.",
+        "It should fly over trees and hills, wait for you at each stop, and circle the cabin when you're close."
+      ],
+      "setup": [
+        "paranormalcraft debug scene familiar_cave",
+        "wait 20",
+        "paranormalcraft debug nearcabin 64",
+        "wait 20",
+        "paranormalcraft debug familiar @s summon"
+      ],
+      "auto_check": "trace wisp_guide_end reason=arrived"
+    },
+    {
+      "id": "ward_preview",
+      "title": "Ward edge preview",
+      "lines": [
+        "A Ward Lantern stands in the middle (radius 12 for this step; the next steps put 32 back). Hold the other lantern and walk toward the edge.",
+        "Is the edge a clear line of cyan motes, with a short post every 4 blocks?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena_night",
+        "wait 20",
+        "paranormalcraft debug config set wardLanternRadius 12",
+        "setblock 100000 201 100000 paranormalcraft:ward_lantern",
+        "item replace entity @s weapon.mainhand with paranormalcraft:ward_lantern"
+      ]
+    },
+    {
+      "id": "ward_flare",
+      "title": "Ward flare",
+      "lines": [
+        "A ghost inside the ward tries to haunt. Watch and listen:",
+        "the lantern pulses bright, a ring bursts out, a chime (\"Ward repels a spirit\"), and the ghost flashes into view as it's pushed back."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene arena_night",
+        "wait 20",
+        "setblock 100000 201 99996 paranormalcraft:ward_lantern",
+        "paranormalcraft debug ghost spawn 100000 201.5 100002",
+        "wait 10",
+        "paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,x=100000,y=201,z=100002,distance=..4] haunt 1"
+      ],
+      "auto_check": "trace ward_flare"
+    },
+    {
+      "id": "blessings_page",
+      "title": "Blessings and Bindings, and the unit's tooltips",
+      "lines": [
+        "Find the Blessings and Bindings spread in the journal: does it say what Restful and the Wisp Familiar do?",
+        "Then close it, open the Containment Unit, select a spirit, and hover Release and Bind."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "paranormalcraft debug containment 100000 202 100000 fill 2",
+        "paranormalcraft debug journal @s lingering_spirit 6",
+        "paranormalcraft debug journal @s open"
+      ],
+      "auto_check": "trace journal_open"
+    },
+    {
+      "id": "trap_decay",
+      "title": "Trap decay to escape",
+      "lines": [
+        "You're looking at a trap set to 2%. Hear the urgent rattles (and EMF 4 nearby); in about 25 s it bursts open.",
+        "The ghost comes out Agitated (a faint red tint with goggles on) and starts following you."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "paranormalcraft debug look 99997.5 201.3 100002.5",
+        "wait 2",
+        "paranormalcraft debug trap @s integrity 2"
+      ],
+      "auto_check": "trace trap_escape"
+    },
+    {
+      "id": "breach",
+      "title": "A breach, and stopping it",
+      "lines": [
+        "The unit is out of charge and breaching: a fast alarm, cracking glass, and a spirit escapes every 30 s.",
+        "Take soul sand from the chest beside it and put it in the fuel slot: the breach should stop."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene breach_lab",
+        "wait 20",
+        "paranormalcraft debug containment 100000 201 100000 breach"
+      ],
+      "auto_check": "trace containment_breach_end reason=refuelled"
+    },
+    {
+      "id": "follow_home",
+      "title": "A ghost follows you home",
+      "lines": [
+        "The ghost beside you is following you now (\"You feel watched\"). Walk to the hut in the far corner; it settles in.",
+        "Then ward the hut with a lantern (no more haunting), and catch it with the wand and a trap for House Call."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene home_base",
+        "wait 20",
+        "paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] agitate",
+        "paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] attach @s"
+      ],
+      "auto_check": "trace attach_settle"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package io.github.mdw22.paranormalcraft.registry;
 
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
+import io.github.mdw22.paranormalcraft.capture.TrapSeal;
 import io.github.mdw22.paranormalcraft.capture.WandHeat;
 import net.minecraft.core.component.DataComponentType;
 
@@ -18,6 +19,10 @@ public final class ModDataComponents {
     /** The ghost inside a Filled Ghost Trap. */
     public static final RegistryEntry<DataComponentType<CapturedGhost>> CAPTURED_GHOST = RegistrationHelper.dataComponent("captured_ghost",
             builder -> builder.persistent(CapturedGhost.CODEC).networkSynchronized(CapturedGhost.STREAM_CODEC));
+
+    /** A Filled Trap's seal, from which its integrity is worked out; synced for the item bar and tooltip. */
+    public static final RegistryEntry<DataComponentType<TrapSeal>> TRAP_SEAL = RegistrationHelper.dataComponent("trap_seal",
+            builder -> builder.persistent(TrapSeal.CODEC).networkSynchronized(TrapSeal.STREAM_CODEC));
 
     private ModDataComponents() {
     }

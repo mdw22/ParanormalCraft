@@ -3,6 +3,7 @@ package io.github.mdw22.paranormalcraft.familiar;
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.ward.Cooldowns;
 import io.github.mdw22.paranormalcraft.ward.WardEffects;
@@ -26,6 +27,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
@@ -33,6 +35,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +51,10 @@ import java.util.UUID;
  *     {@link WispLights}).</li>
  *     <li><b>Warnings:</b> a hostile the owner can't see ({@link WispWarnings}) turns it red and draws it to that
  *     side, with a chirp from its own position once per mob per {@link #WARN_COOLDOWN_TICKS}.</li>
- *     <li><b>Guide:</b> flies {@link #GUIDE_AHEAD} blocks toward a point and waits there, or shakes "no".</li>
+ *     <li><b>Guide:</b> leads the way to a cabin along waypoints planned from the heightmap ({@link GuidePlanner}),
+ *     each {@link #GUIDE_AHEAD} blocks on and above the terrain or canopy; it waits at each until the owner comes within
+ *     4 blocks, circles the cabin once the owner is within 16, and gives up after 90 s, if the owner wanders off the
+ *     route, or if it can't make progress even after rising 6 blocks (then it shakes "no").</li>
  * </ul>
  */
 public class WispFamiliarEntity extends Entity {
@@ -68,8 +74,9 @@ public class WispFamiliarEntity extends Entity {
     private @Nullable BlockPos light;
     private @Nullable Vec3 threatSide;
     private final Cooldowns<UUID> warned = new Cooldowns<>();
-    private @Nullable Vec3 guideTarget;
-    private int guideTicks;
+    private @Nullable Guide guide;
+    /** Tests only: freezes its movement, to exercise the stuck recovery. */
+    private boolean movementBlocked;
     private int shakeTicks;
 
     public WispFamiliarEntity(EntityType<? extends WispFamiliarEntity> type, Level level) {
@@ -172,13 +179,12 @@ public class WispFamiliarEntity extends Entity {
         float yaw = player.getYRot() * Mth.DEG_TO_RAD;
         Vec3 look = new Vec3(-Mth.sin(yaw), 0.0, Mth.cos(yaw));
         Vec3 right = new Vec3(-Mth.cos(yaw), 0.0, -Mth.sin(yaw));
+        if (this.guide != null) {
+            guideMove(player);
+            return;
+        }
         Vec3 target;
-        if (this.guideTarget != null) {
-            target = this.guideTarget;
-            if (--this.guideTicks <= 0 || player.position().distanceTo(this.guideTarget) > TELEPORT_DISTANCE + GUIDE_AHEAD) {
-                endGuide("done");
-            }
-        } else if (this.threatSide != null) {
+        if (this.threatSide != null) {
             target = base.add(this.threatSide.scale(Balance.Familiar.WARN_DRIFT));
         } else {
             target = base.add(right.scale(FOLLOW_OFFSET)).add(look.scale(-FOLLOW_OFFSET));
@@ -189,7 +195,7 @@ public class WispFamiliarEntity extends Entity {
             target = target.add(right.scale(Math.sin(this.shakeTicks * 1.3) * 0.45));
         }
         target = inTheOpen(player, target);
-        if (this.guideTarget == null && position().distanceTo(base) > TELEPORT_DISTANCE) {
+        if (position().distanceTo(base) > TELEPORT_DISTANCE) {
             setPos(target);
             return;
         }
@@ -243,6 +249,11 @@ public class WispFamiliarEntity extends Entity {
                 boolean creeper = mob instanceof Creeper;
                 level.playSound(null, getX(), getY(), getZ(), creeper ? ModSounds.WISP_WARN_SHARP.get() : ModSounds.WISP_WARN.get(),
                         SoundSource.NEUTRAL, 1.0F, 1.0F);
+                if (creeper) {
+                    // More urgent by rhythm: the same chirp, higher, twice in quick succession.
+                    HauntingScheduler.schedule(level, Balance.Familiar.URGENT_CHIRP_GAP_TICKS, () -> level.playSound(null, getX(), getY(), getZ(),
+                            ModSounds.WISP_WARN_SHARP.get(), SoundSource.NEUTRAL, 1.0F, 1.1F));
+                }
                 double angle = WispWarnings.angle(player.getViewVector(1.0F), mob.getEyePosition().subtract(player.getEyePosition()));
                 boolean los = player.hasLineOfSight(mob);
                 ServerTrace.event("wisp_warn", line -> {
@@ -261,14 +272,149 @@ public class WispFamiliarEntity extends Entity {
 
     // ---- guide ----
 
-    /** Flies toward {@code point} and waits there. */
-    public void guideToward(ServerPlayer player, Vec3 point) {
+    /** A guide in progress. */
+    private static final class Guide {
 
-        Vec3 flat = new Vec3(point.x - player.getX(), 0.0, point.z - player.getZ());
-        Vec3 direction = flat.lengthSqr() < 1.0E-6 ? Vec3.ZERO : flat.normalize();
-        this.guideTarget = player.position().add(direction.scale(GUIDE_AHEAD)).add(0.0, Balance.Familiar.SHOULDER_HEIGHT, 0.0);
-        this.guideTicks = Balance.Familiar.GUIDE_WAIT_TICKS;
+        private final Vec3 cabin;
+        private final List<Vec3> route = new ArrayList<>();
+        private Vec3 previous;
+        private Vec3 waypoint;
+        private boolean waiting;
+        private int ticks;
+        private int circleTicks = -1;
+        private double bestDistance = Double.MAX_VALUE;
+        private int sinceProgress;
+        private boolean rose;
+        private int losRise;
+
+        Guide(Vec3 cabin, Vec3 start, Vec3 first) {
+
+            this.cabin = cabin;
+            this.previous = start;
+            this.waypoint = first;
+            this.route.add(first);
+        }
+    }
+
+    private GuidePlanner.Heights heights() {
+
+        return (x, z) -> this.level().getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+    }
+
+    /** Leads the way toward {@code cabin}: plans the first waypoint and sets off. */
+    public void guideToward(ServerPlayer player, Vec3 cabin) {
+
+        Vec3 start = player.position();
+        Vec3 first = GuidePlanner.next(start, cabin, heights());
+        this.guide = new Guide(cabin, start, first);
         this.entityData.set(DATA_GUIDING, true);
+        traceWaypoint(0, first);
+    }
+
+    private void guideMove(ServerPlayer player) {
+
+        Guide guide = this.guide;
+        if (++guide.ticks > Balance.Familiar.GUIDE_TIMEOUT_TICKS) {
+            endGuide("timeout");
+            return;
+        }
+        if (guide.circleTicks >= 0) {
+            circle(guide);
+            return;
+        }
+        if (GuidePlanner.flatDistance(player.position(), guide.cabin) <= Balance.Familiar.GUIDE_ARRIVED) {
+            guide.circleTicks = 0;
+            ServerTrace.event("wisp_guide_arrived", line -> line.addProperty("waypoints", guide.route.size()));
+            return;
+        }
+        if (GuidePlanner.offRoute(player.position(), guide.previous, guide.waypoint) > Balance.Familiar.GUIDE_OFF_ROUTE) {
+            endGuide("wandered");
+            return;
+        }
+        if (guide.waiting) {
+            // Keep in the owner's sight where it can: if something hides it, rise a block at a time (up to 4).
+            if (this.tickCount % 10 == 0 && guide.losRise < Balance.Familiar.GUIDE_SIGHT_RISE && !player.hasLineOfSight(this)) {
+                guide.losRise++;
+                guide.waypoint = guide.waypoint.add(0.0, 1.0, 0.0);
+            }
+            hover(guide.waypoint.add(0.0, Math.sin(this.tickCount * 0.15) * 0.15, 0.0));
+            if (GuidePlanner.flatDistance(player.position(), guide.waypoint) <= Balance.Familiar.GUIDE_REACHED) {
+                guide.previous = guide.waypoint;
+                guide.waypoint = GuidePlanner.next(guide.waypoint, guide.cabin, heights());
+                guide.route.add(guide.waypoint);
+                guide.waiting = false;
+                guide.losRise = 0;
+                guide.bestDistance = Double.MAX_VALUE;
+                guide.sinceProgress = 0;
+                traceWaypoint(guide.route.size() - 1, guide.waypoint);
+            }
+            return;
+        }
+        Vec3 heading = GuidePlanner.heading(position(), guide.waypoint);
+        fly(heading);
+        double distance = position().distanceTo(guide.waypoint);
+        if (distance < Balance.Familiar.GUIDE_ARRIVE_DISTANCE) {
+            guide.waiting = true;
+            return;
+        }
+        if (distance < guide.bestDistance - 0.1) {
+            guide.bestDistance = distance;
+            guide.sinceProgress = 0;
+        } else if (++guide.sinceProgress >= Balance.Familiar.GUIDE_STUCK_TICKS) {
+            guide.sinceProgress = 0;
+            guide.bestDistance = Double.MAX_VALUE;
+            if (guide.rose) {
+                ServerTrace.event("wisp_guide_stuck", line -> line.addProperty("action", "give_up"));
+                shakeNo();
+                endGuide("stuck");
+                return;
+            }
+            guide.rose = true;
+            guide.waypoint = guide.waypoint.add(0.0, Balance.Familiar.GUIDE_STUCK_RISE, 0.0);
+            ServerTrace.event("wisp_guide_stuck", line -> line.addProperty("action", "rise"));
+        }
+    }
+
+    /** Once round the cabin, high above its roof, then back to the owner. */
+    private void circle(Guide guide) {
+
+        double angle = 2 * Math.PI * guide.circleTicks / Balance.Familiar.GUIDE_CIRCLE_TICKS;
+        int top = heights().top((int) Math.floor(guide.cabin.x), (int) Math.floor(guide.cabin.z));
+        Vec3 point = new Vec3(guide.cabin.x + Math.cos(angle) * Balance.Familiar.GUIDE_CIRCLE_RADIUS, top + Balance.Familiar.GUIDE_CLEARANCE + Balance.Familiar.GUIDE_CIRCLE_LIFT,
+                guide.cabin.z + Math.sin(angle) * Balance.Familiar.GUIDE_CIRCLE_RADIUS);
+        fly(GuidePlanner.heading(position(), point));
+        if (++guide.circleTicks >= Balance.Familiar.GUIDE_CIRCLE_TICKS) {
+            endGuide("arrived");
+        }
+    }
+
+    private void fly(Vec3 target) {
+
+        if (this.movementBlocked) {
+            return;
+        }
+        Vec3 delta = target.subtract(position());
+        double length = delta.length();
+        Vec3 step = length > Balance.Familiar.GUIDE_SPEED ? delta.scale(Balance.Familiar.GUIDE_SPEED / length) : delta;
+        setDeltaMovement(step);
+        setPos(position().add(step));
+    }
+
+    private void hover(Vec3 target) {
+
+        if (!this.movementBlocked) {
+            setPos(position().lerp(target, 0.2));
+        }
+    }
+
+    private void traceWaypoint(int index, Vec3 waypoint) {
+
+        ServerTrace.event("wisp_guide_waypoint", line -> {
+            line.addProperty("index", index);
+            line.addProperty("x", ServerTrace.round(waypoint.x));
+            line.addProperty("y", ServerTrace.round(waypoint.y));
+            line.addProperty("z", ServerTrace.round(waypoint.z));
+        });
     }
 
     /** Shakes "no" and stays. */
@@ -277,17 +423,39 @@ public class WispFamiliarEntity extends Entity {
         this.shakeTicks = Balance.Familiar.SHAKE_TICKS;
     }
 
+    /** The waypoint it is heading for or waiting at, or null. */
     public @Nullable Vec3 guideTarget() {
 
-        return this.guideTarget;
+        return this.guide == null ? null : this.guide.waypoint;
+    }
+
+    /** The guide's waypoints so far (empty with no guide). */
+    public List<Vec3> guideRoute() {
+
+        return this.guide == null ? List.of() : List.copyOf(this.guide.route);
+    }
+
+    /** Whether it is waiting at a waypoint for the owner. */
+    public boolean guideWaiting() {
+
+        return this.guide != null && this.guide.waiting;
+    }
+
+    /** Tests only: freezes (or frees) its movement. */
+    public void setMovementBlocked(boolean blocked) {
+
+        this.movementBlocked = blocked;
     }
 
     private void endGuide(String reason) {
 
-        this.guideTarget = null;
-        this.guideTicks = 0;
+        int waypoints = this.guide == null ? 0 : this.guide.route.size();
+        this.guide = null;
         this.entityData.set(DATA_GUIDING, false);
-        ServerTrace.event("wisp_guide_end", line -> line.addProperty("reason", reason));
+        ServerTrace.event("wisp_guide_end", line -> {
+            line.addProperty("reason", reason);
+            line.addProperty("waypoints", waypoints);
+        });
     }
 
     // ---- light ----

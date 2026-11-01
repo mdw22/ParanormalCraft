@@ -1,7 +1,9 @@
 package io.github.mdw22.paranormalcraft.client.containment;
 
+import io.github.mdw22.paranormalcraft.binding.BoundJobs;
 import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
 import io.github.mdw22.paranormalcraft.containment.ContainmentCharge;
+import io.github.mdw22.paranormalcraft.containment.ContainmentTables;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitMenu;
 import io.github.mdw22.paranormalcraft.network.ContainmentStatePayload;
@@ -147,6 +149,38 @@ public class ContainmentUnitScreen extends AbstractContainerScreen<ContainmentUn
                 && !(selectionQueued && rows().get(this.selected).queuePosition() == 0 && this.menu.progress() > 0);
         this.process.active = this.process.active && !selectionBinding;
         updateBindButton(hasSelection && !selectionQueued && !selectionBinding);
+        updateReleaseTooltip(hasSelection ? rows().get(this.selected).type() : null);
+    }
+
+    private @Nullable String releaseTooltipType = "";
+
+    /** Release says what the selected ghost's blessing does ("Restful: phantoms won't spawn for you for 3 nights"). */
+    private void updateReleaseTooltip(@Nullable String type) {
+
+        if (java.util.Objects.equals(type, this.releaseTooltipType)) {
+            return;
+        }
+        this.releaseTooltipType = type;
+        ContainmentTables.Blessing blessing = type == null ? null : ContainmentTables.blessingFor(type);
+        if (blessing == null) {
+            this.release.setTooltip(null);
+            return;
+        }
+        Identifier effect = Identifier.parse(blessing.effect());
+        String key = "effect." + effect.getNamespace() + "." + effect.getPath();
+        this.release.setTooltip(Tooltip.create(Component.translatable("gui.paranormalcraft.containment.release.tooltip", Component.translatable(key),
+                Component.translatable(key + ".blessing", ContainmentTables.nights(blessing)))));
+    }
+
+    /** Bind says what the selected ghost would do bound ("Wisp Familiar: a light that follows you, …"). */
+    private @Nullable Component jobTooltip() {
+
+        if (this.selected < 0 || this.selected >= rows().size()) {
+            return null;
+        }
+        BoundJobs.Job job = BoundJobs.jobFor(rows().get(this.selected).type());
+        return job == null ? null : Component.translatable("gui.paranormalcraft.containment.bind.tooltip", Component.translatable(job.langKey()),
+                Component.translatable(job.langKey() + ".desc"));
     }
 
     private void updateBindButton(boolean selectionFree) {
@@ -171,9 +205,16 @@ public class ContainmentUnitScreen extends AbstractContainerScreen<ContainmentUn
             this.bind.active = selectionFree;
             hint = selectionFree ? null : "gui.paranormalcraft.containment.bind.select";
         }
-        if (!java.util.Objects.equals(hint, this.bindHint)) {
-            this.bindHint = hint;
-            this.bind.setTooltip(hint == null ? null : Tooltip.create(Component.translatable(hint, ContainmentUnitBlockEntity.BIND_CHARGE)));
+        String key = hint == null ? "job:" + this.selected : hint;
+        if (!java.util.Objects.equals(key, this.bindHint)) {
+            this.bindHint = key;
+            Component job = jobTooltip();
+            if (hint == null) {
+                this.bind.setTooltip(job == null ? null : Tooltip.create(job));
+            } else {
+                Component text = Component.translatable(hint, ContainmentUnitBlockEntity.BIND_CHARGE);
+                this.bind.setTooltip(Tooltip.create(job == null || bound ? text : Component.empty().append(job).append("\n").append(text)));
+            }
         }
     }
 

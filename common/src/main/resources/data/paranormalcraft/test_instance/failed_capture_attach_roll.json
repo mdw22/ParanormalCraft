@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:failed_capture_attach_roll",
+  "environment": "paranormalcraft:escape",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 100,
+  "sky_access": true
+}

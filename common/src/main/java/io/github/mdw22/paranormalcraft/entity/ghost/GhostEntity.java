@@ -84,11 +84,16 @@ public abstract class GhostEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_WEAKENED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Released from containment: visible to everyone, rising and fading out, then gone. */
     private static final EntityDataAccessor<Boolean> DATA_ASCENDING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Agitated (Milestone 2 part D): drawn with a faint red tint. */
+    private static final EntityDataAccessor<Boolean> DATA_AGITATED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Players within this distance hear "<name> has dispersed". */
     private static final double DISPERSE_MESSAGE_RANGE = Balance.Ghost.DISPERSE_MESSAGE_RANGE;
 
     private Presence presence = new Presence();
     private final HauntingController haunting = new HauntingController(this);
+    private final Attachment attachment = new Attachment(this);
+    /** Ticks of Agitation left (0: calm). */
+    private int agitatedTicks;
     private @Nullable BlockPos home;
     /** Where the thermometer reads coldest; chosen when home is first set. */
     private @Nullable BlockPos coldSpot;
@@ -402,6 +407,9 @@ public abstract class GhostEntity extends PathfinderMob {
      */
     public boolean goalAllowed(ForcedGoal goal) {
 
+        if (this.attachment.following() || goal == ForcedGoal.CURIOUS && isAgitated()) {
+            return false;
+        }
         ForcedGoal forced = forcedGoal();
         return forced == null || forced == goal;
     }
@@ -533,6 +541,7 @@ public abstract class GhostEntity extends PathfinderMob {
         entityData.define(DATA_MANIFESTING, false);
         entityData.define(DATA_WEAKENED, false);
         entityData.define(DATA_ASCENDING, false);
+        entityData.define(DATA_AGITATED, false);
     }
 
     @Override
@@ -602,12 +611,23 @@ public abstract class GhostEntity extends PathfinderMob {
             }
             float presenceBefore = this.presence.value();
             this.presence.tick(!isWeakened());
+            if (isAgitated()) {
+                for (int extra = 1; extra < Balance.Escape.AGITATED_REGEN_FACTOR; extra++) {
+                    this.presence.tick(!isWeakened());
+                }
+                if (--this.agitatedTicks <= 0) {
+                    calm("timeout");
+                }
+            }
             this.entityData.set(DATA_PRESENCE, this.presence.value());
             tracePresence(presenceBefore, "regen");
             updateWeakened();
             tickWeakened(serverLevel);
-            tickManifest(serverLevel);
+            if (!this.attachment.following() || this.manifestTicksLeft > 0) {
+                tickManifest(serverLevel);
+            }
             if (!this.isRemoved()) {
+                this.attachment.tick(serverLevel);
                 this.haunting.tick(serverLevel);
             }
             traceTick();
@@ -659,7 +679,56 @@ public abstract class GhostEntity extends PathfinderMob {
         ServerConfig config = ModConfigs.server();
         int min = config.manifestIntervalMinSeconds() * 20;
         int max = config.manifestIntervalMaxSeconds() * 20;
-        return ModConfigs.paced(min + this.random.nextInt(max - min + 1));
+        int ticks = ModConfigs.paced(min + this.random.nextInt(max - min + 1));
+        return isAgitated() ? (int) Math.max(1, ticks * Balance.Escape.AGITATED_INTERVAL_FACTOR) : ticks;
+    }
+
+    /**
+     * The ward's flash: visible to everyone for {@code ticks} (through the manifest fade), without a whisper.
+     */
+    public void flash(int ticks) {
+
+        this.manifestTicksLeft = Math.max(this.manifestTicksLeft, ticks);
+        this.entityData.set(DATA_MANIFESTING, true);
+        ServerTrace.ghost("ghost_flash", this, line -> line.addProperty("ticks", ticks));
+    }
+
+    // ---- Agitation and attachment (Milestone 2 part D) ----
+
+    public boolean isAgitated() {
+
+        return this.entityData.get(DATA_AGITATED);
+    }
+
+    public int agitatedTicks() {
+
+        return this.agitatedTicks;
+    }
+
+    /**
+     * Agitated for {@code ticks}: haunts and manifests twice as often, recovers Presence twice as fast, is never
+     * curious, and shows a faint red tint.
+     */
+    public void agitate(int ticks) {
+
+        this.agitatedTicks = Math.max(1, ticks);
+        this.entityData.set(DATA_AGITATED, true);
+        ServerTrace.ghost("agitated_start", this, line -> line.addProperty("ticks", ticks));
+    }
+
+    public void calm(String reason) {
+
+        if (!isAgitated() && this.agitatedTicks <= 0) {
+            return;
+        }
+        this.agitatedTicks = 0;
+        this.entityData.set(DATA_AGITATED, false);
+        ServerTrace.ghost("agitated_end", this, line -> line.addProperty("reason", reason));
+    }
+
+    public Attachment attachment() {
+
+        return this.attachment;
     }
 
     // ---- Server trace ----
@@ -955,6 +1024,8 @@ public abstract class GhostEntity extends PathfinderMob {
         if (this.ghostName != null) {
             output.putString("GhostName", this.ghostName);
         }
+        output.putInt("AgitatedTicks", this.agitatedTicks);
+        this.attachment.save(output);
     }
 
     @Override
@@ -968,5 +1039,8 @@ public abstract class GhostEntity extends PathfinderMob {
         this.manifestCooldown = input.getIntOr("ManifestCooldown", -1);
         this.ghostName = input.getString("GhostName").orElse(null);
         this.entityData.set(DATA_WEAKENED, PresenceRules.isWeakened(this.presence.value()));
+        this.agitatedTicks = input.getIntOr("AgitatedTicks", 0);
+        this.entityData.set(DATA_AGITATED, this.agitatedTicks > 0);
+        this.attachment.load(input);
     }
 }

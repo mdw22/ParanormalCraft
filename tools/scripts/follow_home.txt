@@ -1,0 +1,23 @@
+# Follow home: home_base's ghost attaches to the player, who walks (teleports) home to the hut with the bed (their
+# respawn point). The ghost follows unseen, settles in, re-homes there and haunts it; a Ward Lantern stops that.
+# Run with: /execute as Dev at Dev run paranormalcraft debug run follow_home
+paranormalcraft debug scene home_base
+wait 20
+paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] agitate
+paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] attach @p
+expect trace attach_start player=Dev within 5
+expect dump ghosts[0].attachment.mode=following
+# The start is about 51 blocks from the bed (outside the 48-block settling range): it follows, out of sight.
+wait 60
+expect dump ghosts[0].attachment.mode=following
+# Home, by the hut's door: within 48 of the bed, so it settles.
+tp @p 99981.5 201 99984.5
+expect trace attach_settle player=Dev within 60
+# Settling, it slips into its new home unseen.
+wait 20
+expect dump ghosts[0].attachment.mode=none ghosts[0].home[0]=99981
+paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] haunt 1
+expect trace haunt within 40
+setblock 99984 201 99986 paranormalcraft:ward_lantern
+paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] haunt 1
+expect trace haunt_none reason=warded within 40

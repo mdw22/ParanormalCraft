@@ -99,6 +99,10 @@ public class ContainmentUnitBlock extends BaseEntityBlock {
     @Override
     protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
 
+        // A breach pulses the comparator full and empty (a red-alert signal for contraptions).
+        if (level.getBlockEntity(pos) instanceof ContainmentUnitBlockEntity unit && unit.inBreach()) {
+            return unit.breachSignal(level.getGameTime());
+        }
         return comparatorSignal(state.getValue(GHOSTS));
     }
 

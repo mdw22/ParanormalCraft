@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:function",
+  "function": "paranormalcraft:placed_trap_escapes_at_zero",
+  "environment": "paranormalcraft:escape",
+  "structure": "paranormalcraft:arena",
+  "max_ticks": 20,
+  "sky_access": true
+}

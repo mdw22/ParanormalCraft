@@ -119,6 +119,13 @@ public final class DebugDump {
             json.addProperty("speedFactor", ghost.speedFactor());
             json.addProperty("beingCaptured", ghost.capturingTrap() != null);
             json.addProperty("activeGoal", ghost.activeGoals());
+            json.addProperty("agitatedTicks", ghost.agitatedTicks());
+            JsonObject attachment = new JsonObject();
+            attachment.addProperty("mode", ghost.attachment().mode().name().toLowerCase(java.util.Locale.ROOT));
+            attachment.addProperty("player", ghost.attachment().player() == null ? "none" : ghost.attachment().playerName());
+            attachment.addProperty("stayTicks", ghost.attachment().stayTicks());
+            attachment.addProperty("settledOn", ghost.attachment().settledOn() == null ? "none" : ghost.attachment().settledOn().toString());
+            json.add("attachment", attachment);
             HauntingSchedule schedule = ghost.haunting().schedule();
             JsonObject haunting = new JsonObject();
             haunting.addProperty("nextAttemptGameTime", schedule.isScheduled() ? schedule.nextAttempt() : null);
@@ -190,6 +197,7 @@ public final class DebugDump {
             json.addProperty("entityType", contents == null ? "none" : contents.entityType());
             json.addProperty("captor", contents == null ? "none" : contents.captor());
             json.addProperty("structure", contents == null ? "none" : contents.structure().orElse("none"));
+            json.addProperty("integrity", Math.round(trap.integrity(level.getGameTime()) * 10.0) / 10.0);
             json.addProperty("uuid", contents == null || !contents.entity().contains("UUID") ? "none"
                     : UUIDUtil.uuidFromIntArray(contents.entity().getIntArray("UUID").orElse(new int[4])).toString());
             trapArray.add(json);
@@ -207,6 +215,9 @@ public final class DebugDump {
             json.addProperty("charge", unit.charge());
             json.addProperty("unstable", unit.isUnstable());
             json.addProperty("processTicks", unit.processTicks());
+            json.addProperty("unstableTicks", unit.unstableTicks());
+            json.addProperty("breach", unit.inBreach());
+            json.addProperty("ticksToNextEscape", unit.ticksToNextEscape());
             JsonArray storedArray = new JsonArray();
             for (StoredGhost ghost : unit.stored()) {
                 JsonObject stored = new JsonObject();

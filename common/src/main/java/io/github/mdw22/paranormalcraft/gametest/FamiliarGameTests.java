@@ -35,10 +35,13 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -69,7 +72,8 @@ public final class FamiliarGameTests {
         RegistrationHelper.testFunction("wisp_light_not_where_bright", FamiliarGameTests::noLightWhereBright);
         RegistrationHelper.testFunction("wisp_light_air_only_and_orphan_sweep", FamiliarGameTests::lightAirOnlyAndSweep);
         RegistrationHelper.testFunction("wisp_warns_behind_not_in_front", FamiliarGameTests::warnsBehind);
-        RegistrationHelper.testFunction("wisp_guide_heads_for_cabin", FamiliarGameTests::guide);
+        RegistrationHelper.testFunction("wisp_guide_leads_over_obstacles", FamiliarGameTests::guide);
+        RegistrationHelper.testFunction("wisp_guide_stuck_recovery", FamiliarGameTests::guideStuck);
         RegistrationHelper.testFunction("phase_walks_through_passables", FamiliarGameTests::phaseThroughPassables);
         RegistrationHelper.testFunction("phase_extends_inside_pane_then_nudges", FamiliarGameTests::phaseExtends);
         RegistrationHelper.testFunction("spectral_step_cooldown_and_durability", FamiliarGameTests::cooldownAndDurability);
@@ -371,31 +375,104 @@ public final class FamiliarGameTests {
         });
     }
 
+    /**
+     * A stand-in cabin (GameTest worlds generate no structures, so the locator is pointed at it) behind a 4-high stone
+     * wall and a row of trees (5 high; low enough that the route stays under the test area's barrier ceiling at 10). The mock owner walks to each waypoint as the wisp waits there; the wisp must lead the way
+     * over both, never sitting inside a block, until the owner is within 16 of the cabin, then circle and finish.
+     */
     private static void guide(GameTestHelper helper) {
 
-        // GameTest worlds generate no structures, so a cabin template is placed and the locator pointed at it.
-        BlockPos cabin = helper.absolutePos(new BlockPos(20, 1, 34));
-        helper.getLevel().getStructureManager().get(io.github.mdw22.paranormalcraft.Constants.id("abandoned_cabin_oak")).ifPresent(template ->
-                template.placeInWorld(helper.getLevel(), cabin.offset(-7, 0, -2), cabin.offset(-7, 0, -2),
-                        new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings(), helper.getLevel().getRandom(),
-                        Block.UPDATE_CLIENTS));
-        Familiars.setLocatorOverride((level, origin) -> cabin);
-        ServerPlayer player = player(helper, CENTRE, 90.0F);
+        ServerLevel level = helper.getLevel();
+        for (int x = 8; x <= 32; x++) {
+            for (int y = 1; y <= 4; y++) {
+                helper.setBlock(new BlockPos(x, y, 12), Blocks.STONE);
+            }
+        }
+        for (int x = 10; x <= 30; x += 4) {
+            for (int y = 1; y <= 4; y++) {
+                helper.setBlock(new BlockPos(x, y, 22), Blocks.OAK_LOG);
+            }
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int y = 4; y <= 5; y++) {
+                        if (helper.getBlockState(new BlockPos(x + dx, y, 22 + dz)).isAir()) {
+                            helper.setBlock(new BlockPos(x + dx, y, 22 + dz), Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
+                        }
+                    }
+                }
+            }
+        }
+        for (int x = 18; x <= 22; x++) {
+            for (int z = 34; z <= 38; z++) {
+                for (int y = 1; y <= 4; y++) {
+                    boolean wall = x == 18 || x == 22 || z == 34 || z == 38 || y == 4;
+                    helper.setBlock(new BlockPos(x, y, z), wall ? Blocks.SPRUCE_PLANKS : Blocks.AIR);
+                }
+            }
+        }
+        BlockPos cabin = helper.absolutePos(new BlockPos(20, 1, 36));
+        Familiars.setLocatorOverride((lvl, origin) -> cabin);
+        ServerPlayer player = player(helper, new BlockPos(20, 1, 3), 0.0F);
         WispFamiliarEntity wisp = summoned(helper, player);
         BlockPos found = Familiars.guide(player);
         check(helper, cabin.equals(found), "the guide found %s, expected the cabin at %s", found, cabin);
-        Vec3 target = wisp.guideTarget();
-        check(helper, target != null && wisp.isGuiding(), "the wisp isn't guiding");
-        Vec3 offset = target.subtract(player.position());
-        check(helper, Math.abs(Math.hypot(offset.x, offset.z) - Balance.Familiar.GUIDE_AHEAD) < 0.01 && offset.z > 7.9,
-                "the wisp heads to %s, expected 8 blocks south toward the cabin", offset);
+        check(helper, wisp.isGuiding() && wisp.guideTarget() != null, "the wisp isn't guiding");
         check(helper, Familiars.guide(player) == null, "guided again during the cooldown");
-        helper.runAfterDelay(30, () -> {
-            check(helper, wisp.position().subtract(player.position()).z > 6.0, "the wisp didn't fly toward the cabin");
-            Familiars.setLocatorOverride((level, origin) -> null);
+        List<String> problems = new ArrayList<>();
+        int[] maxWaypoints = {0};
+        helper.onEachTick(() -> {
+            if (!wisp.isGuiding() || player.isRemoved()) {
+                return;
+            }
+            maxWaypoints[0] = Math.max(maxWaypoints[0], wisp.guideRoute().size());
+            BlockPos at = wisp.blockPosition();
+            if (level.getBlockState(at).isSolid()) {
+                problems.add("inside " + level.getBlockState(at).getBlock() + " at " + helper.relativePos(at).toShortString() + " heading "
+                        + helper.relativeVec(wisp.guideTarget()) + " owner " + helper.relativeVec(player.position()) + " route "
+                        + wisp.guideRoute().stream().map(helper::relativeVec).toList());
+            }
+            if (wisp.guideWaiting()) {
+                // The owner follows: walks to the ground under the waypoint.
+                Vec3 waypoint = wisp.guideTarget();
+                Vec3 ground = new Vec3(waypoint.x, helper.absoluteVec(Vec3.ZERO).y + 1.0, waypoint.z);
+                player.snapTo(ground.x, ground.y, ground.z, 0.0F, 0.0F);
+            }
+        });
+        helper.succeedWhen(() -> {
+            check(helper, !wisp.isGuiding(), "still guiding");
+            check(helper, problems.isEmpty(), "the wisp went through blocks: %s", problems.stream().limit(3).toList());
+            check(helper, maxWaypoints[0] >= 3, "only %d waypoints", maxWaypoints[0]);
+            check(helper, player.position().distanceTo(Vec3.atCenterOf(cabin)) <= Balance.Familiar.GUIDE_ARRIVED + 2.0,
+                    "the owner didn't get within 16 of the cabin (%.1f)", player.position().distanceTo(Vec3.atCenterOf(cabin)));
+            Familiars.setLocatorOverride(null);
+            remove(player);
+        });
+    }
+
+    /**
+     * A wisp that can't move: after 3 s without progress it rises 6 blocks and tries again; still stuck, it shakes and
+     * gives up. With no cabin in range it shakes at once.
+     */
+    private static void guideStuck(GameTestHelper helper) {
+
+        BlockPos cabin = helper.absolutePos(new BlockPos(20, 1, 38));
+        Familiars.setLocatorOverride((lvl, origin) -> cabin);
+        ServerPlayer player = player(helper, new BlockPos(20, 1, 3), 0.0F);
+        WispFamiliarEntity wisp = summoned(helper, player);
+        Familiars.guide(player);
+        wisp.setMovementBlocked(true);
+        double firstHeight = wisp.guideTarget().y;
+        helper.runAfterDelay(Balance.Familiar.GUIDE_STUCK_TICKS + 5, () -> {
+            check(helper, wisp.isGuiding() && Math.abs(wisp.guideTarget().y - firstHeight - Balance.Familiar.GUIDE_STUCK_RISE) < 0.01,
+                    "no rise after 3 s stuck (waypoint y %.1f, was %.1f)", wisp.guideTarget() == null ? Double.NaN : wisp.guideTarget().y, firstHeight);
+        });
+        helper.runAfterDelay(2 * Balance.Familiar.GUIDE_STUCK_TICKS + 10, () -> {
+            check(helper, !wisp.isGuiding(), "still guiding after being stuck twice");
+            check(helper, wisp.isShaking(), "no shake when it gave up");
+            wisp.setMovementBlocked(false);
+            Familiars.setLocatorOverride((lvl, origin) -> null);
             Familiars.resetGuideCooldown(player);
             check(helper, Familiars.guide(player) == null, "found a cabin with none in range");
-            check(helper, wisp.isShaking(), "no shake for no cabin");
             Familiars.setLocatorOverride(null);
             remove(player);
             helper.succeed();
@@ -526,11 +603,14 @@ public final class FamiliarGameTests {
         BlockPos lantern = ghostAt.offset(-6, -1, 0);
         helper.setBlock(lantern, ModBlocks.WARD_LANTERN.get());
         check(helper, ghost.haunting().force(level, HauntingAction.TOGGLE_OPENING).isEmpty(), "haunted inside a ward");
-        check(helper, helper.getBlockState(lantern).getValue(WardLanternBlock.FLARE), "the lantern didn't flare");
+        check(helper, helper.getBlockState(lantern).getValue(WardLanternBlock.FLARE) == 2, "the lantern didn't flare");
+        check(helper, ghost.isManifesting(), "the ward didn't expose the ghost");
         check(helper, ghost.getDeltaMovement().x > 0.5, "the ghost wasn't pushed away from the lantern (%s)", ghost.getDeltaMovement());
         check(helper, level.getLightEmission(helper.absolutePos(lantern)) == Balance.Ward.FLARE_LIGHT, "the flare isn't light 15");
-        helper.runAfterDelay(Balance.Ward.FLARE_TICKS + 4, () -> {
-            check(helper, !helper.getBlockState(lantern).getValue(WardLanternBlock.FLARE), "the flare didn't fade");
+        helper.runAfterDelay(Balance.Ward.FLARE_PULSE_TICKS + 1, () -> check(helper, helper.getBlockState(lantern).getValue(WardLanternBlock.FLARE) == 1,
+                "the flare isn't pulsing"));
+        helper.runAfterDelay(Balance.Ward.FLARE_TICKS + Balance.Ward.FLARE_PULSE_TICKS + 4, () -> {
+            check(helper, helper.getBlockState(lantern).getValue(WardLanternBlock.FLARE) == 0, "the flare didn't fade");
             ghost.discard();
             helper.succeed();
         });

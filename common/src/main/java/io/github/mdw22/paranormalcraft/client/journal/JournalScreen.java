@@ -1,6 +1,9 @@
 package io.github.mdw22.paranormalcraft.client.journal;
 
+import io.github.mdw22.paranormalcraft.binding.BoundJobs;
+import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
+import io.github.mdw22.paranormalcraft.containment.ContainmentTables;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.journal.CaptureLog;
 import io.github.mdw22.paranormalcraft.journal.JournalTypes;
@@ -9,7 +12,6 @@ import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModEffects;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.registry.RegistrationHelper;
-import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
@@ -19,12 +21,14 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -45,7 +49,11 @@ import java.util.function.Supplier;
  *     drawn as a dark silhouette until the player has seen one) over the facts rows from {@link JournalTypes}
  *     ("?" until unlocked); on the right the short stage notes ("?" until reached), plus the bound-job line once one
  *     has been bound.</li>
- *     <li><b>Captures:</b> compact rows: type icon, name, day, outcome icon.</li>
+ *     <li><b>Blessings and Bindings:</b> what each type's release gives and what binding it does (icon, name, effect,
+ *     how long or how to use it), from {@code ContainmentTables} and {@code BoundJobs}; "?" until the player has
+ *     released or bound one.</li>
+ *     <li><b>Captures:</b> compact rows: type icon, name, day, outcome icon (held, processed, released, bound,
+ *     escaped, or "attached to you").</li>
  * </ul>
  * Every icon shows its full name on hover. All text is lang ({@code journal.paranormalcraft.*}).
  */
@@ -71,7 +79,7 @@ public class JournalScreen extends Screen {
     private static final long TURN_MILLIS = 9000;
 
     /** A spread: Field Notes, one ghost type, or a page pair of captures. */
-    private sealed interface Spread permits Notes, TypePage, Captures {
+    private sealed interface Spread permits Notes, TypePage, Blessings, Captures {
     }
 
     private record Notes() implements Spread {
@@ -81,6 +89,10 @@ public class JournalScreen extends Screen {
     }
 
     private record Captures(List<CaptureLog.Entry> left, List<CaptureLog.Entry> right) implements Spread {
+    }
+
+    /** What each ghost type's release gives and what binding it does; each entry "?" until earned. */
+    private record Blessings(List<JournalPayload.TypeStage> types) implements Spread {
     }
 
     private final List<Spread> spreads;
@@ -119,6 +131,7 @@ public class JournalScreen extends Screen {
                 spreads.add(new TypePage(stage.type(), stage.stage(), stage.bound()));
             }
         }
+        spreads.add(new Blessings(payload.stages()));
         List<CaptureLog.Entry> captures = payload.captures();
         if (captures.isEmpty()) {
             spreads.add(new Captures(List.of(), List.of()));
@@ -156,6 +169,7 @@ public class JournalScreen extends Screen {
                 case Notes _ -> kind.equals("notes");
                 case TypePage page -> page.type().equals(kind);
                 case Captures _ -> kind.equals("captures");
+                case Blessings _ -> kind.equals("blessings");
             };
             if (match) {
                 return i;
@@ -218,6 +232,7 @@ public class JournalScreen extends Screen {
             case Notes _ -> drawNotes(graphics, x, rightPage, y);
             case TypePage page -> drawType(graphics, page, x, rightPage, y);
             case Captures captures -> drawCaptures(graphics, captures, x, rightPage, y);
+            case Blessings blessings -> drawBlessings(graphics, blessings, x, rightPage, y);
         }
         // Between the "<" button and Done, clear of the page text.
         graphics.centeredText(this.font, Component.literal((this.spread + 1) + " / " + this.spreads.size()), x + 20 + (SPREAD_WIDTH / 2 - 60) / 2,
@@ -270,6 +285,62 @@ public class JournalScreen extends Screen {
                     branches[i] + 19, INK);
             graphics.text(this.font, Component.translatable("journal.paranormalcraft.diagram." + outcomeLabels[i] + ".gives"), iconX + 24,
                     branches[i] + 4, FADED, false);
+        }
+        graphics.textWithWordWrap(this.font, Component.translatable("journal.paranormalcraft.field_notes.loose"), right + MARGIN, y + 172,
+                PAGE_WIDTH - 2 * MARGIN, FADED, false);
+    }
+
+    // ---- Blessings and Bindings ----
+
+    private void drawBlessings(GuiGraphicsExtractor graphics, Blessings spread, int left, int right, int y) {
+
+        graphics.centeredText(this.font, Component.translatable("journal.paranormalcraft.blessings.title"), left + PAGE_WIDTH / 2, y + 8, INK);
+        graphics.centeredText(this.font, Component.translatable("journal.paranormalcraft.bindings.title"), right + PAGE_WIDTH / 2, y + 8, INK);
+        int leftY = y + 24;
+        int rightY = y + 24;
+        int textWidth = PAGE_WIDTH - 2 * MARGIN - 22;
+        for (JournalPayload.TypeStage type : spread.types()) {
+            Identifier id = Identifier.parse(type.type());
+            Component typeName = Component.translatable("entity." + id.getNamespace() + "." + id.getPath());
+            ContainmentTables.Blessing blessing = ContainmentTables.blessingFor(type.type());
+            if (blessing != null) {
+                Identifier effectId = Identifier.parse(blessing.effect());
+                if (type.released()) {
+                    var effect = BuiltInRegistries.MOB_EFFECT.get(effectId);
+                    if (effect.isPresent()) {
+                        var holder = effect.get();
+                        icon(graphics, new JournalTypes.Icon(null, () -> holder, null), left + MARGIN, leftY);
+                    }
+                    graphics.text(this.font, Component.translatable("effect." + effectId.getNamespace() + "." + effectId.getPath()), left + MARGIN + 22, leftY,
+                            INK, false);
+                    Component what = Component.translatable("effect." + effectId.getNamespace() + "." + effectId.getPath() + ".blessing",
+                            ContainmentTables.nights(blessing));
+                    Component line = Component.translatable("journal.paranormalcraft.blessings.from", what, typeName);
+                    graphics.textWithWordWrap(this.font, line, left + MARGIN + 22, leftY + 11, textWidth, FADED, false);
+                    leftY += 13 + this.font.wordWrapHeight(line, textWidth) + 6;
+                } else {
+                    unknown(graphics, left + MARGIN, leftY);
+                    graphics.text(this.font, Component.translatable("journal.paranormalcraft.blessings.locked", typeName), left + MARGIN + 22, leftY + 4, FADED, false);
+                    leftY += 24;
+                }
+            }
+            BoundJobs.Job job = BoundJobs.jobFor(type.type());
+            if (job != null) {
+                if (type.bound()) {
+                    icon(graphics, JournalTypes.Icon.stack(JournalScreen::boundVessel, Component.translatable(job.langKey())), right + MARGIN, rightY);
+                    graphics.text(this.font, Component.translatable(job.langKey()), right + MARGIN + 22, rightY, INK, false);
+                    Component what = Component.translatable(job.langKey() + ".desc");
+                    Component how = Component.translatable(job.langKey() + ".usage");
+                    graphics.textWithWordWrap(this.font, what, right + MARGIN + 22, rightY + 11, textWidth, FADED, false);
+                    int howY = rightY + 11 + this.font.wordWrapHeight(what, textWidth) + 2;
+                    graphics.textWithWordWrap(this.font, how, right + MARGIN + 22, howY, textWidth, FADED, false);
+                    rightY = howY + this.font.wordWrapHeight(how, textWidth) + 8;
+                } else {
+                    unknown(graphics, right + MARGIN, rightY);
+                    graphics.text(this.font, Component.translatable("journal.paranormalcraft.bindings.locked", typeName), right + MARGIN + 22, rightY + 4, FADED, false);
+                    rightY += 24;
+                }
+            }
         }
     }
 
@@ -433,6 +504,8 @@ public class JournalScreen extends Screen {
         Supplier<ItemStack> stack = switch (outcome) {
             case "processed" -> () -> new ItemStack(ModItems.LINGERING_ECTOPLASM.get());
             case "bound" -> JournalScreen::boundVessel;
+            case "escaped" -> () -> new ItemStack(ModItems.GHOST_TRAP.get());
+            case "attached" -> () -> new ItemStack(Items.ENDER_EYE);
             case "released" -> null;
             default -> () -> new ItemStack(ModItems.FILLED_GHOST_TRAP.get());
         };

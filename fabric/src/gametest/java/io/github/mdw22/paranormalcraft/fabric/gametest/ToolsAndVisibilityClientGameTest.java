@@ -68,6 +68,7 @@ import java.util.stream.Stream;
  *     <li>the Wisp Familiar: visible without goggles, its warning tint, its light in a dark tunnel;</li>
  *     <li>the Spectral Step: walking through a closed door with client and server in agreement;</li>
  *     <li>playtest mode: a step's clickable chat buttons and boss-bar line;</li>
+ *     <li>a ghost following the player: "You feel watched", and never drawn while the player can't see it;</li>
  *     <li>the Paranormal Craft creative tab and its items.</li>
  * </ol>
  * No golden-image comparison yet: the art is placeholder.
@@ -104,6 +105,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             wispFamiliar(context, server);
             phaseThroughDoor(context, server);
             playtestStep(context, server);
+            followerUnseen(context, server);
             creativeTab(context, server);
         }
     }
@@ -586,15 +588,15 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             journal.setPage(1);
             return journal.pageCount();
         });
-        check(spreads == 3, spreads + " journal spreads, expected 3 (notes, Lingering Spirit, captures)");
+        check(spreads == 4, spreads + " journal spreads, expected 4 (notes, Lingering Spirit, blessings and bindings, captures)");
         context.waitTicks(5);
         context.takeScreenshot("15-journal-stage-1");
         context.runOnClient(client -> ((JournalScreen) client.gui.screen()).setPage(0));
         context.waitTicks(3);
         context.takeScreenshot("16-journal-field-notes");
         context.runOnClient(client -> client.gui.setScreen(null));
-        // Stage 5 in the debug command: all four stages plus the bound line.
-        server.runCommand("paranormalcraft debug journal @p lingering_spirit 5");
+        // Stage 6 in the debug command: all four stages, the bound line, and the released blessing.
+        server.runCommand("paranormalcraft debug journal @p lingering_spirit 6");
         server.runCommand("paranormalcraft debug journal @p open");
         context.waitTicks(10);
         context.runOnClient(client -> ((JournalScreen) client.gui.screen()).setPage(1));
@@ -603,6 +605,12 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         context.takeScreenshot("17-journal-stage-4");
         server.runCommand("execute as @p run paranormalcraft debug screenshot field_journal");
         context.waitTicks(5);
+        context.runOnClient(client -> {
+            JournalScreen journal = (JournalScreen) client.gui.screen();
+            journal.setPage(journal.spreadOf("blessings"));
+        });
+        context.waitTicks(3);
+        context.takeScreenshot("17b-journal-blessings");
         context.runOnClient(client -> client.gui.setScreen(null));
         server.runCommand("paranormalcraft debug journal @p reset");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
@@ -718,6 +726,49 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         context.takeScreenshot("21-phased-through-door");
         context.runOnClient(client -> hideHud(client, false));
         server.runCommand("paranormalcraft debug phase @p end");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * A ghost attached to the player follows unseen: on attach the player hears "You feel watched" (traced where an
+     * audio device exists), and over the next 3 s the follower is never drawn for a player without goggles.
+     */
+    private static void followerUnseen(ClientGameTestContext context, TestServerContext server) {
+
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(30);
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(2);
+        server.runCommand("paranormalcraft debug ghost @e[type=" + GHOST + ",tag=paranormalcraft_scene] attach @p");
+        int drawn = 0;
+        int seen = 0;
+        for (int tick = 0; tick < 60; tick++) {
+            context.waitTick();
+            int[] counts = context.computeOnClient(client -> {
+                List<GhostEntity> ghosts = client.level.getEntitiesOfClass(GhostEntity.class, client.player.getBoundingBox().inflate(48));
+                int visible = 0;
+                int canSee = 0;
+                for (GhostEntity ghost : ghosts) {
+                    visible += ghost.isInvisible() ? 0 : 1;
+                    canSee += GhostVisibility.canClientSee(ghost) ? 1 : 0;
+                }
+                return new int[] {visible, canSee, ghosts.size()};
+            });
+            check(counts[2] == 1, counts[2] + " ghosts reached the client, expected the follower");
+            drawn += counts[0];
+            seen += counts[1];
+        }
+        check(drawn == 0 && seen == 0, "the follower was drawn on " + drawn + " ticks (seeable on " + seen + ") without goggles");
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        List<JsonObject> trace = readNewestTrace(context);
+        boolean anySound = trace.stream().anyMatch(line -> line.get("type").getAsString().equals("sound"));
+        boolean watched = trace.stream().anyMatch(line -> line.get("type").getAsString().equals("sound")
+                && line.get("id").getAsString().equals("paranormalcraft:entity.lingering_spirit.watching"));
+        check(!anySound || watched, "sounds were traced, but not \"You feel watched\"");
+        System.out.println("[client gametest] follower never drawn over 60 ticks; watched sound " + (anySound ? "traced" : "not traceable (no audio)"));
+        server.runCommand("paranormalcraft debug ghost clear 64");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
         context.waitTicks(20);
     }

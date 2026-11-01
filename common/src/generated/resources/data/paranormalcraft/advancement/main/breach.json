@@ -1,0 +1,30 @@
+{
+  "parent": "paranormalcraft:main/lockup",
+  "criteria": {
+    "breach_witnessed": {
+      "conditions": {
+        "event": "breach_witnessed"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancements.paranormalcraft.breach.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "icon": {
+      "id": "paranormalcraft:containment_unit"
+    },
+    "title": {
+      "translate": "advancements.paranormalcraft.breach.title"
+    }
+  },
+  "requirements": [
+    [
+      "breach_witnessed"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

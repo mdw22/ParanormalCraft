@@ -179,10 +179,6 @@ public final class Balance {
         public static final double ZONE_HEIGHT = 3.0;
         /** (Used as {@code CaptureRules.ZONE_HALF_WIDTH}.) */
         public static final double ZONE_HALF_WIDTH = 1.5;
-        /** (Used as {@code FilledGhostTrapBlockEntity.MIN_RATTLE_TICKS}.) */
-        public static final int MIN_RATTLE_TICKS = 200;
-        /** (Used as {@code FilledGhostTrapBlockEntity.MAX_RATTLE_TICKS}.) */
-        public static final int MAX_RATTLE_TICKS = 400;
         /** A trapped ghost reads at most this. (Used as {@code EmfReadings.TRAPPED_MAX_LEVEL}.) */
         public static final int TRAPPED_EMF_MAX_LEVEL = 3;
         /** (Used as {@code GhostTrapItem.THROW_SPEED}.) */
@@ -362,8 +358,21 @@ public final class Balance {
         public static final int LIGHT = 12;
         /** Light level while flaring. (Used in {@code ModBlocks.WARD_LANTERN}.) */
         public static final int FLARE_LIGHT = 15;
-        /** How long a flare lasts. (Used in {@code WardEffects}.) */
-        public static final int FLARE_TICKS = 10;
+        /** How long a flare lasts (1.5 s). (Used in {@code WardEffects}.) */
+        public static final int FLARE_TICKS = 30;
+        /** The flare pulses between 15 and this. (Used in {@code ModBlocks.WARD_LANTERN}.) */
+        public static final int FLARE_DIM_LIGHT = 13;
+        /** The flare's pulse half-period. (Used in {@code WardLanternBlock}.) */
+        public static final int FLARE_PULSE_TICKS = 5;
+        /** The flare's burst ring spreads to this radius. (Used in {@code WardEffects}.) */
+        public static final double FLARE_BURST_RADIUS = 3.0;
+        /** The flare burst: rings drawn on this many ticks, this many motes per block of ring. (Used in {@code WardEffects}.) */
+        public static final int FLARE_BURST_STEPS = 3;
+        public static final int FLARE_BURST_MOTES_PER_BLOCK = 4;
+        /** The flare chime's volume: 1.5 carries 24 blocks. (Used in {@code WardEffects}.) */
+        public static final float FLARE_VOLUME = 1.5F;
+        /** The ward exposes the ghost it repels for this long (0.75 s). (Used in {@code WardEffects}.) */
+        public static final int FLARE_EXPOSE_TICKS = 15;
         /** At most one flare per lantern per this many ticks. (Used in {@code WardEffects}.) */
         public static final int FLARE_COOLDOWN_TICKS = 60;
         /** A ghost the ward caught recoils about this far from the lantern. (Used in {@code WardEffects}.) */
@@ -380,10 +389,20 @@ public final class Balance {
         public static final double PREVIEW_RANGE = 48.0;
         /** Preview motes are drawn on the edge stretch within this distance of the player. (Used in {@code ClientWardPreview}.) */
         public static final double PREVIEW_EDGE_RANGE = 24.0;
-        /** Preview motes per ward per round. (Used in {@code ClientWardPreview}.) */
-        public static final int PREVIEW_MOTES = 6;
+        /** Preview motes per block along the edge arc. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_MOTES_PER_BLOCK = 3;
+        /** A preview post (a short column of motes) every this many blocks of edge. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_POST_SPACING = 4;
+        /** Posts are this many motes (blocks) high. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_POST_HEIGHT = 3;
+        /** At most this many preview motes per round, all wards together. (Used in {@code ClientWardPreview}.) */
+        public static final int PREVIEW_MAX_MOTES = 240;
         /** A preview round every this many ticks. (Used in {@code ClientWardPreview}.) */
-        public static final int PREVIEW_INTERVAL_TICKS = 4;
+        public static final int PREVIEW_INTERVAL_TICKS = 8;
+        /** Placement ring motes per block of edge. (Used in {@code WardEffects}.) */
+        public static final int RING_MOTES_PER_BLOCK = 3;
+        /** Ring and preview motes float this far above the ground. (Used in {@code WardEffects}, {@code ClientWardPreview}.) */
+        public static final double MOTE_LIFT = 0.3;
 
         private Ward() {
         }
@@ -444,14 +463,39 @@ public final class Balance {
         public static final int GUIDE_RADIUS_CHUNKS = 64;
         /** Guide: how far ahead of the owner it goes and waits. (Used in {@code WispFamiliarEntity}.) */
         public static final double GUIDE_AHEAD = 8.0;
-        /** Guide: how long it waits there. (Used in {@code WispFamiliarEntity}.) */
-        public static final int GUIDE_WAIT_TICKS = 400;
+        /** Guide: waypoints sit this far above the highest terrain or canopy on their leg. (Used in {@code GuidePlanner}.) */
+        public static final double GUIDE_CLEARANCE = 3.0;
+        /** Guide: the owner reaching this close (horizontally) to a waypoint sends the wisp on. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_REACHED = 4.0;
+        /** Guide: done once the owner is this close to the cabin; the wisp circles it once. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_ARRIVED = 16.0;
+        /** Guide: gives up after this long (90 s). (Used in {@code WispFamiliarEntity}.) */
+        public static final int GUIDE_TIMEOUT_TICKS = 1800;
+        /** Guide: gives up if the owner wanders this far off the route. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_OFF_ROUTE = 32.0;
+        /** Guide: no progress for this long counts as stuck (3 s). (Used in {@code WispFamiliarEntity}.) */
+        public static final int GUIDE_STUCK_TICKS = 60;
+        /** Guide: when stuck it rises this far and tries again, once. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_STUCK_RISE = 6.0;
+        /** Guide: the closing circle over the cabin: radius, and how long it takes. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_CIRCLE_RADIUS = 6.0;
+        public static final int GUIDE_CIRCLE_TICKS = 80;
+        /** Guide: it counts as at a waypoint within this distance. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_ARRIVE_DISTANCE = 0.6;
+        /** Guide: the closing circle flies this much higher than the waypoints' clearance. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_CIRCLE_LIFT = 2.0;
+        /** Guide: waiting out of the owner's sight, it rises up to this many blocks to be seen. (Used in {@code WispFamiliarEntity}.) */
+        public static final int GUIDE_SIGHT_RISE = 4;
+        /** Guide: top flying speed, blocks per tick. (Used in {@code WispFamiliarEntity}.) */
+        public static final double GUIDE_SPEED = 0.5;
         /** Guide cooldown after a successful guide (2 minutes). (Used in {@code Familiars}.) */
         public static final int GUIDE_COOLDOWN_TICKS = 2400;
         /** Guide cooldown after "no cabin in range", so a player can't spam the search. (Used in {@code Familiars}.) */
         public static final int GUIDE_FAIL_COOLDOWN_TICKS = 200;
         /** Listed light blocks no wisp owns are swept this often, in loaded chunks. (Used in {@code Familiars}.) */
         public static final int LIGHT_SWEEP_TICKS = 100;
+        /** The creeper warning's second chirp follows the first after this many ticks. (Used in {@code WispFamiliarEntity}.) */
+        public static final int URGENT_CHIRP_GAP_TICKS = 3;
         /** How long the "no" shake lasts. (Used in {@code WispFamiliarEntity}.) */
         public static final int SHAKE_TICKS = 30;
 
@@ -480,6 +524,91 @@ public final class Balance {
         public static final int RESYNC_TICKS = 10;
 
         private Phase() {
+        }
+    }
+
+    /**
+     * Milestone 2 part D (Update 12): Filled Trap integrity, Containment breaches, Agitated ghosts and attachment. The
+     * trap's lifetime and the Agitated time are server config ({@code trapIntegrityMinutes}, {@code agitatedMinutes}).
+     */
+    public static final class Escape {
+
+        /** Default real minutes a Filled Trap lasts (1 in-game day). (Used in {@code ServerConfig.DEFAULTS}.) */
+        public static final int DEFAULT_TRAP_INTEGRITY_MINUTES = 20;
+        /** Default real minutes an escaped ghost stays Agitated. (Used in {@code ServerConfig.DEFAULTS}.) */
+        public static final int DEFAULT_AGITATED_MINUTES = 10;
+        /** Volume of a trap bursting open. (Used in {@code TrapDecay}.) */
+        public static final float BURST_VOLUME = 1.2F;
+        /** Volume of the creak below {@link #CREAK_BELOW}%. (Used in {@code TrapDecay}, {@code FilledGhostTrapBlockEntity}.) */
+        public static final float CREAK_VOLUME = 0.8F;
+        /** A healthy placed trap rattles softly once every 45–90 s, at most. (Used in {@code TrapIntegrity}.) */
+        public static final int QUIET_RATTLE_MIN_TICKS = 900;
+        /** Longest gap between soft rattles. (Used in {@code TrapIntegrity}.) */
+        public static final int QUIET_RATTLE_MAX_TICKS = 1800;
+        /** Below {@link #URGENT_BELOW}%, a trap rattles loudly every 10–20 s, anywhere. (Used in {@code TrapIntegrity}.) */
+        public static final int URGENT_RATTLE_MIN_TICKS = 200;
+        /** Longest gap between urgent rattles. (Used in {@code TrapIntegrity}.) */
+        public static final int URGENT_RATTLE_MAX_TICKS = 400;
+        /** Integrity (%) below which rattles are urgent and EMF reads level 4. (Used in {@code TrapIntegrity}.) */
+        public static final int URGENT_BELOW = 25;
+        /** Integrity (%) below which a trap in an inventory or container rattles at all. (Used in {@code TrapIntegrity}.) */
+        public static final int CARRIED_RATTLE_BELOW = 50;
+        /** Integrity (%) below which a carried trap creaks too. (Used in {@code TrapIntegrity}.) */
+        public static final int CREAK_BELOW = 10;
+        /** Volume of a soft rattle. (Used in {@code TrapIntegrity}.) */
+        public static final float QUIET_VOLUME = 0.3F;
+        /** Volume of an urgent rattle. (Used in {@code TrapIntegrity}.) */
+        public static final float URGENT_VOLUME = 1.0F;
+        /** EMF level of a decaying trap below {@link #URGENT_BELOW}%. (Used in {@code TrapIntegrity}.) */
+        public static final int URGENT_EMF_LEVEL = 4;
+        /** Loaded chunks scanned per tick for decaying traps in containers and on the ground. (Used in {@code TrapDecay}.) */
+        public static final int SCAN_CHUNKS_PER_TICK = 8;
+        /** Chunks around each player that the decay scan covers. (Used in {@code TrapDecay}.) */
+        public static final int SCAN_RADIUS_CHUNKS = 6;
+        /** A unit Unstable this long goes into Breach (60 s). (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BREACH_AFTER_TICKS = 1200;
+        /** During a Breach, one ghost escapes this often (30 s). (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BREACH_ESCAPE_TICKS = 600;
+        /** The Breach alarm's faster pulse. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BREACH_ALARM_TICKS = 20;
+        /** The Breach alarm's volume. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final float BREACH_VOLUME = 1.2F;
+        /** Cracking-glass particles, the comparator pulse and the shudder repeat this often. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BREACH_EFFECT_TICKS = 5;
+        /** The comparator pulses full and empty with this half-period. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final int BREACH_PULSE_TICKS = 10;
+        /** Players this close to a Breach get the hidden advancement. (Used in {@code ContainmentUnitBlockEntity}.) */
+        public static final double BREACH_WITNESS_RANGE = 16.0;
+        /** While Agitated, haunting and manifest intervals are multiplied by this. (Used in {@code GhostEntity}.) */
+        public static final double AGITATED_INTERVAL_FACTOR = 0.5;
+        /** An Agitated ghost keeps this much (%) of its green and blue: a faint red cast. (Used in {@code LingeringSpiritRenderer}.) */
+        public static final int AGITATED_TINT_KEEP = 72;
+        /** While Agitated, Presence regenerates this many times as fast. (Used in {@code GhostEntity}.) */
+        public static final int AGITATED_REGEN_FACTOR = 2;
+        /** A loose ghost attaches to the nearest player within this range. (Used in {@code Attachment}.) */
+        public static final double ATTACH_RANGE = 32.0;
+        /** Chance a failed capture roll makes the ghost attach. (Used in {@code GhostTrapBlockEntity}.) */
+        public static final double FAILED_CAPTURE_ATTACH_CHANCE = 0.3;
+        /** An Agitated ghost may attach when a player first comes this close. (Used in {@code Attachment}.) */
+        public static final double AGITATED_NOTICE_RANGE = 16.0;
+        /** Chance it does, once per ghost. (Used in {@code Attachment}.) */
+        public static final double AGITATED_ATTACH_CHANCE = 0.3;
+        /** A following ghost keeps this far behind its player, at least. (Used in {@code Attachment}.) */
+        public static final double FOLLOW_MIN = 12.0;
+        /** And at most. (Used in {@code Attachment}.) */
+        public static final double FOLLOW_MAX = 24.0;
+        /** Further behind than this it teleports, somewhere out of view. (Used in {@code Attachment}.) */
+        public static final double FOLLOW_TELEPORT = 48.0;
+        /** It settles once its player is this close to their respawn point. (Used in {@code Attachment}.) */
+        public static final double SETTLE_RESPAWN_RANGE = 48.0;
+        /** Or once they've stayed within this many blocks of one spot under a roof… (Used in {@code Attachment}.) */
+        public static final double SETTLE_STAY_RADIUS = 8.0;
+        /** …for this long (2 real minutes). (Used in {@code Attachment}.) */
+        public static final int SETTLE_STAY_TICKS = 2400;
+        /** A waiting ghost (its player left the dimension) resumes when they come back this close. (Used in {@code Attachment}.) */
+        public static final double RESUME_RANGE = 64.0;
+
+        private Escape() {
         }
     }
 

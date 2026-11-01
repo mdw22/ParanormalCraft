@@ -3,5 +3,7 @@
  * ({@link io.github.mdw22.paranormalcraft.familiar.WispFamiliarEntity}), who has one out and the vessel link
  * ({@code Familiars}), its light blocks ({@code WispLight} rule, {@code WispLights} saved list and sweeps) and its
  * warning rule ({@code WispWarnings}).
+ * <p>
+ * {@code GuidePlanner} plans the guide's waypoints from the heightmap.
  */
 package io.github.mdw22.paranormalcraft.familiar;

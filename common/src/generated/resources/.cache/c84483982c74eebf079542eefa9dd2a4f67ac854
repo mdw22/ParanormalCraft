@@ -1,9 +1,9 @@
-// 26.2	2026-10-19T20:17:10.274866	Model Definitions - paranormalcraft
+// 26.2	2026-10-19T22:16:10.744745	Model Definitions - paranormalcraft
 c9f464c149494f3a1af8e86d3b16cf7f99de00a7 assets/paranormalcraft/blockstates/containment_unit.json
 3dfdcb43b4a19cb69a6d9d8871dcb3e30c11453d assets/paranormalcraft/blockstates/filled_ghost_trap.json
 6406b6e17889ea6682827bf1415c608d732594e4 assets/paranormalcraft/blockstates/ghost_marker.json
 7b4817ec28ccd584d9002ddd63435acc1621412e assets/paranormalcraft/blockstates/ghost_trap.json
-dbaee101299bb904563a07e1380da84d58f498b5 assets/paranormalcraft/blockstates/ward_lantern.json
+3789195dd3b67e914c42f6bd73ceb375c401dd50 assets/paranormalcraft/blockstates/ward_lantern.json
 12c5f4d37a2ffe6585b9767b460fda99486d00c6 assets/paranormalcraft/items/containment_unit.json
 6d566db579bc7dbf2a460ed02bedf11cf544a920 assets/paranormalcraft/items/emf_reader.json
 44ad54c6a89cd108dd50a442c4acb754ddf78cb6 assets/paranormalcraft/items/field_journal.json

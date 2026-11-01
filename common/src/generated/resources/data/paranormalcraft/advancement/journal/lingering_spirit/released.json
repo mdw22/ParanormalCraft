@@ -1,0 +1,17 @@
+{
+  "criteria": {
+    "released": {
+      "conditions": {
+        "event": "released",
+        "ghost_type": "paranormalcraft:lingering_spirit"
+      },
+      "trigger": "paranormalcraft:ghost_event"
+    }
+  },
+  "requirements": [
+    [
+      "released"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

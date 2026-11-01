@@ -8,8 +8,11 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
+import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
+import io.github.mdw22.paranormalcraft.capture.TrapDecay;
+import io.github.mdw22.paranormalcraft.capture.TrapIntegrity;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.containment.ContainmentCharge;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
@@ -50,6 +53,8 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.io.IOException;
@@ -62,7 +67,7 @@ import java.util.Set;
 
 /**
  * The testing toolkit under {@code /paranormalcraft debug}: screenshot, trace, scene, kit, look, ghost, tether,
- * timers, pace, config, journal, containment, bind, familiar, nearcabin, phase and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
+ * timers, pace, config, journal, containment, bind, familiar, nearcabin, trap, phase and run. Gated like the other debug commands (op level 2 plus {@code enableDebugCommands}, forced on in
  * development). See the README's "How to test" section.
  */
 public final class DebugCommands {
@@ -111,6 +116,7 @@ public final class DebugCommands {
                                                 IntegerArgumentType.getInteger(context, "index"), context.getSource().getPlayerOrException())
                                                 ? "bound into the vessel" : "can't bind that ghost")))))
                 .then(familiar())
+                .then(trap())
                 .then(Commands.literal("nearcabin")
                         .executes(context -> nearCabin(context, DEFAULT_CABIN_DISTANCE))
                         .then(Commands.argument("distance", IntegerArgumentType.integer(8, 256))
@@ -143,7 +149,7 @@ public final class DebugCommands {
                         .then(Commands.argument("ghostType", StringArgumentType.word())
                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                         JournalStages.GHOST_TYPES.stream().map(type -> Identifier.parse(type).getPath()), builder))
-                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, JournalEvent.STAGES.length + 1))
+                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, JournalEvent.STAGES.length + 2))
                                         .executes(DebugCommands::journalStage))));
     }
 
@@ -205,6 +211,10 @@ public final class DebugCommands {
                         .then(Commands.literal("bindstart").then(Commands.argument("index", IntegerArgumentType.integer(0, ContainmentUnitBlockEntity.CAPACITY - 1))
                                 .executes(context -> containment(context, unit -> unit.bind(IntegerArgumentType.getInteger(context, "index"),
                                         context.getSource().getPlayerOrException()) ? "binding started" : "can't bind that ghost"))))
+                        .then(Commands.literal("breach").executes(context -> containment(context, unit -> {
+                            unit.debugBreach(context.getSource().getLevel());
+                            return unit.stored().isEmpty() ? "empty: nothing to breach" : "Unstable for a minute already: Breach next tick";
+                        })))
                         .then(Commands.literal("unbind").executes(context -> containment(context, unit ->
                                 unit.unbind(context.getSource().getPlayerOrException()) ? "unbound into storage" : "nothing to unbind, or no room"))));
     }
@@ -452,7 +462,97 @@ public final class DebugCommands {
                                 .then(Commands.argument("goal", StringArgumentType.word())
                                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                                 List.of("wander", "curious", "shy", "home"), builder))
-                                        .executes(DebugCommands::forceGoal))));
+                                        .executes(DebugCommands::forceGoal))))
+                .then(Commands.argument("ghosts", EntityArgument.entities())
+                        .then(Commands.literal("agitate")
+                                .executes(context -> ghosts(context, ghost -> {
+                                    ghost.agitate(ModConfigs.server().agitatedMinutes() * TrapIntegrity.TICKS_PER_MINUTE);
+                                    return "agitated";
+                                }))
+                                .then(Commands.argument("ticks", IntegerArgumentType.integer(1, 1_000_000))
+                                        .executes(context -> ghosts(context, ghost -> {
+                                            ghost.agitate(IntegerArgumentType.getInteger(context, "ticks"));
+                                            return "agitated";
+                                        }))))
+                        .then(Commands.literal("calm").executes(context -> ghosts(context, ghost -> {
+                            ghost.calm("command");
+                            return "calm";
+                        })))
+                        .then(Commands.literal("attach").then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> {
+                                    ServerPlayer player = EntityArgument.getPlayer(context, "player");
+                                    return ghosts(context, ghost -> {
+                                        ghost.attachment().attach(player.level(), player, "command");
+                                        return "attached to " + player.getGameProfile().name();
+                                    });
+                                })))
+                        .then(Commands.literal("detach").executes(context -> ghosts(context, ghost -> {
+                            ghost.attachment().detach("command");
+                            return "detached";
+                        })))
+                        .then(Commands.literal("settle").executes(context -> ghosts(context, ghost -> {
+                            ServerLevel level = (ServerLevel) ghost.level();
+                            ServerPlayer player = ghost.attachment().player() == null ? null
+                                    : level.getServer().getPlayerList().getPlayer(ghost.attachment().player());
+                            BlockPos at = player != null ? player.blockPosition() : ghost.blockPosition();
+                            ghost.attachment().settle(level, at);
+                            return "settled at " + at.toShortString();
+                        }))));
+    }
+
+    @FunctionalInterface
+    private interface GhostAction {
+
+        String apply(GhostEntity ghost) throws CommandSyntaxException;
+    }
+
+    private static int ghosts(CommandContext<CommandSourceStack> context, GhostAction action) throws CommandSyntaxException {
+
+        int count = 0;
+        String last = "";
+        for (Entity entity : EntityArgument.getEntities(context, "ghosts")) {
+            if (entity instanceof GhostEntity ghost) {
+                last = action.apply(ghost);
+                count++;
+            }
+        }
+        if (count == 0) {
+            return fail(context, "No ghosts among the targets");
+        }
+        return ok(context, count + " ghost(s) " + last);
+    }
+
+    // ---- trap ----
+
+    private static LiteralArgumentBuilder<CommandSourceStack> trap() {
+
+        return Commands.literal("trap")
+                .then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.literal("integrity")
+                                .then(Commands.argument("percent", IntegerArgumentType.integer(0, 100))
+                                        .executes(DebugCommands::trapIntegrity))));
+    }
+
+    /**
+     * Sets the integrity of the Filled Trap in the player's main hand, or else the placed one they're looking at.
+     */
+    private static int trapIntegrity(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+
+        ServerPlayer player = EntityArgument.getPlayer(context, "player");
+        int percent = IntegerArgumentType.getInteger(context, "percent");
+        ServerLevel level = player.level();
+        int lifetime = ModConfigs.server().trapIntegrityMinutes() * TrapIntegrity.TICKS_PER_MINUTE;
+        ItemStack held = player.getMainHandItem();
+        if (TrapDecay.isFilledTrap(held)) {
+            held.set(ModDataComponents.TRAP_SEAL.get(), TrapIntegrity.at(level.getGameTime(), percent, lifetime));
+            return ok(context, "Held trap integrity set to " + percent + "%");
+        }
+        if (player.pick(8.0, 1.0F, false) instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK
+                && level.getBlockEntity(hit.getBlockPos()) instanceof FilledGhostTrapBlockEntity filled && filled.contents() != null) {
+            filled.setSeal(TrapIntegrity.at(level.getGameTime(), percent, lifetime));
+            return ok(context, "Trap at " + hit.getBlockPos().toShortString() + " set to " + percent + "%");
+        }
+        return fail(context, "Hold a Filled Ghost Trap, or look at a placed one");
     }
 
     private static List<GhostEntity> ghosts(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

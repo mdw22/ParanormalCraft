@@ -6,6 +6,7 @@ import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhosts;
 import io.github.mdw22.paranormalcraft.capture.TetherManager;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlock;
+import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.haunting.HauntingScheduler;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
@@ -14,6 +15,7 @@ import io.github.mdw22.paranormalcraft.registry.ModEntities;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,6 +29,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CandleBlock;
@@ -38,9 +41,11 @@ import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -133,6 +138,8 @@ public final class DebugScenes {
         SCENES.put("capture_arena", DebugScenes::captureArena);
         SCENES.put("containment_lab", DebugScenes::containmentLab);
         SCENES.put("familiar_cave", DebugScenes::familiarCave);
+        SCENES.put("breach_lab", DebugScenes::breachLab);
+        SCENES.put("home_base", DebugScenes::homeBase);
     }
 
     private DebugScenes() {
@@ -440,6 +447,69 @@ public final class DebugScenes {
             player.getInventory().setItem(FAMILIAR_CAVE_VESSEL_SLOT, vessel);
             DebugKit.select(player, FAMILIAR_CAVE_VESSEL_SLOT);
         });
+    }
+
+    /** {@code breach_lab}: the unit, the chest of soul sand beside it. */
+    public static final BlockPos BREACH_LAB_UNIT = CENTRE.offset(0, 1, 0);
+    public static final BlockPos BREACH_LAB_CHEST = CENTRE.offset(3, 1, 0);
+
+    /**
+     * Noon. A Containment Unit holding 3 Lingering Spirits at 5 charge (it goes Unstable within a couple of minutes,
+     * or at once with {@code debug containment … charge 0}), and a chest of soul sand 3 blocks east to stop it. The
+     * player stands 5 blocks south, facing it.
+     */
+    private static Placement breachLab(ServerLevel level) {
+
+        time(level, NOON);
+        set(level, BREACH_LAB_UNIT, ModBlocks.CONTAINMENT_UNIT.get().defaultBlockState().setValue(ContainmentUnitBlock.FACING, Direction.SOUTH));
+        if (level.getBlockEntity(BREACH_LAB_UNIT) instanceof ContainmentUnitBlockEntity unit) {
+            unit.fillForDebug(level, 3);
+            unit.setCharge(5);
+        }
+        set(level, BREACH_LAB_CHEST, Blocks.CHEST.defaultBlockState());
+        if (level.getBlockEntity(BREACH_LAB_CHEST) instanceof ChestBlockEntity chest) {
+            chest.setItem(0, new ItemStack(Items.SOUL_SAND, 16));
+        }
+        return new Placement(at(0, 5), 180.0F, 15.0F, new Vec3(2, 0, 0), List.of());
+    }
+
+    /** {@code home_base}: the hut's bed (the player's respawn point) and the ghost's spot, about 57 blocks apart. */
+    public static final BlockPos HOME_BASE_BED = CENTRE.offset(-19, 1, -19);
+    public static final BlockPos HOME_BASE_GHOST = CENTRE.offset(20, 1, 20);
+
+    /**
+     * Dusk-free noon. A small plank hut in the north-west corner (a bed, set as the player's respawn point, a painting,
+     * torches and a door), and in the far south-east corner one ghost at full Presence. The player stands by the ghost.
+     * Use {@code debug ghost … attach} (or a trap escape) to have it follow you home.
+     */
+    private static Placement homeBase(ServerLevel level) {
+
+        time(level, NOON);
+        BlockPos corner = CENTRE.offset(-22, 1, -22);
+        for (int x = 0; x < 6; x++) {
+            for (int z = 0; z < 6; z++) {
+                for (int y = 0; y < 4; y++) {
+                    boolean wall = x == 0 || x == 5 || z == 0 || z == 5 || y == 3;
+                    set(level, corner.offset(x, y, z), wall ? Blocks.SPRUCE_PLANKS.defaultBlockState() : Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        BlockState door = Blocks.SPRUCE_DOOR.defaultBlockState().setValue(DoorBlock.FACING, Direction.SOUTH);
+        set(level, corner.offset(3, 0, 5), door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        set(level, corner.offset(3, 1, 5), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+        BlockState bed = Blocks.BED.red().defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH);
+        set(level, HOME_BASE_BED.north(), bed.setValue(BedBlock.PART, BedPart.HEAD));
+        set(level, HOME_BASE_BED, bed.setValue(BedBlock.PART, BedPart.FOOT));
+        set(level, corner.offset(1, 1, 2), Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, Direction.EAST));
+        set(level, corner.offset(4, 1, 2), Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, Direction.WEST));
+        BlockPos painting = corner.offset(2, 2, 1);
+        MinecraftServer server = level.getServer();
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), String.format(java.util.Locale.ROOT,
+                "summon painting %d %d %d {facing:3b,variant:\"minecraft:kebab\"}", painting.getX(), painting.getY(), painting.getZ()));
+        LingeringSpiritEntity ghost = ghost(level, HOME_BASE_GHOST, HOME_BASE_GHOST);
+        Vec3 stand = Vec3.atBottomCenterOf(HOME_BASE_GHOST.offset(-3, 0, -3));
+        return new Placement(stand, 135.0F, 0.0F, new Vec3(2, 0, 0), Float.NaN, List.of(ghost), false, player -> player.setRespawnPosition(
+                new ServerPlayer.RespawnConfig(new LevelData.RespawnData(GlobalPos.of(level.dimension(), HOME_BASE_BED), 0.0F, 0.0F), true), false));
     }
 
     private static Placement captureArena(ServerLevel level) {

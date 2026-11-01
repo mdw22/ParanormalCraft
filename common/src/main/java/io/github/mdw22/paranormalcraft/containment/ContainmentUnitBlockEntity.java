@@ -6,6 +6,8 @@ import io.github.mdw22.paranormalcraft.binding.BoundJobs;
 import io.github.mdw22.paranormalcraft.binding.SpiritVesselItem;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhosts;
+import io.github.mdw22.paranormalcraft.capture.LooseGhosts;
+import io.github.mdw22.paranormalcraft.capture.TrapDecay;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.Presence;
@@ -23,6 +25,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -49,11 +52,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -115,6 +120,10 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
     /** The last player to open the menu, credited with loads made by automation. */
     private @Nullable UUID lastUser;
     private int lastChargeBand = -1;
+    /** Ticks it has been Unstable without a break, and the Breach (Milestone 2 part D). */
+    private int unstableTicks;
+    private boolean breach;
+    private int breachTicks;
     /** The ghost being bound into the vessel, and how far along. */
     private @Nullable UUID binding;
     private int bindTicks;
@@ -248,6 +257,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
             });
             setChanged();
         }
+        tickBreach(level, pos, state);
         if (processing) {
             tickProcessing(level, pos);
         }
@@ -256,6 +266,166 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         }
         sounds(level, pos);
         updateBlockState(level, pos, state);
+    }
+
+    // ---- breach ----
+
+    public boolean inBreach() {
+
+        return this.breach;
+    }
+
+    public int unstableTicks() {
+
+        return this.unstableTicks;
+    }
+
+    /** Ticks until the next breach escape, or -1 outside a Breach. */
+    public int ticksToNextEscape() {
+
+        return this.breach ? Balance.Escape.BREACH_ESCAPE_TICKS - this.breachTicks % Balance.Escape.BREACH_ESCAPE_TICKS : -1;
+    }
+
+    /** The comparator during a Breach: a red pulse, full and empty every 10 ticks. */
+    public int breachSignal(long gameTime) {
+
+        return gameTime / Balance.Escape.BREACH_PULSE_TICKS % 2 == 0 ? 15 : 0;
+    }
+
+    /**
+     * Unstable for {@code BREACH_AFTER_TICKS} → Breach: every {@code BREACH_ESCAPE_TICKS} one stored ghost escapes
+     * (storage order; the one processing or binding goes last). Refuelling (charge above 0) ends it.
+     */
+    private void tickBreach(ServerLevel level, BlockPos pos, BlockState state) {
+
+        if (!this.unstable) {
+            if (this.breach) {
+                endBreach(level, pos, this.stored.isEmpty() ? "empty" : "refuelled");
+            }
+            this.unstableTicks = 0;
+            return;
+        }
+        this.unstableTicks++;
+        if (!this.breach && BreachRules.breached(this.unstableTicks)) {
+            startBreach(level, pos);
+        }
+        if (!this.breach) {
+            return;
+        }
+        this.breachTicks++;
+        long time = level.getGameTime();
+        if (time % Balance.Escape.BREACH_ALARM_TICKS == 0) {
+            level.playSound(null, pos, ModSounds.CONTAINMENT_BREACH.get(), SoundSource.BLOCKS, Balance.Escape.BREACH_VOLUME,
+                    1.0F + level.getRandom().nextFloat() * 0.2F);
+            // Anyone who comes within range during the Breach is a witness too (the trigger only awards once).
+            witnesses(level, pos);
+        }
+        if (time % Balance.Escape.BREACH_EFFECT_TICKS == 0) {
+            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GLASS.defaultBlockState()),
+                    pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 6, 0.35, 0.35, 0.35, 0.05);
+            // The shudder: dust of the unit itself shaking off its sides, with a low knock.
+            level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5,
+                    4, 0.5, 0.05, 0.5, 0.0);
+            level.playSound(null, pos, net.minecraft.sounds.SoundEvents.IRON_GOLEM_STEP, SoundSource.BLOCKS, 0.4F, 0.5F);
+        }
+        if (time % Balance.Escape.BREACH_PULSE_TICKS == 0) {
+            level.updateNeighbourForOutputSignal(pos, state.getBlock());
+        }
+        if (BreachRules.escapesOn(this.breachTicks)) {
+            breachEscape(level, pos);
+        }
+        setChanged();
+    }
+
+    private void startBreach(ServerLevel level, BlockPos pos) {
+
+        this.breach = true;
+        this.breachTicks = 0;
+        ServerTrace.event("containment_breach_start", line -> {
+            line.addProperty("pos", pos.toShortString());
+            line.addProperty("ghosts", this.stored.size());
+        });
+        witnesses(level, pos);
+        setChanged();
+    }
+
+    private static void witnesses(ServerLevel level, BlockPos pos) {
+
+        for (ServerPlayer player : level.players()) {
+            if (player.position().closerThan(Vec3.atCenterOf(pos), Balance.Escape.BREACH_WITNESS_RANGE)) {
+                JournalEvents.fire(player, JournalEvent.BREACH_WITNESSED, null);
+            }
+        }
+    }
+
+    private void endBreach(ServerLevel level, BlockPos pos, String reason) {
+
+        this.breach = false;
+        this.breachTicks = 0;
+        ServerTrace.event("containment_breach_end", line -> {
+            line.addProperty("pos", pos.toShortString());
+            line.addProperty("reason", reason);
+            line.addProperty("ghosts", this.stored.size());
+        });
+        level.updateNeighbourForOutputSignal(pos, getBlockState().getBlock());
+        setChanged();
+    }
+
+    private void breachEscape(ServerLevel level, BlockPos pos) {
+
+        List<UUID> ids = this.stored.stream().map(StoredGhost::id).toList();
+        int index = BreachRules.nextToEscape(ids, this.queue.isEmpty() ? null : this.queue.getFirst(), this.binding);
+        if (index < 0) {
+            return;
+        }
+        StoredGhost ghost = this.stored.remove(index);
+        if (!this.queue.isEmpty() && this.queue.getFirst().equals(ghost.id())) {
+            this.processTicks = 0;
+        }
+        this.queue.remove(ghost.id());
+        if (ghost.id().equals(this.binding)) {
+            this.binding = null;
+            this.bindTicks = 0;
+        }
+        CaptureLog.get(level.getServer()).setOutcome(ghost.id(), "escaped");
+        GhostEntity loose = LooseGhosts.escape(level, ghost.ghost(), new Vec3(pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5), pos, "breach");
+        level.playSound(null, pos, ModSounds.TRAP_BURST.get(), SoundSource.BLOCKS, Balance.Escape.BURST_VOLUME, 0.8F);
+        ServerTrace.event("containment_breach_escape", line -> {
+            line.addProperty("pos", pos.toShortString());
+            line.addProperty("name", ghost.ghost().name());
+            line.addProperty("left", this.stored.size());
+            line.addProperty("attachedTo", loose == null || loose.attachment().player() == null ? "none" : loose.attachment().playerName());
+        });
+        setChanged();
+    }
+
+    /** Tests: moves a Breach this many ticks on, stopping one tick short of the next escape. */
+    public void debugAdvanceBreach(int ticks) {
+
+        if (this.breach) {
+            int next = (this.breachTicks / BreachRules.ESCAPE_TICKS + 1) * BreachRules.ESCAPE_TICKS - 1;
+            this.breachTicks = Math.min(next, this.breachTicks + ticks);
+            setChanged();
+        }
+    }
+
+    /** Tests: sets how long it has been Unstable. */
+    public void debugSetUnstableTicks(int ticks) {
+
+        this.unstableTicks = ticks;
+        setChanged();
+    }
+
+    /** Debug: straight into a Breach (charge 0, Unstable for the full minute already). */
+    public void debugBreach(ServerLevel level) {
+
+        if (this.stored.isEmpty()) {
+            return;
+        }
+        this.charge = this.charge.withCharge(0);
+        this.unstable = true;
+        this.unstableTicks = Balance.Escape.BREACH_AFTER_TICKS - 1;
+        setChanged();
     }
 
     private void tryLoad(ServerLevel level, BlockPos pos) {
@@ -381,7 +551,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
 
         long time = level.getGameTime();
         int ghosts = this.stored.size();
-        if (this.unstable && time % Balance.Containment.ALARM_INTERVAL_TICKS == 0) {
+        if (this.unstable && !this.breach && time % Balance.Containment.ALARM_INTERVAL_TICKS == 0) {
             level.playSound(null, pos, ModSounds.CONTAINMENT_ALARM.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
         }
         if (ghosts > 0 && time % Balance.Containment.HUM_INTERVAL_TICKS == 0) {
@@ -636,18 +806,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
 
     private static @Nullable GhostEntity recreate(ServerLevel level, CapturedGhost captured, BlockPos pos) {
 
-        CompoundTag data = captured.entity().copy();
-        data.putFloat("Presence", Presence.MAX);
-        Entity entity;
-        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(Constants.LOG)) {
-            entity = EntityType.loadEntityRecursive(TagValueInput.create(reporter, level.registryAccess(), data), level, EntitySpawnReason.LOAD, loaded -> loaded);
-        }
-        if (!(entity instanceof GhostEntity ghost)) {
-            return null;
-        }
-        ghost.snapTo(pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, ghost.getYRot(), 0.0F);
-        level.addFreshEntity(ghost);
-        return ghost;
+        return LooseGhosts.recreate(level, captured, new Vec3(pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5));
     }
 
     /**
@@ -812,6 +971,10 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
             for (StoredGhost ghost : this.stored) {
                 ItemStack trap = new ItemStack(ModItems.FILLED_GHOST_TRAP.get());
                 trap.set(ModDataComponents.CAPTURED_GHOST.get(), ghost.ghost());
+                // A ghost leaving a unit gets a fresh seal: the unit kept it, so its old trap's decay doesn't carry over.
+                if (this.level instanceof ServerLevel serverLevel) {
+                    trap.set(ModDataComponents.TRAP_SEAL.get(), TrapDecay.freshSeal(serverLevel));
+                }
                 Containers.dropItemStack(this.level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, trap);
             }
             this.stored.clear();
@@ -855,6 +1018,9 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         this.binding = input.read("Binding", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
         this.bindTicks = input.getIntOr("BindTicks", 0);
         this.bindBy = input.read("BindBy", net.minecraft.core.UUIDUtil.CODEC).orElse(null);
+        this.unstableTicks = input.getIntOr("UnstableTicks", 0);
+        this.breach = input.getBooleanOr("Breach", false);
+        this.breachTicks = input.getIntOr("BreachTicks", 0);
     }
 
     @Override
@@ -877,6 +1043,9 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         if (this.bindBy != null) {
             output.store("BindBy", net.minecraft.core.UUIDUtil.CODEC, this.bindBy);
         }
+        output.putInt("UnstableTicks", this.unstableTicks);
+        output.putBoolean("Breach", this.breach);
+        output.putInt("BreachTicks", this.breachTicks);
     }
 
     @Override

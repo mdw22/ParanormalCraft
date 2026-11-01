@@ -37,13 +37,13 @@ public final class WardEffects {
     }
 
     /**
-     * Traces the ward's boundary once: each tick for {@link Balance.Ward#RING_TICKS} draws the next arc, about two motes
+     * Traces the ward's boundary once: each tick for {@link Balance.Ward#RING_TICKS} draws the next arc, about three motes
      * per block, on the ground (or at the lantern's height where the ground is far off).
      */
     public static void placementRing(ServerLevel level, BlockPos lantern, int radius) {
 
         int ticks = Balance.Ward.RING_TICKS;
-        int points = Math.max(48, (int) Math.round(4 * Math.PI * radius));
+        int points = Math.max(72, (int) Math.round(2 * Math.PI * radius * Balance.Ward.RING_MOTES_PER_BLOCK));
         for (int tick = 0; tick < ticks; tick++) {
             int from = points * tick / ticks;
             int to = points * (tick + 1) / ticks;
@@ -54,8 +54,10 @@ public final class WardEffects {
                     double z = lantern.getZ() + 0.5 + Math.sin(angle) * radius;
                     double y = groundY(level, x, z, lantern.getY());
                     // Glow motes are full-bright cyan, so the ring reads at night; a dust mote under each for colour by day.
-                    level.sendParticles(ParticleTypes.GLOW, true, false, x, y + 0.25, z, 1, 0.05, 0.1, 0.05, 0.0);
-                    level.sendParticles(MOTE, true, false, x, y + 0.2, z, 1, 0.05, 0.1, 0.05, 0.0);
+                    level.sendParticles(ParticleTypes.GLOW, true, false, x, y + Balance.Ward.MOTE_LIFT, z, 1, 0.03, 0.05, 0.03, 0.0);
+                    if (i % 2 == 0) {
+                        level.sendParticles(MOTE, true, false, x, y + Balance.Ward.MOTE_LIFT, z, 1, 0.03, 0.05, 0.03, 0.0);
+                    }
                 }
             });
         }
@@ -86,10 +88,17 @@ public final class WardEffects {
         }
         BlockState state = level.getBlockState(lantern);
         if (state.getBlock() instanceof WardLanternBlock) {
-            level.setBlock(lantern, state.setValue(WardLanternBlock.FLARE, true), Block.UPDATE_ALL);
-            level.scheduleTick(lantern, state.getBlock(), Balance.Ward.FLARE_TICKS);
+            level.setBlock(lantern, state.setValue(WardLanternBlock.FLARE, 2), Block.UPDATE_ALL);
+            if (level.getBlockEntity(lantern) instanceof WardLanternBlockEntity ward) {
+                ward.startFlare(Balance.Ward.FLARE_TICKS);
+            }
+            level.scheduleTick(lantern, state.getBlock(), Balance.Ward.FLARE_PULSE_TICKS);
         }
-        level.playSound(null, lantern, ModSounds.WARD_FLARE.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
+        // Volume above 1 carries further: 1.5 is heard to 24 blocks.
+        level.playSound(null, lantern, ModSounds.WARD_FLARE.get(), SoundSource.BLOCKS, Balance.Ward.FLARE_VOLUME, 1.0F);
+        burst(level, lantern);
+        // The ward drags the ghost into view for a moment, for everyone.
+        ghost.flash(Balance.Ward.FLARE_EXPOSE_TICKS);
         Vec3 from = ghost.getBoundingBox().getCenter();
         Vec3 to = Vec3.atCenterOf(lantern);
         int steps = Math.max(2, (int) Math.ceil(from.distanceTo(to) * 3));
@@ -104,6 +113,26 @@ public final class WardEffects {
         ghost.hurtMarked = true;
         ServerTrace.ghost("ward_flare", ghost, line -> line.addProperty("lantern", lantern.toShortString()));
         return true;
+    }
+
+    /** A ring of glow motes spreading out from the lantern to {@code FLARE_BURST_RADIUS} over three ticks. */
+    private static void burst(ServerLevel level, BlockPos lantern) {
+
+        double cx = lantern.getX() + 0.5;
+        double cy = lantern.getY() + 0.5;
+        double cz = lantern.getZ() + 0.5;
+        int steps = Balance.Ward.FLARE_BURST_STEPS;
+        for (int step = 1; step <= steps; step++) {
+            double radius = Balance.Ward.FLARE_BURST_RADIUS * step / steps;
+            int points = (int) Math.round(2 * Math.PI * radius * Balance.Ward.FLARE_BURST_MOTES_PER_BLOCK);
+            HauntingScheduler.schedule(level, step - 1, () -> {
+                for (int i = 0; i < points; i++) {
+                    double angle = 2 * Math.PI * i / points;
+                    level.sendParticles(ParticleTypes.GLOW, true, false, cx + Math.cos(angle) * radius, cy, cz + Math.sin(angle) * radius,
+                            1, 0.0, 0.05, 0.0, 0.0);
+                }
+            });
+        }
     }
 
     /**

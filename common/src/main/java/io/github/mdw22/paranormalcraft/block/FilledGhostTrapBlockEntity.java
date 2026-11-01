@@ -4,11 +4,13 @@ import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.capture.CapturedGhost;
 import io.github.mdw22.paranormalcraft.capture.FilledTraps;
 import io.github.mdw22.paranormalcraft.capture.ReleaseHold;
+import io.github.mdw22.paranormalcraft.capture.TrapDecay;
+import io.github.mdw22.paranormalcraft.capture.TrapIntegrity;
+import io.github.mdw22.paranormalcraft.capture.TrapSeal;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
-import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
@@ -17,23 +19,26 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 /**
- * A Filled Ghost Trap's contents ({@link CapturedGhost}), carried to and from the item as the
- * {@code paranormalcraft:captured_ghost} component. While loaded it rattles every 10–20 s and counts as a weak ghost
- * for EMF Readers (level 3 at most).
+ * A Filled Ghost Trap's contents ({@link CapturedGhost}) and seal ({@link TrapSeal}), carried to and from the item as
+ * the {@code captured_ghost} and {@code trap_seal} components. While loaded it decays ({@link TrapIntegrity}): soft,
+ * rare rattles while healthy, urgent ones below 25%; it counts as a weak ghost for EMF Readers (level 3, 4 below 25%);
+ * at 0% the ghost bursts out and the trap is left empty.
  */
 public class FilledGhostTrapBlockEntity extends BlockEntity {
 
-    private static final int MIN_RATTLE_TICKS = Balance.Trap.MIN_RATTLE_TICKS;
-    private static final int MAX_RATTLE_TICKS = Balance.Trap.MAX_RATTLE_TICKS;
-
     private @Nullable CapturedGhost contents;
+    private @Nullable TrapSeal seal;
     private int nextRattle = -1;
     private boolean registered;
     /** An empty-hand release hold in progress, and whose it is. Not saved. */
@@ -48,6 +53,24 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
     public @Nullable CapturedGhost contents() {
 
         return this.contents;
+    }
+
+    public @Nullable TrapSeal seal() {
+
+        return this.seal;
+    }
+
+    public void setSeal(@Nullable TrapSeal seal) {
+
+        this.seal = seal;
+        this.nextRattle = -1;
+        setChanged();
+    }
+
+    /** Integrity now (100 if it has no seal yet). */
+    public float integrity(long now) {
+
+        return this.seal == null ? 100.0F : TrapIntegrity.integrity(this.seal, now);
     }
 
     public void setContents(@Nullable CapturedGhost contents) {
@@ -70,12 +93,30 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
             FilledTraps.add(level, pos);
             trap.registered = true;
         }
+        if (trap.contents == null) {
+            return;
+        }
+        if (trap.seal == null) {
+            trap.setSeal(TrapDecay.freshSeal(serverLevel));
+        }
+        float integrity = TrapIntegrity.integrity(trap.seal, serverLevel.getGameTime());
+        if (integrity <= 0.0F) {
+            CapturedGhost captured = trap.contents;
+            trap.setContents(null);
+            serverLevel.setBlock(pos, ModBlocks.GHOST_TRAP.get().defaultBlockState(), Block.UPDATE_ALL);
+            TrapDecay.escape(serverLevel, captured, Vec3.atBottomCenterOf(pos), "placed");
+            return;
+        }
+        TrapIntegrity.Rattle rattle = TrapIntegrity.rattle(integrity, true);
         if (trap.nextRattle < 0) {
-            trap.nextRattle = MIN_RATTLE_TICKS + serverLevel.getRandom().nextInt(MAX_RATTLE_TICKS - MIN_RATTLE_TICKS + 1);
+            trap.nextRattle = rattle.minTicks() + serverLevel.getRandom().nextInt(rattle.maxTicks() - rattle.minTicks() + 1);
         }
         if (--trap.nextRattle <= 0) {
             trap.nextRattle = -1;
-            serverLevel.playSound(null, pos, ModSounds.TRAP_RATTLE.get(), SoundSource.BLOCKS, 1.0F, 0.9F + serverLevel.getRandom().nextFloat() * 0.3F);
+            serverLevel.playSound(null, pos, ModSounds.TRAP_RATTLE.get(), SoundSource.BLOCKS, rattle.volume(), 0.9F + serverLevel.getRandom().nextFloat() * 0.3F);
+            if (TrapIntegrity.creaks(integrity)) {
+                serverLevel.playSound(null, pos, ModSounds.TRAP_CREAK.get(), SoundSource.BLOCKS, Balance.Escape.CREAK_VOLUME, 0.8F);
+            }
             serverLevel.sendParticles(ParticleTypes.SOUL, pos.getX() + 0.5, pos.getY() + 0.35, pos.getZ() + 0.5, 4, 0.2, 0.05, 0.2, 0.01);
             serverLevel.blockEvent(pos, state.getBlock(), FilledGhostTrapBlock.EVENT_RATTLE, 0);
         }
@@ -141,6 +182,9 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
         if (this.contents != null) {
             components.set(ModDataComponents.CAPTURED_GHOST.get(), this.contents);
         }
+        if (this.seal != null) {
+            components.set(ModDataComponents.TRAP_SEAL.get(), this.seal);
+        }
     }
 
     @Override
@@ -148,6 +192,7 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
 
         super.applyImplicitComponents(components);
         this.contents = components.get(ModDataComponents.CAPTURED_GHOST.get());
+        this.seal = components.get(ModDataComponents.TRAP_SEAL.get());
     }
 
     @Override
@@ -155,6 +200,7 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
 
         super.removeComponentsFromTag(output);
         output.discard("Captured");
+        output.discard("Seal");
     }
 
     @Override
@@ -162,6 +208,7 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
 
         super.loadAdditional(input);
         this.contents = input.read("Captured", CapturedGhost.CODEC).orElse(null);
+        this.seal = input.read("Seal", TrapSeal.CODEC).orElse(null);
     }
 
     @Override
@@ -170,6 +217,9 @@ public class FilledGhostTrapBlockEntity extends BlockEntity {
         super.saveAdditional(output);
         if (this.contents != null) {
             output.store("Captured", CapturedGhost.CODEC, this.contents);
+        }
+        if (this.seal != null) {
+            output.store("Seal", TrapSeal.CODEC, this.seal);
         }
     }
 }

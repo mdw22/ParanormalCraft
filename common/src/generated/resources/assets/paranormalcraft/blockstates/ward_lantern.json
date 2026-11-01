@@ -1,15 +1,21 @@
 {
   "variants": {
-    "flare=false,hanging=false": {
+    "flare=0,hanging=false": {
       "model": "paranormalcraft:block/ward_lantern"
     },
-    "flare=false,hanging=true": {
+    "flare=0,hanging=true": {
       "model": "paranormalcraft:block/ward_lantern_hanging"
     },
-    "flare=true,hanging=false": {
+    "flare=1,hanging=false": {
       "model": "paranormalcraft:block/ward_lantern"
     },
-    "flare=true,hanging=true": {
+    "flare=1,hanging=true": {
+      "model": "paranormalcraft:block/ward_lantern_hanging"
+    },
+    "flare=2,hanging=false": {
+      "model": "paranormalcraft:block/ward_lantern"
+    },
+    "flare=2,hanging=true": {
       "model": "paranormalcraft:block/ward_lantern_hanging"
     }
   }

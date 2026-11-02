@@ -149,9 +149,9 @@ Every line keeps the position the script was started from, even after a scene te
 - `bind_cycle` (bind a stored spirit, summon its wisp, recall it, put the vessel back and unbind);
 - `wisp_warns` (`familiar_cave`: the wisp lights the tunnel and warns of the zombie behind the corner; the warning ends when it's gone, and a recall takes the light);
 - `phase_through_door` (a phase that runs out inside a door is extended, then ends once you step out);
-- `trap_decay` (a trap set to 2% bursts open; the ghost comes out Agitated and attaches to you);
-- `breach_cycle` (a drained unit breaches, a spirit escapes, soul sand stops it);
-- `follow_home` (a ghost follows you home, settles in and haunts there; a Ward Lantern stops it).
+- `trap_decay` (a trap set to 2% bursts open; the ghost shows itself, flees, then comes round behind you);
+- `breach_cycle` (a drained unit breaches, a spirit escapes and flees, soul sand stops it);
+- `follow_home` (a ghost follows you home, settles in with a creak and haunts there; a Ward Lantern stops it).
 
 ### Vanilla tools that help
 
@@ -184,7 +184,7 @@ Every line keeps the position the script was started from, even after a scene te
 
   Hoppers: fuel from the top or sides, traps from the sides, outputs from the bottom. A comparator reads how many ghosts it holds. Breaking it drops its ghosts as Filled Traps.
 - **Ward Lantern** (lantern, 4 Lingering Ectoplasm, amethyst shard): within 32 blocks (config `wardLanternRadius`) no monsters spawn naturally, ghosts don't haunt and nobody sees shadow figures. Ghosts can still be inside, and caught, but they won't choose to wander within 4 blocks of it. Spawns that belong to a structure (witch huts, fortresses, monuments) are not blocked. Placing one traces its radius in cyan motes; holding one shows the edges of nearby wards. When it stops a haunting it flares bright, chimes, and pushes the ghost back; refused monster spawns leave a small puff of smoke.
-- **Loose ghosts**: a ghost that escapes (or slips a trap, or an Agitated one that notices you) may **follow you home**, unseen, without haunting on the way ("You feel watched"). It settles near your bed, or where you've stayed indoors for a couple of minutes, and haunts there. Catch it again, or ward the place. While Agitated (10 minutes, config `agitatedMinutes`) a ghost haunts and recovers twice as fast and has a faint red tint.
+- **Loose ghosts**: a ghost that escapes shows itself to everyone for a moment, flees, then circles behind you and **follows you home**, unseen, without haunting on the way ("You feel watched"). One that slips a trap, or an Agitated one that notices you, may do the same. It settles near your bed, or where you've stayed indoors for a couple of minutes ("Something settles in"), and haunts there. Catch it again, or ward the place. While Agitated (10 minutes, config `agitatedMinutes`) a ghost haunts and recovers twice as fast and is drawn a pulsing red, with dark-red motes rising off it.
 - **Spirit Vessel** (copper ingot / glass, Lingering Ectoplasm, glass / three glass): put it in a Containment Unit's Vessel slot, pick a stored ghost and press **Bind** (60 s, 5 charge). The Bound Spirit Vessel carries the ghost; put it back and press **Unbind** to return it to storage.
 - **Wisp Familiar** (a bound Lingering Spirit): use the bound vessel to summon or recall it. It follows at your shoulder, carries a light where it's dark, turns red and chirps from the side of a hostile you can't see, and sneak + use sends it toward the nearest Abandoned Cabin (2 minute cooldown). It goes back into the vessel if you drop or store the vessel, change dimension or log out.
 - **Spectral Step** (3 Lingering Ectoplasm, phantom membrane, amethyst shard; 20 uses, repair with ectoplasm): use it to walk through doors, trapdoors, fences, gates, walls, bars, panes and glass for 5 s (60 s cooldown). If it runs out while you're inside something, it lasts a little longer, then nudges you out.

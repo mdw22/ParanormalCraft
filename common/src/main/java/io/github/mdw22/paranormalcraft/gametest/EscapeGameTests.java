@@ -1,5 +1,6 @@
 package io.github.mdw22.paranormalcraft.gametest;
 
+import com.google.gson.JsonObject;
 import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.block.FilledGhostTrapBlockEntity;
@@ -10,9 +11,12 @@ import io.github.mdw22.paranormalcraft.capture.LooseGhosts;
 import io.github.mdw22.paranormalcraft.capture.TrapDecay;
 import io.github.mdw22.paranormalcraft.capture.TrapIntegrity;
 import io.github.mdw22.paranormalcraft.containment.ContainmentUnitBlockEntity;
+import io.github.mdw22.paranormalcraft.debug.DebugScenes;
+import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.entity.LingeringSpiritEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.Attachment;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
+import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostFollowGoal;
 import io.github.mdw22.paranormalcraft.haunting.HauntingAction;
 import io.github.mdw22.paranormalcraft.registry.ModBlocks;
 import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
@@ -37,21 +41,28 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * GameTests for Milestone 2 part D: Filled Trap integrity (a trap in a chest, a placed trap, containment stopping the
  * decay, the tooltip and item bar), Containment breaches (timing, order, refuelling), Agitated ghosts, and attachment
  * (attach and follow, no haunting while following, settling at the respawn point and haunting there, waiting across a
- * dimension change, wards, recapture, the seeded failed-capture roll). Own batch ({@code escape}).
+ * dimension change, wards, recapture, the seeded failed-capture roll), and getting away after an escape (it shows
+ * itself where it got out, flees, ends up behind the player, and neither jumps nor settles before that). Own batch
+ * ({@code escape}).
  */
 public final class EscapeGameTests {
 
     private static final BlockPos CENTRE = new BlockPos(20, 1, 20);
+    private static final int ESCAPE_WATCH_TICKS = 600;
+    /** More than this in one tick is a jump: a fleeing ghost covers well under a block. */
+    private static final double MAX_STEP = 1.5;
 
     private EscapeGameTests() {
     }
@@ -71,6 +82,11 @@ public final class EscapeGameTests {
         RegistrationHelper.testFunction("recapture_clears_attachment", EscapeGameTests::recaptureClears);
         RegistrationHelper.testFunction("failed_capture_attach_roll", EscapeGameTests::failedCaptureAttach);
         RegistrationHelper.testFunction("agitated_ghost_notices_player", EscapeGameTests::agitatedNotice);
+        RegistrationHelper.testFunction("trap_escape_flees_visibly", EscapeGameTests::trapEscapeFlees);
+        RegistrationHelper.testFunction("breach_escape_flees_visibly", EscapeGameTests::breachEscapeFlees);
+        RegistrationHelper.testFunction("escape_settles_only_after_getting_away", EscapeGameTests::settlesAfterGettingAway);
+        RegistrationHelper.testFunction("attached_ghost_teleports_close_behind", EscapeGameTests::teleportsCloseBehind);
+        RegistrationHelper.testFunction("scene_forgets_home_base_respawn", EscapeGameTests::sceneForgetsRespawn);
     }
 
     private static void check(GameTestHelper helper, boolean condition, String message, Object... args) {
@@ -284,6 +300,8 @@ public final class EscapeGameTests {
         if (ghost == null) {
             throw helper.assertionException(Component.literal("couldn't make a loose ghost"));
         }
+        // Past the getting-away part, which has its own tests.
+        ghost.attachment().endEscape("test");
         return ghost;
     }
 
@@ -304,6 +322,195 @@ public final class EscapeGameTests {
             remove(near);
             helper.succeed();
         });
+    }
+
+    // ---- getting away ----
+
+    /**
+     * Watches a ghost that just escaped from {@code at} for 30 s: never a jump, shown to everyone at first, near the
+     * spot after a second, and by the end out of its flight and 12–24 blocks behind the player, with no catch-up teleport.
+     * The clock starts when {@code loose} first finds it. Call this from the test function, not from a delayed task: the
+     * framework can't take a new task while it runs those.
+     */
+    private static void watchEscape(GameTestHelper helper, ServerPlayer player, Supplier<@Nullable GhostEntity> loose, Vec3 at) {
+
+        ServerLevel level = helper.getLevel();
+        long start = level.getGameTime();
+        GhostEntity[] found = {null};
+        Vec3[] last = {null};
+        int[] elapsed = {0};
+        helper.onEachTick(() -> {
+            if (found[0] == null) {
+                found[0] = loose.get();
+                if (found[0] == null) {
+                    return;
+                }
+                last[0] = found[0].position();
+                check(helper, found[0].attachment().following() && player.getUUID().equals(found[0].attachment().player()), "it didn't attach to the player");
+                check(helper, found[0].isManifesting() && found[0].isAgitated(), "it isn't shown Agitated at the moment it escapes");
+            }
+            GhostEntity ghost = found[0];
+            int tick = ++elapsed[0];
+            if (tick > ESCAPE_WATCH_TICKS) {
+                return;
+            }
+            double step = ghost.position().distanceTo(last[0]);
+            last[0] = ghost.position();
+            check(helper, step < MAX_STEP, "it jumped %.1f blocks on tick %d", step, tick);
+            if (tick == 20) {
+                check(helper, ghost.position().distanceTo(at) <= 6.0, "%.1f blocks from where it got out after 20 ticks", ghost.position().distanceTo(at));
+            }
+            if (tick == Balance.Escape.ESCAPE_MANIFEST_TICKS - 5) {
+                check(helper, ghost.isManifesting(), "no longer shown after %d ticks", tick);
+            }
+            if (tick == Balance.Escape.ESCAPE_MANIFEST_TICKS + 5) {
+                check(helper, !ghost.isManifesting(), "still shown after %d ticks", tick);
+            }
+            if (tick == ESCAPE_WATCH_TICKS) {
+                List<JsonObject> trace = ServerTrace.since(start);
+                check(helper, count(trace, "attach_teleport", ghost) == 0, "a catch-up teleport with the player within 30 blocks");
+                check(helper, count(trace, "attach_flee_end", ghost) == 1, "it never finished fleeing");
+                double distance = ghost.distanceTo(player);
+                check(helper, ghost.attachment().escape() == Attachment.Escape.NONE, "still getting away (%s) after 30 s", ghost.attachment().escape());
+                check(helper, distance >= Attachment.FOLLOW_MIN && distance <= Attachment.FOLLOW_MAX, "%.1f blocks from the player after 30 s", distance);
+                check(helper, GhostFollowGoal.behind(player.position(), player.getViewVector(1.0F), ghost.position()), "not behind the player after 30 s");
+                ghost.discard();
+                remove(player);
+                ServerTrace.stopBuffering();
+                helper.succeed();
+            }
+        });
+    }
+
+    private static long count(List<JsonObject> trace, String type, GhostEntity ghost) {
+
+        String id = ghost.getUUID().toString();
+        return trace.stream().filter(line -> line.get("type").getAsString().equals(type) && line.has("ghost") && line.get("ghost").getAsString().equals(id)).count();
+    }
+
+    /** A player at the middle of the arena, looking along {@code yaw}. */
+    private static ServerPlayer playerFacing(GameTestHelper helper, float yaw) {
+
+        ServerPlayer player = player(helper, CENTRE);
+        player.setYRot(yaw);
+        player.setYHeadRot(yaw);
+        return player;
+    }
+
+    private static void trapEscapeFlees(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ServerTrace.startBuffering(level.getServer());
+        // Facing the trap, so the ghost flees in front of them and has to come round.
+        ServerPlayer player = playerFacing(helper, 0.0F);
+        BlockPos trap = CENTRE.south(5);
+        Vec3 at = helper.absoluteVec(Vec3.atBottomCenterOf(trap));
+        TrapDecay.escape(level, CapturedGhosts.fresh(level, helper.absolutePos(trap), "test"), at, "placed");
+        List<GhostEntity> loose = ghostsNear(helper, trap, 3.0);
+        check(helper, loose.size() == 1, "%d ghosts by the trap, expected 1", loose.size());
+        watchEscape(helper, player, loose::getFirst, at);
+    }
+
+    private static void breachEscapeFlees(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ServerTrace.startBuffering(level.getServer());
+        ServerPlayer player = playerFacing(helper, -90.0F);
+        BlockPos at = CENTRE.east(5);
+        helper.setBlock(at, ModBlocks.CONTAINMENT_UNIT.get());
+        ContainmentUnitBlockEntity unit = (ContainmentUnitBlockEntity) helper.getBlockEntity(at, ContainmentUnitBlockEntity.class);
+        unit.fillForDebug(level, 1);
+        unit.setCharge(0);
+        unit.debugSetUnstableTicks(Balance.Escape.BREACH_AFTER_TICKS);
+        helper.runAfterDelay(3, () -> {
+            check(helper, unit.inBreach(), "no Breach (set-up)");
+            unit.debugAdvanceBreach(10_000);
+        });
+        watchEscape(helper, player, () -> {
+            List<GhostEntity> loose = ghostsNear(helper, at, 4.0);
+            check(helper, loose.size() <= 1, "%d ghosts by the unit, expected 1", loose.size());
+            return loose.isEmpty() ? null : loose.getFirst();
+        }, helper.absoluteVec(Vec3.atBottomCenterOf(at)));
+    }
+
+    /** The bug from the update12 playtest: with a respawn point in range, the ghost was at the bed on its first check. */
+    private static void settlesAfterGettingAway(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ServerTrace.startBuffering(level.getServer());
+        ServerPlayer player = playerFacing(helper, 180.0F);
+        BlockPos bed = helper.absolutePos(new BlockPos(2, 1, 2));
+        player.setRespawnPosition(new ServerPlayer.RespawnConfig(new LevelData.RespawnData(GlobalPos.of(level.dimension(), bed), 0.0F, 0.0F), true), false);
+        BlockPos trap = CENTRE.south(5);
+        Vec3 at = helper.absoluteVec(Vec3.atBottomCenterOf(trap));
+        long start = level.getGameTime();
+        TrapDecay.escape(level, CapturedGhosts.fresh(level, helper.absolutePos(trap), "test"), at, "placed");
+        GhostEntity ghost = ghostsNear(helper, trap, 3.0).getFirst();
+        helper.runAfterDelay(25, () -> {
+            check(helper, ghost.attachment().following(), "it settled before getting away");
+            check(helper, ghost.position().distanceTo(at) <= 6.0, "%.1f blocks from where it got out after 25 ticks", ghost.position().distanceTo(at));
+        });
+        helper.succeedWhen(() -> {
+            check(helper, !ghost.attachment().attached(), "not settled yet");
+            check(helper, bed.equals(ghost.getHome()), "home is %s, expected the respawn point %s", ghost.getHome(), bed);
+            JsonObject settle = ServerTrace.since(start).stream().filter(line -> line.get("type").getAsString().equals("attach_settle")
+                    && line.get("ghost").getAsString().equals(ghost.getUUID().toString())).findFirst().orElse(null);
+            check(helper, settle != null && settle.get("cue").getAsBoolean(), "no \"Something settles in\" cue in the trace");
+            ghost.discard();
+            remove(player);
+            ServerTrace.stopBuffering();
+        });
+    }
+
+    private static void teleportsCloseBehind(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ServerTrace.startBuffering(level.getServer());
+        ServerPlayer player = player(helper, CENTRE.south(5));
+        GhostEntity ghost = looseGhost(helper, CENTRE);
+        // Well past the catch-up range, with the chunks round the player loaded.
+        Vec3 far = player.position().add(70.0, 0.0, 0.0);
+        int cx = BlockPos.containing(far).getX() >> 4;
+        int cz = BlockPos.containing(far).getZ() >> 4;
+        // Only the ones this test forces get released: the rest may be under a neighbouring test.
+        List<int[]> forced = new ArrayList<>();
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (level.setChunkForced(cx + dx, cz + dz, true)) {
+                    forced.add(new int[] {cx + dx, cz + dz});
+                }
+            }
+        }
+        long start = level.getGameTime();
+        player.teleportTo(far.x, far.y, far.z);
+        helper.succeedWhen(() -> {
+            JsonObject jump = ServerTrace.since(start).stream().filter(line -> line.get("type").getAsString().equals("attach_teleport")).findFirst().orElse(null);
+            check(helper, jump != null, "no catch-up teleport yet");
+            check(helper, jump.get("from").getAsDouble() > Attachment.FOLLOW_TELEPORT, "it jumped from only %.1f blocks", jump.get("from").getAsDouble());
+            check(helper, jump.get("to").getAsDouble() <= Attachment.FOLLOW_MAX + 2.0, "it jumped to %.1f blocks from the player", jump.get("to").getAsDouble());
+            ghost.discard();
+            remove(player);
+            forced.forEach(chunk -> level.setChunkForced(chunk[0], chunk[1], false));
+            ServerTrace.stopBuffering();
+        });
+    }
+
+    private static void sceneForgetsRespawn(GameTestHelper helper) {
+
+        ServerLevel level = helper.getLevel();
+        ServerPlayer player = player(helper, CENTRE);
+        ServerPlayer.RespawnConfig bed = new ServerPlayer.RespawnConfig(new LevelData.RespawnData(GlobalPos.of(level.dimension(), DebugScenes.HOME_BASE_BED), 0.0F, 0.0F), true);
+        player.setRespawnPosition(bed, false);
+        DebugScenes.forgetSceneRespawn(player, "home_base");
+        check(helper, player.getRespawnConfig() != null, "home_base lost its own respawn point");
+        DebugScenes.forgetSceneRespawn(player, "containment_lab");
+        check(helper, player.getRespawnConfig() == null, "another scene kept the home_base respawn point");
+        BlockPos own = helper.absolutePos(CENTRE);
+        player.setRespawnPosition(new ServerPlayer.RespawnConfig(new LevelData.RespawnData(GlobalPos.of(level.dimension(), own), 0.0F, 0.0F), true), false);
+        DebugScenes.forgetSceneRespawn(player, "containment_lab");
+        check(helper, player.getRespawnConfig() != null, "a scene cleared a respawn point of the player's own");
+        remove(player);
+        helper.succeed();
     }
 
     private static void settlesAtRespawn(GameTestHelper helper) {

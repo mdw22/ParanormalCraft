@@ -8,8 +8,10 @@ import com.geckolib.animation.RawAnimation;
 import com.geckolib.animation.object.PlayState;
 import com.geckolib.constant.dataticket.DataTicket;
 import com.geckolib.util.GeckoLibUtil;
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostCuriousGoal;
+import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostEscapeGoal;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostFollowGoal;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostReturnHomeGoal;
 import io.github.mdw22.paranormalcraft.entity.ghost.goal.GhostTetheredGoal;
@@ -45,6 +47,7 @@ public class LingeringSpiritEntity extends GhostEntity implements GeoEntity {
 
         this.goalSelector.addGoal(0, new GhostTetheredGoal(this));
         this.goalSelector.addGoal(0, new GhostReturnHomeGoal(this, 1.2));
+        this.goalSelector.addGoal(0, new GhostEscapeGoal(this, Balance.Escape.ESCAPE_FLEE_SPEED));
         this.goalSelector.addGoal(0, new GhostFollowGoal(this, 1.2));
         this.goalSelector.addGoal(1, new GhostShyGoal(this, 1.4));
         this.goalSelector.addGoal(2, new GhostCuriousGoal(this, 1.0, 200));

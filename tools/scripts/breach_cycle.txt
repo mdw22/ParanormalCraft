@@ -1,5 +1,6 @@
 # Breach: breach_lab's unit holds 3 spirits at 5 charge. Drained to 0 it goes Unstable; after a minute (skipped here)
-# it breaches and one spirit escapes every 30 s, Agitated and attached to the player. Soul sand ends it.
+# it breaches and one spirit escapes every 30 s, Agitated, shown to everyone for 2 s, then fleeing and following the
+# player. Soul sand ends it.
 # Run with: /execute as Dev at Dev run paranormalcraft debug run breach_cycle
 paranormalcraft debug scene breach_lab
 wait 20
@@ -10,6 +11,7 @@ expect trace containment_breach_start within 5
 expect trace containment_breach_escape within 620
 expect dump containmentUnits[0].stored.length=2 containmentUnits[0].breach=true
 paranormalcraft debug screenshot breach
+expect trace attach_flee_end within 350
 # Refuel: soul sand into the fuel slot ends Unstable and the Breach.
 item replace block 100000 201 100000 container.1 with minecraft:soul_sand 4
 expect trace containment_breach_end reason=refuelled within 10

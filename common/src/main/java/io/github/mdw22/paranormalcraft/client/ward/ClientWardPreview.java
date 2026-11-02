@@ -4,6 +4,7 @@ import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.client.debug.ClientTrace;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.ward.WardLanternBlockEntity;
+import io.github.mdw22.paranormalcraft.ward.WardRing;
 import io.github.mdw22.paranormalcraft.world.LoadedPositions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -13,11 +14,14 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
+
 /**
  * While the local player holds a Ward Lantern, the boundaries of wards within {@link Balance.Ward#PREVIEW_RANGE} show as
  * a line of full-bright cyan motes on the ground at the radius edge (3 a block, 0.3 up), with a 3-high post every 4
  * blocks. Client only, on the stretch of edge within {@link #EDGE_RANGE} of the player, one round every
- * {@code PREVIEW_INTERVAL_TICKS}, capped at {@code PREVIEW_MAX_MOTES} a round.
+ * {@code PREVIEW_INTERVAL_TICKS}, at most {@code PREVIEW_MAX_MOTES} a round (a round over that gets sparser, see
+ * {@link WardRing}).
  */
 public final class ClientWardPreview {
 
@@ -46,26 +50,26 @@ public final class ClientWardPreview {
             return;
         }
         Vec3 at = player.position();
+        List<BlockPos> lanterns = List.copyOf(LoadedPositions.WARD_LANTERNS_CLIENT.near(level, at, Balance.Ward.PREVIEW_RANGE));
         int budget = Balance.Ward.PREVIEW_MAX_MOTES;
         int spawned = 0;
-        for (BlockPos lantern : LoadedPositions.WARD_LANTERNS_CLIENT.near(level, at, Balance.Ward.PREVIEW_RANGE)) {
+        double widestGap = 0.0;
+        for (int w = 0; w < lanterns.size(); w++) {
+            BlockPos lantern = lanterns.get(w);
             int radius = level.getBlockEntity(lantern) instanceof WardLanternBlockEntity ward ? ward.radius() : Balance.Ward.DEFAULT_RADIUS;
-            int points = (int) Math.ceil(2 * Math.PI * radius * Balance.Ward.PREVIEW_MOTES_PER_BLOCK);
-            int postEvery = Balance.Ward.PREVIEW_POST_SPACING * Balance.Ward.PREVIEW_MOTES_PER_BLOCK;
-            for (int i = 0; i < points && spawned < budget; i++) {
-                double angle = 2 * Math.PI * i / points;
-                double x = lantern.getX() + 0.5 + Math.cos(angle) * radius;
-                double z = lantern.getZ() + 0.5 + Math.sin(angle) * radius;
-                if ((x - at.x) * (x - at.x) + (z - at.z) * (z - at.z) > EDGE_RANGE * EDGE_RANGE) {
-                    continue;
-                }
-                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
+            double centreX = lantern.getX() + 0.5;
+            double centreZ = lantern.getZ() + 0.5;
+            // An even share of what's left, so no ward loses the end of its circle to another.
+            List<WardRing.Point> points = WardRing.previewRound(centreX, centreZ, radius, at.x, at.z, EDGE_RANGE, (budget - spawned) / (lanterns.size() - w));
+            widestGap = Math.max(widestGap, WardRing.widestGap(points, centreX, centreZ, radius, at.x, at.z, EDGE_RANGE));
+            for (WardRing.Point point : points) {
+                int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(point.x()), (int) Math.floor(point.z()));
                 double y = (Math.abs(top - lantern.getY()) <= 8 ? top : lantern.getY()) + Balance.Ward.MOTE_LIFT;
-                level.addParticle(ParticleTypes.GLOW, x, y, z, 0, 0.005, 0);
+                level.addParticle(ParticleTypes.GLOW, point.x(), y, point.z(), 0, 0.005, 0);
                 spawned++;
-                if (i % postEvery == 0) {
-                    for (int h = 1; h < Balance.Ward.PREVIEW_POST_HEIGHT && spawned < budget; h++) {
-                        level.addParticle(ParticleTypes.GLOW, x, y + h, z, 0, 0.005, 0);
+                if (point.post()) {
+                    for (int h = 1; h < Balance.Ward.PREVIEW_POST_HEIGHT; h++) {
+                        level.addParticle(ParticleTypes.GLOW, point.x(), y + h, point.z(), 0, 0.005, 0);
                         spawned++;
                     }
                 }
@@ -73,7 +77,11 @@ public final class ClientWardPreview {
         }
         if (spawned != lastRound) {
             int motes = spawned;
-            ClientTrace.event("ward_preview_round", line -> line.addProperty("motes", motes));
+            double gap = Math.round(widestGap * 100.0) / 100.0;
+            ClientTrace.event("ward_preview_round", line -> {
+                line.addProperty("motes", motes);
+                line.addProperty("gap", gap);
+            });
         }
         lastRound = spawned;
     }

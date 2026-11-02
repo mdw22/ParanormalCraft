@@ -1,10 +1,12 @@
 package io.github.mdw22.paranormalcraft.capture;
 
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.Constants;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.entity.ghost.GhostEntity;
 import io.github.mdw22.paranormalcraft.entity.ghost.Presence;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
@@ -17,7 +19,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Bringing a captured ghost back into the world: a release (calm, its old home) or an escape from a decayed trap or a
- * Containment breach (full Presence, Agitated, homed where it got out, and attached to the nearest player).
+ * Containment breach (full Presence, Agitated, homed where it got out, shown to everyone for a moment, then fleeing
+ * from the nearest player, whom it's attached to).
  */
 public final class LooseGhosts {
 
@@ -46,8 +49,9 @@ public final class LooseGhosts {
     }
 
     /**
-     * A ghost gets loose: recreated at {@code at}, Agitated for the configured time, homed at {@code home}, and
-     * attached to the nearest player within range.
+     * A ghost gets loose: recreated at {@code at}, Agitated for the configured time, homed at {@code home}, visible to
+     * everyone for {@code ESCAPE_MANIFEST_TICKS}, and attached to the nearest player within range, which starts its
+     * flight from them ({@code Attachment.beginEscape}).
      */
     public static @Nullable GhostEntity escape(ServerLevel level, CapturedGhost captured, Vec3 at, BlockPos home, String cause) {
 
@@ -57,7 +61,17 @@ public final class LooseGhosts {
         }
         ghost.setHome(level, home);
         ghost.agitate(ModConfigs.server().agitatedMinutes() * TICKS_PER_MINUTE);
-        ghost.attachment().attachToNearest(level, cause);
+        ghost.flash(Balance.Escape.ESCAPE_MANIFEST_TICKS);
+        if (ghost.attachment().attachToNearest(level, cause)) {
+            ghost.attachment().beginEscape();
+        }
         return ghost;
+    }
+
+    /** The burst of soul fire and sparks where a ghost got out. */
+    public static void burst(ServerLevel level, Vec3 at) {
+
+        level.sendParticles(ParticleTypes.SOUL, at.x, at.y + 0.5, at.z, 24, 0.4, 0.5, 0.4, 0.06);
+        level.sendParticles(ParticleTypes.CRIT, at.x, at.y + 0.3, at.z, 12, 0.3, 0.2, 0.3, 0.2);
     }
 }

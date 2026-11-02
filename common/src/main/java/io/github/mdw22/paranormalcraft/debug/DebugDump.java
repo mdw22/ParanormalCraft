@@ -123,6 +123,8 @@ public final class DebugDump {
             JsonObject attachment = new JsonObject();
             attachment.addProperty("mode", ghost.attachment().mode().name().toLowerCase(java.util.Locale.ROOT));
             attachment.addProperty("player", ghost.attachment().player() == null ? "none" : ghost.attachment().playerName());
+            attachment.addProperty("escape", ghost.attachment().escape().name().toLowerCase(java.util.Locale.ROOT));
+            attachment.addProperty("escapeTicks", ghost.attachment().escapeTicks());
             attachment.addProperty("stayTicks", ghost.attachment().stayTicks());
             attachment.addProperty("settledOn", ghost.attachment().settledOn() == null ? "none" : ghost.attachment().settledOn().toString());
             json.add("attachment", attachment);

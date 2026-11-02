@@ -2,6 +2,7 @@ package io.github.mdw22.paranormalcraft.fabric.gametest;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.mdw22.paranormalcraft.Balance;
 import io.github.mdw22.paranormalcraft.client.ClientToolState;
 import io.github.mdw22.paranormalcraft.client.containment.ContainmentUnitScreen;
 import io.github.mdw22.paranormalcraft.client.hallucination.ClientHallucinations;
@@ -106,6 +107,7 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
             phaseThroughDoor(context, server);
             playtestStep(context, server);
             followerUnseen(context, server);
+            agitatedGhost(context, server);
             creativeTab(context, server);
         }
     }
@@ -618,8 +620,8 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
     }
 
     /**
-     * The Ward Lantern's placement ring (radius set to 8 so it fits the frame), seen from above at night, with the
-     * lantern held for the boundary preview.
+     * The Ward Lantern's placement ring (radius set to 8 so it fits the frame), seen from above at night, once it has
+     * closed; then the lantern in hand for the boundary preview, which has no gap in the trace or the frame.
      */
     private static void wardRing(ClientGameTestContext context, TestServerContext server) {
 
@@ -632,11 +634,21 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
         // A glass block to stand on, high above the ring (survival players fall).
         server.runCommand("setblock 100000 213 100006 minecraft:glass");
         server.runCommand("tp @p 100000.5 214 100006.5 180 65");
-        server.runCommand("item replace entity @p weapon.mainhand with paranormalcraft:ward_lantern");
         context.runOnClient(client -> hideHud(client, true));
-        context.waitTicks(35);
+        // The closing round is drawn when the trace ends.
+        context.waitTicks(Balance.Ward.RING_TICKS + 3);
         context.takeScreenshot("18-ward-placement-ring");
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        server.runCommand("item replace entity @p weapon.mainhand with paranormalcraft:ward_lantern");
+        context.waitTicks(30);
+        context.takeScreenshot("18b-ward-held-preview");
         context.runOnClient(client -> hideHud(client, false));
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        List<JsonObject> rounds = readNewestTrace(context).stream().filter(line -> line.get("type").getAsString().equals("ward_preview_round")).toList();
+        check(!rounds.isEmpty(), "no ward_preview_round in the trace");
+        double widest = rounds.stream().mapToDouble(line -> line.get("gap").getAsDouble()).max().orElse(0.0);
+        check(widest > 0.0 && widest <= 1.5 / Balance.Ward.PREVIEW_MOTES_PER_BLOCK, "a gap of " + widest + " blocks in the radius 8 preview");
         server.runCommand("execute as @p run paranormalcraft debug screenshot ward_ring");
         context.waitTicks(5);
         server.runCommand("paranormalcraft debug config set wardLanternRadius 32");
@@ -768,6 +780,34 @@ public class ToolsAndVisibilityClientGameTest implements FabricClientGameTest {
                 && line.get("id").getAsString().equals("paranormalcraft:entity.lingering_spirit.watching"));
         check(!anySound || watched, "sounds were traced, but not \"You feel watched\"");
         System.out.println("[client gametest] follower never drawn over 60 ticks; watched sound " + (anySound ? "traced" : "not traceable (no audio)"));
+        server.runCommand("paranormalcraft debug ghost clear 64");
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(20);
+    }
+
+    /**
+     * An Agitated ghost seen through goggles, a few blocks in front of the player: red, with dark-red motes rising off
+     * it (the first is traced).
+     */
+    private static void agitatedGhost(ClientGameTestContext context, TestServerContext server) {
+
+        String ghost = "@e[type=" + GHOST + ",tag=paranormalcraft_scene]";
+        server.runCommand("execute as @p run paranormalcraft debug scene arena");
+        context.waitTicks(30);
+        server.runCommand("execute as @p run paranormalcraft debug trace start");
+        context.waitTicks(2);
+        server.runCommand("item replace entity @a armor.head with paranormalcraft:spectral_goggles");
+        server.runCommand("data merge entity " + ghost + " {NoAI:1b}");
+        server.runCommand("execute as @p at @s positioned ^ ^ ^3.5 run tp " + ghost + " ~ ~0.5 ~");
+        server.runCommand("paranormalcraft debug ghost " + ghost + " agitate");
+        context.runOnClient(client -> hideHud(client, true));
+        context.waitTicks(40);
+        context.takeScreenshot("26-agitated-ghost-goggles");
+        context.runOnClient(client -> hideHud(client, false));
+        server.runCommand("execute as @p run paranormalcraft debug trace stop");
+        context.waitTicks(5);
+        check(readNewestTrace(context).stream().anyMatch(line -> line.get("type").getAsString().equals("agitated_motes")), "no Agitated motes in the trace");
+        server.runCommand("item replace entity @a armor.head with air");
         server.runCommand("paranormalcraft debug ghost clear 64");
         server.runCommand("execute as @p run paranormalcraft debug scene arena");
         context.waitTicks(20);

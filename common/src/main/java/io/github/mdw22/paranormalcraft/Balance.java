@@ -581,8 +581,12 @@ public final class Balance {
         public static final double BREACH_WITNESS_RANGE = 16.0;
         /** While Agitated, haunting and manifest intervals are multiplied by this. (Used in {@code GhostEntity}.) */
         public static final double AGITATED_INTERVAL_FACTOR = 0.5;
-        /** An Agitated ghost keeps this much (%) of its green and blue: a faint red cast. (Used in {@code LingeringSpiritRenderer}.) */
-        public static final int AGITATED_TINT_KEEP = 72;
+        /** An Agitated ghost is drawn red: full red, and this much of green and blue at the middle of its pulse. (Used in {@code AgitatedTint}.) */
+        public static final float AGITATED_TINT_GREEN_BLUE = 0.45F;
+        /** How far green and blue swing either way in the pulse. (Used in {@code AgitatedTint}.) */
+        public static final float AGITATED_TINT_PULSE = 0.1F;
+        /** The tint's slow pulse, in ticks (3 s). (Used in {@code AgitatedTint}.) */
+        public static final int AGITATED_TINT_PERIOD_TICKS = 60;
         /** While Agitated, Presence regenerates this many times as fast. (Used in {@code GhostEntity}.) */
         public static final int AGITATED_REGEN_FACTOR = 2;
         /** A loose ghost attaches to the nearest player within this range. (Used in {@code Attachment}.) */
@@ -605,6 +609,34 @@ public final class Balance {
         public static final double SETTLE_STAY_RADIUS = 8.0;
         /** …for this long (2 real minutes). (Used in {@code Attachment}.) */
         public static final int SETTLE_STAY_TICKS = 2400;
+        /** An escaped ghost shows itself to everyone this long, where it got out (2 s). (Used in {@code LooseGhosts, Attachment}.) */
+        public static final int ESCAPE_MANIFEST_TICKS = 40;
+        /** Then it flees from its player until this far out. (Used in {@code Attachment}.) */
+        public static final double ESCAPE_FLEE_MIN = 12.0;
+        /** Where it aims for when it flees. (Used in {@code GhostEscapeGoal}.) */
+        public static final double ESCAPE_FLEE_TARGET = 16.0;
+        /** The speed it flees at: a shy ghost's. (Used in {@code LingeringSpiritEntity}.) */
+        public static final double ESCAPE_FLEE_SPEED = 1.4;
+        /** It picks a new spot to flee to this often, as its player may be moving. (Used in {@code GhostEscapeGoal}.) */
+        public static final int ESCAPE_REPLAN_TICKS = 20;
+        /** It gives up fleeing after this long, if cornered or chased (15 s). (Used in {@code Attachment}.) */
+        public static final int ESCAPE_FLEE_MAX_TICKS = 300;
+        /** Then it works its way round behind the player, for at most this long (13 s). (Used in {@code Attachment}.) */
+        public static final int ESCAPE_POSITION_MAX_TICKS = 260;
+        /** Each move round the player is at most this many degrees of arc, so it never cuts through them. (Used in {@code GhostFollowGoal}.) */
+        public static final double ESCAPE_ORBIT_STEP_DEGREES = 50.0;
+        /** Volume of the creak when a ghost settles in. (Used in {@code Attachment}.) */
+        public static final float SETTLE_CUE_VOLUME = 0.5F;
+        /** A dark-red mote rises off a visible Agitated ghost this often. (Used in {@code GhostEntity}.) */
+        public static final int AGITATED_MOTE_INTERVAL_TICKS = 5;
+        /** Size of those motes. (Used in {@code GhostEntity}.) */
+        public static final float AGITATED_MOTE_SCALE = 0.7F;
+        /** Colour of those motes. (Used in {@code GhostEntity}.) */
+        public static final int AGITATED_MOTE_COLOR = 0x8A1010;
+        /** How wide round the ghost they start, as a fraction of its width. (Used in {@code GhostEntity}.) */
+        public static final double AGITATED_MOTE_SPREAD = 0.6;
+        /** Their rising speed. (Used in {@code GhostEntity}.) */
+        public static final double AGITATED_MOTE_RISE = 0.3;
         /** A waiting ghost (its player left the dimension) resumes when they come back this close. (Used in {@code Attachment}.) */
         public static final double RESUME_RANGE = 64.0;
 

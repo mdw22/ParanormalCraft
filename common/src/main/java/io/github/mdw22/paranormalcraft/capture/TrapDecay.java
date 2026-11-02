@@ -8,7 +8,6 @@ import io.github.mdw22.paranormalcraft.registry.ModDataComponents;
 import io.github.mdw22.paranormalcraft.registry.ModItems;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,8 +35,8 @@ import java.util.UUID;
  *     ({@link #SCAN_RADIUS} chunks), {@link #SCAN_CHUNKS_PER_TICK} chunks a tick, so a trap in a chest is caught soon
  *     after its chunk is loaded near a player.</li>
  * </ul>
- * At 0% the ghost escapes ({@link #escape}): next to the trap, Agitated, attached to the nearest player; the trap is
- * left empty.
+ * At 0% the ghost escapes ({@link #escape}): next to the trap, Agitated and visible, then fleeing from the nearest
+ * player and following them; the trap is left empty.
  */
 public final class TrapDecay {
 
@@ -81,8 +80,7 @@ public final class TrapDecay {
 
         BlockPos home = BlockPos.containing(at);
         level.playSound(null, at.x, at.y, at.z, ModSounds.TRAP_BURST.get(), SoundSource.BLOCKS, Balance.Escape.BURST_VOLUME, 1.0F);
-        level.sendParticles(ParticleTypes.SOUL, at.x, at.y + 0.5, at.z, 24, 0.4, 0.5, 0.4, 0.06);
-        level.sendParticles(ParticleTypes.CRIT, at.x, at.y + 0.3, at.z, 12, 0.3, 0.2, 0.3, 0.2);
+        LooseGhosts.burst(level, at);
         CaptureLog.get(level.getServer()).setOutcome(captured.id(), "escaped");
         var ghost = LooseGhosts.escape(level, captured, at.add(0.0, 0.5, 0.0), home, "trap_escape");
         ServerTrace.event("trap_escape", line -> {

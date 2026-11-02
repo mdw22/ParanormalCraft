@@ -5,12 +5,14 @@ import io.github.mdw22.paranormalcraft.capture.PresenceRules;
 import io.github.mdw22.paranormalcraft.capture.Steering;
 import io.github.mdw22.paranormalcraft.config.ModConfigs;
 import io.github.mdw22.paranormalcraft.config.ServerConfig;
+import io.github.mdw22.paranormalcraft.debug.trace.ClientTraceHook;
 import io.github.mdw22.paranormalcraft.debug.trace.ServerTrace;
 import io.github.mdw22.paranormalcraft.haunting.HauntingController;
 import io.github.mdw22.paranormalcraft.registry.ModSounds;
 import io.github.mdw22.paranormalcraft.tool.GhostEvents;
 import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -84,14 +86,17 @@ public abstract class GhostEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_WEAKENED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Released from containment: visible to everyone, rising and fading out, then gone. */
     private static final EntityDataAccessor<Boolean> DATA_ASCENDING = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
-    /** Agitated (Milestone 2 part D): drawn with a faint red tint. */
+    /** Agitated (Milestone 2 part D): drawn red. */
     private static final EntityDataAccessor<Boolean> DATA_AGITATED = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.BOOLEAN);
     /** Players within this distance hear "<name> has dispersed". */
     private static final double DISPERSE_MESSAGE_RANGE = Balance.Ghost.DISPERSE_MESSAGE_RANGE;
 
     private Presence presence = new Presence();
     private final HauntingController haunting = new HauntingController(this);
+    private static final DustParticleOptions AGITATED_MOTE = new DustParticleOptions(Balance.Escape.AGITATED_MOTE_COLOR, Balance.Escape.AGITATED_MOTE_SCALE);
     private final Attachment attachment = new Attachment(this);
+    /** Client only: whether the first Agitated mote has been traced. */
+    private boolean agitatedMotesTraced;
     /** Ticks of Agitation left (0: calm). */
     private int agitatedTicks;
     private @Nullable BlockPos home;
@@ -633,6 +638,20 @@ public abstract class GhostEntity extends PathfinderMob {
             traceTick();
         } else {
             tickManifestFade();
+            tickAgitatedMotes();
+        }
+    }
+
+    /** Client side: a few small dark-red motes rising off an Agitated ghost, while the local player can see it. */
+    private void tickAgitatedMotes() {
+
+        if (!isAgitated() || this.tickCount % Balance.Escape.AGITATED_MOTE_INTERVAL_TICKS != 0 || !GhostVisibility.canClientSee(this)) {
+            return;
+        }
+        this.level().addParticle(AGITATED_MOTE, this.getRandomX(Balance.Escape.AGITATED_MOTE_SPREAD), this.getRandomY(), this.getRandomZ(Balance.Escape.AGITATED_MOTE_SPREAD), 0.0, Balance.Escape.AGITATED_MOTE_RISE, 0.0);
+        if (!this.agitatedMotesTraced) {
+            this.agitatedMotesTraced = true;
+            ClientTraceHook.event("agitated_motes", line -> line.addProperty("id", this.getId()));
         }
     }
 
@@ -684,7 +703,8 @@ public abstract class GhostEntity extends PathfinderMob {
     }
 
     /**
-     * The ward's flash: visible to everyone for {@code ticks} (through the manifest fade), without a whisper.
+     * A flash, from a ward or an escape: visible to everyone for {@code ticks} (through the manifest fade), without a
+     * whisper.
      */
     public void flash(int ticks) {
 
@@ -707,7 +727,7 @@ public abstract class GhostEntity extends PathfinderMob {
 
     /**
      * Agitated for {@code ticks}: haunts and manifests twice as often, recovers Presence twice as fast, is never
-     * curious, and shows a faint red tint.
+     * curious, and is drawn red with dark-red motes rising off it.
      */
     public void agitate(int ticks) {
 

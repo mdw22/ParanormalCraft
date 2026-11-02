@@ -15,6 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
+
 /**
  * What a Ward Lantern shows when it's working (Update 9 feedback: "make it visible and felt"). Server side; every
  * effect is particles and sounds that all nearby players see.
@@ -38,33 +40,37 @@ public final class WardEffects {
 
     /**
      * Traces the ward's boundary once: each tick for {@link Balance.Ward#RING_TICKS} draws the next arc, about three motes
-     * per block, on the ground (or at the lantern's height where the ground is far off).
+     * per block, on the ground (or at the lantern's height where the ground is far off). Motes last about a second, less
+     * than the trace, so it ends by drawing the whole circle once, closed.
      */
     public static void placementRing(ServerLevel level, BlockPos lantern, int radius) {
 
         int ticks = Balance.Ward.RING_TICKS;
-        int points = Math.max(72, (int) Math.round(2 * Math.PI * radius * Balance.Ward.RING_MOTES_PER_BLOCK));
+        int count = Math.max(72, WardRing.pointCount(radius, Balance.Ward.RING_MOTES_PER_BLOCK));
+        List<WardRing.Point> points = WardRing.circle(lantern.getX() + 0.5, lantern.getZ() + 0.5, radius, count);
         for (int tick = 0; tick < ticks; tick++) {
-            int from = points * tick / ticks;
-            int to = points * (tick + 1) / ticks;
-            HauntingScheduler.schedule(level, tick, () -> {
-                for (int i = from; i < to; i++) {
-                    double angle = 2 * Math.PI * i / points;
-                    double x = lantern.getX() + 0.5 + Math.cos(angle) * radius;
-                    double z = lantern.getZ() + 0.5 + Math.sin(angle) * radius;
-                    double y = groundY(level, x, z, lantern.getY());
-                    // Glow motes are full-bright cyan, so the ring reads at night; a dust mote under each for colour by day.
-                    level.sendParticles(ParticleTypes.GLOW, true, false, x, y + Balance.Ward.MOTE_LIFT, z, 1, 0.03, 0.05, 0.03, 0.0);
-                    if (i % 2 == 0) {
-                        level.sendParticles(MOTE, true, false, x, y + Balance.Ward.MOTE_LIFT, z, 1, 0.03, 0.05, 0.03, 0.0);
-                    }
-                }
-            });
+            int from = count * tick / ticks;
+            int to = count * (tick + 1) / ticks;
+            HauntingScheduler.schedule(level, tick, () -> ringMotes(level, lantern, points, from, to));
         }
+        HauntingScheduler.schedule(level, ticks, () -> ringMotes(level, lantern, points, 0, count));
         ServerTrace.event("ward_ring", line -> {
             line.addProperty("pos", lantern.toShortString());
             line.addProperty("radius", radius);
         });
+    }
+
+    private static void ringMotes(ServerLevel level, BlockPos lantern, List<WardRing.Point> points, int from, int to) {
+
+        for (int i = from; i < to; i++) {
+            WardRing.Point point = points.get(i);
+            double y = groundY(level, point.x(), point.z(), lantern.getY()) + Balance.Ward.MOTE_LIFT;
+            // Glow motes are full-bright cyan, so the ring reads at night; a dust mote under each for colour by day.
+            level.sendParticles(ParticleTypes.GLOW, true, false, point.x(), y, point.z(), 1, 0.03, 0.05, 0.03, 0.0);
+            if (i % 2 == 0) {
+                level.sendParticles(MOTE, true, false, point.x(), y, point.z(), 1, 0.03, 0.05, 0.03, 0.0);
+            }
+        }
     }
 
     /**

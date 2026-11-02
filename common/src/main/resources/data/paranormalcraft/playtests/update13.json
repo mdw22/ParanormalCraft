@@ -1,0 +1,115 @@
+{
+  "title": "Update 13 re-test: Milestone 2 wrap-up",
+  "steps": [
+    {
+      "id": "ward_ring_8",
+      "title": "Ward ring, radius 8",
+      "lines": [
+        "You're holding two Ward Lanterns, and every new ward has radius 8. Place one and look at the ring: it traces round, then closes.",
+        "Keep holding the other and walk round the edge. Is the circle closed in both, with no gap anywhere?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena_night",
+        "wait 20",
+        "paranormalcraft debug config set wardLanternRadius 8",
+        "item replace entity @s weapon.mainhand with paranormalcraft:ward_lantern 2"
+      ],
+      "auto_check": "trace ward_ring radius=8"
+    },
+    {
+      "id": "ward_ring_32",
+      "title": "Ward ring, radius 32",
+      "lines": [
+        "The same at radius 32. Place a lantern, then look along the ring as it traces and closes.",
+        "Hold the other and walk out to the edge: only the part near you shows. Follow it a good way round. Any gap?"
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene arena_night",
+        "wait 20",
+        "item replace entity @s weapon.mainhand with paranormalcraft:ward_lantern 2"
+      ],
+      "auto_check": "trace ward_ring radius=32"
+    },
+    {
+      "id": "capitals",
+      "title": "Journal and tooltips: capital letters",
+      "lines": [
+        "Read the Blessings and Bindings spread in the journal: do its sentences start with capital letters?",
+        "Then close it, open the Containment Unit, select a spirit, and hover Release and Bind. The same check."
+      ],
+      "setup": [
+        "paranormalcraft debug config set wardLanternRadius 32",
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "paranormalcraft debug containment 100000 202 100000 fill 2",
+        "paranormalcraft debug journal @s lingering_spirit 6",
+        "paranormalcraft debug journal @s open"
+      ],
+      "auto_check": "trace journal_open"
+    },
+    {
+      "id": "agitated_tint",
+      "title": "Agitated tint",
+      "lines": [
+        "Goggles on, and an Agitated ghost hangs in front of you.",
+        "Does it read as angry at a glance: clearly red, pulsing slowly, with small dark-red motes rising off it?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene arena",
+        "wait 20",
+        "item replace entity @s armor.head with paranormalcraft:spectral_goggles",
+        "data merge entity @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene,limit=1] {NoAI:1b}",
+        "execute at @s positioned ^ ^ ^4 run tp @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene,limit=1] ~ ~0.5 ~",
+        "paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] agitate"
+      ]
+    },
+    {
+      "id": "trap_escape",
+      "title": "Trap escape",
+      "lines": [
+        "Look at the trap, set to 2%. In about 25 s it bursts. Take your goggles off for the burst if you want to check everyone sees it.",
+        "It should show itself red at the trap for about 2 s, drift away from you (no jump), then come round behind you and keep following."
+      ],
+      "setup": [
+        "paranormalcraft debug scene containment_lab",
+        "wait 20",
+        "item replace entity @s armor.head with paranormalcraft:spectral_goggles",
+        "paranormalcraft debug look 99997.5 201.3 100002.5",
+        "wait 2",
+        "paranormalcraft debug trap @s integrity 2"
+      ],
+      "auto_check": "trace attach_flee_end"
+    },
+    {
+      "id": "breach_escape",
+      "title": "Breach escape",
+      "lines": [
+        "The unit is breaching, and a spirit gets out every 30 s. Stay close and watch the first one.",
+        "It should do the same: red at the unit for about 2 s, a visible drift away, then following, with no jump. Refuel from the chest when you've seen it."
+      ],
+      "setup": [
+        "paranormalcraft debug scene breach_lab",
+        "wait 20",
+        "item replace entity @s armor.head with paranormalcraft:spectral_goggles",
+        "paranormalcraft debug containment 100000 201 100000 breach"
+      ],
+      "auto_check": "trace attach_flee_end"
+    },
+    {
+      "id": "settles_in",
+      "title": "\"Something settles in\"",
+      "lines": [
+        "The ghost beside you is following you now. Turn subtitles on (Options, Accessibility) and walk toward the hut in the far corner.",
+        "When you get in range of the bed, do you hear one quiet creak from the hut, with the subtitle \"Something settles in\"?"
+      ],
+      "setup": [
+        "paranormalcraft debug scene home_base",
+        "wait 20",
+        "paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] agitate",
+        "paranormalcraft debug ghost @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] attach @s"
+      ],
+      "auto_check": "trace attach_settle cue=true"
+    }
+  ]
+}

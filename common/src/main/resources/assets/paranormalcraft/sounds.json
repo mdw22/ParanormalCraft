@@ -471,6 +471,23 @@
       }
     ]
   },
+  "entity.lingering_spirit.settles": {
+    "subtitle": "subtitles.paranormalcraft.lingering_spirit.settles",
+    "sounds": [
+      {
+        "name": "minecraft:block/wooden_door/open1",
+        "pitch": 0.7,
+        "volume": 0.5,
+        "attenuation_distance": 64
+      },
+      {
+        "name": "minecraft:block/wooden_door/open2",
+        "pitch": 0.7,
+        "volume": 0.5,
+        "attenuation_distance": 64
+      }
+    ]
+  },
   "entity.lingering_spirit.watching": {
     "subtitle": "subtitles.paranormalcraft.lingering_spirit.watching",
     "sounds": [

@@ -172,8 +172,9 @@ public class ModLanguageProvider extends LanguageProvider {
         add("subtitles.paranormalcraft.ghost_trap.creak", "Ghost Trap creaks");
         add("subtitles.paranormalcraft.containment_unit.breach", "Containment breach!");
         add("subtitles.paranormalcraft.lingering_spirit.watching", "You feel watched");
-        add("effect.paranormalcraft.restful.blessing", "phantoms won't spawn for you for %s nights");
-        add("job.paranormalcraft.wisp_familiar.desc", "a light that follows you, warns of mobs, and guides you to cabins");
+        add("subtitles.paranormalcraft.lingering_spirit.settles", "Something settles in");
+        add("effect.paranormalcraft.restful.blessing", "Phantoms won't spawn for you for %s nights");
+        add("job.paranormalcraft.wisp_familiar.desc", "A light that follows you, warns of mobs, and guides you to cabins");
         add("gui.paranormalcraft.containment.release.tooltip", "%s: %s");
         add("gui.paranormalcraft.containment.bind.tooltip", "%s: %s");
         add("journal.paranormalcraft.blessings.title", "Blessings");

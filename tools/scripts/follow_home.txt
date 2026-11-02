@@ -12,8 +12,9 @@ wait 60
 expect dump ghosts[0].attachment.mode=following
 # Home, by the hut's door: within 48 of the bed, so it settles.
 tp @p 99981.5 201 99984.5
-expect trace attach_settle player=Dev within 60
-# Settling, it slips into its new home unseen.
+expect trace attach_settle player=Dev cue=true within 60
+# Settling, it slips into its new home unseen; the player hears one creak ("Something settles in").
+expect trace sound id=paranormalcraft:entity.lingering_spirit.settles within 20
 wait 20
 expect dump ghosts[0].attachment.mode=none ghosts[0].home[0]=99981
 paranormalcraft debug timers @e[type=paranormalcraft:lingering_spirit,tag=paranormalcraft_scene] haunt 1

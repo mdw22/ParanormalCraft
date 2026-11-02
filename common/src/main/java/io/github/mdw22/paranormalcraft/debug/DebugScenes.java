@@ -151,6 +151,19 @@ public final class DebugScenes {
     }
 
     /**
+     * {@code home_base} makes its bed the player's respawn point, and that stays in their save. Every other scene is
+     * built on the same spot, so it has to go, or a ghost getting loose there would "settle" straight away at a bed
+     * that's no longer there.
+     */
+    public static void forgetSceneRespawn(ServerPlayer player, String scene) {
+
+        ServerPlayer.RespawnConfig respawn = player.getRespawnConfig();
+        if (!"home_base".equals(scene) && respawn != null && respawn.respawnData().globalPos().pos().equals(HOME_BASE_BED)) {
+            player.setRespawnPosition(null, false);
+        }
+    }
+
+    /**
      * Builds {@code name} in the overworld and places {@code player} (if not null) and Dev2 (if online).
      *
      * @return what was built, or empty for an unknown name
@@ -197,6 +210,7 @@ public final class DebugScenes {
             target.setDeltaMovement(Vec3.ZERO);
             target.setHealth(target.getMaxHealth());
             TetherManager.setForced(target, false);
+            forgetSceneRespawn(target, name);
             DebugKit.give(target, true);
             if (placement.goggles()) {
                 target.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.SPECTRAL_GOGGLES.get()));

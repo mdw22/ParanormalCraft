@@ -1,5 +1,6 @@
 # Trap decay: one of containment_lab's Filled Traps, set to 2% integrity, runs down in about 24 s. The ghost bursts
-# out next to it, Agitated, and attaches to the player; the trap is left empty.
+# out next to it, Agitated and shown to everyone for 2 s, attaches to the player, flees, and comes round behind them;
+# the trap is left empty.
 # Run with: /execute as Dev at Dev run paranormalcraft debug run trap_decay
 paranormalcraft debug scene containment_lab
 wait 20
@@ -10,5 +11,8 @@ expect dump filledTraps[*].integrity<3
 expect trace trap_escape where=placed within 520
 expect trace attach_start cause=trap_escape player=Dev within 5
 execute if block 99997 201 100002 paranormalcraft:ghost_trap
-expect dump ghosts[*].agitatedTicks>0 ghosts[*].attachment.mode=following
+expect dump ghosts[*].agitatedTicks>0 ghosts[*].attachment.mode=following ghosts[*].attachment.escape=manifest ghosts[*].manifesting=true
 paranormalcraft debug screenshot trap_escape
+expect trace attach_flee_start within 50
+expect trace attach_flee_end reason=clear within 320
+expect trace attach_escape_end reason=behind within 280

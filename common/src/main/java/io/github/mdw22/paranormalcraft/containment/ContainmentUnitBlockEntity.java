@@ -390,6 +390,7 @@ public class ContainmentUnitBlockEntity extends BaseContainerBlockEntity impleme
         CaptureLog.get(level.getServer()).setOutcome(ghost.id(), "escaped");
         GhostEntity loose = LooseGhosts.escape(level, ghost.ghost(), new Vec3(pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5), pos, "breach");
         level.playSound(null, pos, ModSounds.TRAP_BURST.get(), SoundSource.BLOCKS, Balance.Escape.BURST_VOLUME, 0.8F);
+        LooseGhosts.burst(level, new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5));
         ServerTrace.event("containment_breach_escape", line -> {
             line.addProperty("pos", pos.toShortString());
             line.addProperty("name", ghost.ghost().name());
